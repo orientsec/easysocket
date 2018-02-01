@@ -10,12 +10,5 @@ package com.orientsec.easysocket;
  * 网络状态监测
  */
 public interface NetworkDetector {
-    boolean isNetworkAvailable();
 
-    /**
-     * 网络状态监听器
-     */
-    interface OnNetworkStateChangedListener {
-        void onNetworkStateChanged(boolean available);
-    }
 }

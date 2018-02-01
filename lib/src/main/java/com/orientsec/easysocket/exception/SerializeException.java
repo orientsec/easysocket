@@ -7,5 +7,5 @@ package com.orientsec.easysocket.exception;
  * Author: Fredric
  * coding is art not science
  */
-public class DecodeException extends EasyException {
+public class SerializeException extends EasyException {
 }

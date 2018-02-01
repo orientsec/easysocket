@@ -8,10 +8,10 @@ import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.exception.TimeoutException;
 import com.orientsec.easysocket.exception.WriteException;
 import com.orientsec.easysocket.inner.MessageType;
-import com.orientsec.easysocket.inner.SendMessage;
 import com.orientsec.easysocket.inner.TaskExecutor;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -27,13 +27,13 @@ public class BlockingExecutor implements TaskExecutor<EasyTask> {
 
     private Map<Integer, EasyTask> taskMap = new ConcurrentHashMap<>();
 
-    private LinkedBlockingQueue<SendMessage> messageQueue = new LinkedBlockingQueue<>();
+    private LinkedBlockingQueue<Message> messageQueue = new LinkedBlockingQueue<>();
 
     private SocketConnection connection;
 
     private PushHandler pushHandler;
 
-    LinkedBlockingQueue<SendMessage> getMessageQueue() {
+    LinkedBlockingQueue<Message> getMessageQueue() {
         return messageQueue;
     }
 
@@ -48,19 +48,10 @@ public class BlockingExecutor implements TaskExecutor<EasyTask> {
             throw new IllegalStateException("connection is show down!");
         }
         connection.connect();
-        if (messageQueue.offer(task.getMessage())) {
-            taskMap.put(task.getMessage().getTaskId(), task);
-            task.timeoutFuture = connection.executorService().schedule(() -> {
-                SendMessage message = task.getMessage();
-                message.invalid();
-                taskMap.remove(message.getTaskId());
-                if (connection.isConnect()) {
-                    task.onError(new TimeoutException("request time out"));
-                } else {
-                    task.onError(new ConnectException("no connection"));
-                }
-            }, connection.options().getRequestTimeOut(), TimeUnit.SECONDS);
-        } else {
+        Message message = task.getMessage();
+        taskMap.put(message.getTaskId(), task);
+        if (!messageQueue.offer(message)) {
+            taskMap.remove(message.getTaskId());
             task.onError(new EasyException("task refuse to execute!"));
         }
     }
@@ -86,6 +77,12 @@ public class BlockingExecutor implements TaskExecutor<EasyTask> {
             if (easyTask.getTaskType() == TaskType.SEND_ONLY) {
                 easyTask.onSuccess();
                 taskMap.remove(message.getTaskId());
+            } else {
+                easyTask.timeoutFuture = connection.options().getExecutorService()
+                        .schedule(() -> {
+                            taskMap.remove(message.getTaskId());
+                            easyTask.onError(new TimeoutException("request time out"));
+                        }, connection.options().getRequestTimeOut(), TimeUnit.SECONDS);
             }
         }
     }
@@ -105,4 +102,13 @@ public class BlockingExecutor implements TaskExecutor<EasyTask> {
         }
     }
 
+    void onConnectionClosed() {
+        ConnectException exception = new ConnectException("connect failed");
+        messageQueue.clear();
+        Set<Map.Entry<Integer, EasyTask>> entrySet = taskMap.entrySet();
+        for (Map.Entry<Integer, EasyTask> entry : entrySet) {
+            entry.getValue().onError(exception);
+        }
+        taskMap.clear();
+    }
 }

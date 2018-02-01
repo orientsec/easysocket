@@ -7,6 +7,7 @@ import com.orientsec.easysocket.Connection;
 import com.orientsec.easysocket.ConnectionInfo;
 import com.orientsec.easysocket.ConnectionManager;
 import com.orientsec.easysocket.LivePolicy;
+import com.orientsec.easysocket.Message;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Task;
 import com.orientsec.easysocket.utils.Logger;
@@ -15,7 +16,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -28,13 +28,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Author: Fredric
  * coding is art not science
  */
-public abstract class AbstractConnection implements Connection {
+public abstract class AbstractConnection implements Connection, ConnectionManager.OnNetworkStateChangedListener {
     protected final Object lock = new byte[0];
     /**
      * 0 空闲状态 0 -> 1; 0 -> 4
-     * 1 连接中 1-> 2; 1-> 4
+     * 1 连接中 1 -> 0; 1 -> 2; 1 -> 4
      * 2 连接成功 2 -> 3; 2 -> 4
-     * 3 连接断开中 3 -> 1; 3 -> 4
+     * 3 连接断开中 3 -> 0; 3 -> 4
      * 4 关闭
      * <p>
      * 可能的状态：
@@ -63,21 +63,17 @@ public abstract class AbstractConnection implements Connection {
 
     protected AbstractConnection(Options options) {
         this.options = options;
-        executorService = Executors.newSingleThreadScheduledExecutor();
+        executorService = options.getExecutorService();
         pulse = new Pulse(this);
         reconnection = new Reconnection();
         connectionInfo = options.getConnectionInfo();
-    }
-
-    public ScheduledExecutorService executorService() {
-        return executorService;
     }
 
     public Pulse pulse() {
         return pulse;
     }
 
-    public abstract void onPulse(SendMessage message);
+    public abstract void onPulse(Message message);
 
     public abstract TaskExecutor<? extends Task> taskExecutor();
 
@@ -107,13 +103,15 @@ public abstract class AbstractConnection implements Connection {
         int currentState = state.getAndSet(4);
         if (currentState != 4) {
             ConnectionManager.getInstance().removeConnection(this);
+
         }
         if (currentState == 2) {
             doOnDisconnect();
         }
-        if (currentState == 1) {
+        /*if (currentState == 1) {
             reconnection.stopReconnect();
-        }
+        }*/
+        executorService.shutdownNow();
     }
 
     public void connect() {
@@ -140,11 +138,12 @@ public abstract class AbstractConnection implements Connection {
         //停止心跳
         pulse.stop();
         //取消断开连接的任务
-        cancelDisconnectTask();
+        //cancelDisconnectTask();
     }
 
 
     protected void sendDisconnectEvent() {
+        Logger.i("connection is disconnected!");
         reconnection.onDisconnect();
         if (connectEventListeners.size() > 0) {
             options.getDispatchExecutor().execute(() -> {
@@ -156,6 +155,7 @@ public abstract class AbstractConnection implements Connection {
     }
 
     protected void sendConnectEvent() {
+        Logger.i("connection is established!");
         reconnection.onConnect();
         if (connectEventListeners.size() > 0) {
             options.getDispatchExecutor().execute(() -> {
@@ -167,6 +167,7 @@ public abstract class AbstractConnection implements Connection {
     }
 
     protected void sendConnectFailedEvent() {
+        Logger.i("connection fail to establish!");
         reconnection.onConnectFailed();
         if (connectEventListeners.size() > 0) {
             options.getDispatchExecutor().execute(() -> {
@@ -177,38 +178,44 @@ public abstract class AbstractConnection implements Connection {
         }
     }
 
-    public void setBackground() {
-        synchronized (lock) {
-            cancelDisconnectTask();
-            if (isConnect() && options.getLivePolicy() != LivePolicy.STRONG) {
-                disconnectTask = executorService.schedule(() -> {
-                    if (ConnectionManager.getInstance().isBackground()) {
-                        synchronized (lock) {
-                            sleep = true;
-                            reconnection.stopReconnect();
-                        }
+    @Override
+    public void onNetworkStateChanged(boolean available) {
+        if (available) {
+            reconnection.reset();
+            reconnection.reconnectDelay(1);
+        } else {
+            disconnect();
+        }
+    }
+
+    public synchronized void setBackground() {
+        cancelDisconnectTask();
+        if (!isShutdown() && options.getLivePolicy() != LivePolicy.STRONG) {
+            disconnectTask = executorService.schedule(() -> {
+                if (ConnectionManager.getInstance().isBackground()) {
+                    Logger.i("connection is set to background");
+                    synchronized (lock) {
+                        sleep = true;
+                        reconnection.stopReconnect();
                         disconnect();
                     }
-                    disconnectTask = null;
-                }, options.getBackgroundLiveTime(), TimeUnit.SECONDS);
-            }
+                }
+                disconnectTask = null;
+            }, options.getBackgroundLiveTime(), TimeUnit.SECONDS);
         }
     }
 
     private void cancelDisconnectTask() {
-        synchronized (lock) {
-            if (disconnectTask != null) {
-                disconnectTask.cancel(true);
-                disconnectTask = null;
-            }
+        if (disconnectTask != null) {
+            disconnectTask.cancel(true);
+            disconnectTask = null;
         }
     }
 
-    public void setForeground() {
-        synchronized (lock) {
-            sleep = false;
-            cancelDisconnectTask();
-        }
+    public synchronized void setForeground() {
+        sleep = false;
+        cancelDisconnectTask();
+        pulse.pulseOnce();
     }
 
 
@@ -216,11 +223,11 @@ public abstract class AbstractConnection implements Connection {
         /**
          * 默认重连时间(后面会以指数次增加)
          */
-        private static final int DEFAULT = 5;
+        private static final int DEFAULT = 3;
         /**
          * 最大连接失败次数,不包括断开异常
          */
-        private static final int MAX_CONNECTION_FAILED_TIMES = 12;
+        private static final int MAX_CONNECTION_FAILED_TIMES = 5;
         /**
          * 延时连接时间
          */
@@ -234,11 +241,13 @@ public abstract class AbstractConnection implements Connection {
          */
         private int backUpIndex = -1;
 
-        private Future<?> reconnectTask;
+        private volatile Future<?> reconnectTask;
 
         @Override
         public void onDisconnect() {
-            reconnectDelay(DEFAULT);
+            if (ConnectionManager.getInstance().isNetworkAvailable()) {
+                reconnectDelay(DEFAULT);
+            }
         }
 
         @Override
@@ -248,35 +257,33 @@ public abstract class AbstractConnection implements Connection {
 
         @Override
         public void onConnectFailed() {
-            if (++connectionFailedTimes > MAX_CONNECTION_FAILED_TIMES) {
+            if (!ConnectionManager.getInstance().isNetworkAvailable()) {
+                return;
+            }
+            //连接失败达到阈值,需要切换备用线路
+            if (++connectionFailedTimes >= MAX_CONNECTION_FAILED_TIMES) {
                 reset();
-                //连接失败达到阈值,需要切换备用线路
                 List<ConnectionInfo> connectionInfoList = options.getBackupConnectionInfoList();
                 if (connectionInfoList != null && connectionInfoList.size() > 0) {
                     if (++backUpIndex >= connectionInfoList.size()) {
+                        Logger.i("switch to main server");
                         backUpIndex = -1;
                         connectionInfo = options.getConnectionInfo();
                     } else {
+                        Logger.i("switch to backup server");
                         connectionInfo = connectionInfoList.get(backUpIndex);
                     }
-                    //站点切换，2s后开始连接
-                    reconnectDelay(2);
-                    return;
                 }
             }
             reconnectDelay(reconnectTimeDelay);
-            reconnectTimeDelay = reconnectTimeDelay * 2;//5+10+20+40 = 75 4次
-            if (reconnectTimeDelay >= 60) {
-                reconnectTimeDelay = DEFAULT;
-            }
+            reconnectTimeDelay = reconnectTimeDelay * 2;//x+2x+4x
+
         }
 
         private void stopReconnect() {
-            synchronized (lock) {
-                if (reconnectTask != null) {
-                    reconnectTask.cancel(true);
-                    reconnectTask = null;
-                }
+            if (reconnectTask != null) {
+                reconnectTask.cancel(true);
+                reconnectTask = null;
             }
         }
 
@@ -288,26 +295,17 @@ public abstract class AbstractConnection implements Connection {
 
         private void reconnectDelay(int second) {
             synchronized (lock) {
-                if (sleep && (state.compareAndSet(3, 0) || state.compareAndSet(1, 0))) {
-                    Logger.i("connection is sleeping!");
-                } else if (state.compareAndSet(3, 1) || state.get() == 1) {
-                    Logger.i(" reconnect after " + second + " s...");
+                if (state.get() == 0 && !sleep) {
+                    stopReconnect();
+                    Logger.i(" reconnect after " + second + " seconds...");
                     reconnectTask = executorService.schedule(() -> {
-                        if (sleep && state.compareAndSet(1, 0)) {
-                            Logger.i("connection is sleeping!");
-                        } else if (state.get() == 1) {
-                            doOnConnect();
-                        } else {
-                            Logger.i("connection is already shutdown!");
+                        if (!sleep) {
+                            connect();
                         }
                         reconnectTask = null;
                     }, second, TimeUnit.SECONDS);
-                } else if (state.get() == 4) {
-                    Logger.i("connection is already shutdown!");
-                } else {
-                    //this should never happen
-                    throw new IllegalStateException();
                 }
+
             }
         }
     }

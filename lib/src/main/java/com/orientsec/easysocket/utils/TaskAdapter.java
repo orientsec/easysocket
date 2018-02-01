@@ -1,11 +1,10 @@
 package com.orientsec.easysocket.utils;
 
 import com.orientsec.easysocket.Connection;
-import com.orientsec.easysocket.Message;
 import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.Task;
-import com.orientsec.easysocket.exception.DecodeException;
 import com.orientsec.easysocket.exception.EasyException;
+import com.orientsec.easysocket.exception.SerializeException;
 
 import io.reactivex.Observable;
 import io.reactivex.Observer;
@@ -53,13 +52,13 @@ public class TaskAdapter {
             }
 
             @Override
-            public Message encode(T request) {
+            public byte[] encode(T request) throws SerializeException {
                 return delegate.encode(request);
             }
 
             @Override
-            public R decode(Message message) throws DecodeException {
-                return delegate.decode(message);
+            public R decode(byte[] response) throws SerializeException {
+                return delegate.decode(response);
             }
 
             @Override

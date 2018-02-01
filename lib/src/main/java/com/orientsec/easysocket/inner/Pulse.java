@@ -1,5 +1,7 @@
 package com.orientsec.easysocket.inner;
 
+import com.orientsec.easysocket.Message;
+import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.concurrent.ScheduledFuture;
@@ -22,9 +24,9 @@ public class Pulse implements Runnable {
 
     private AtomicInteger lostTimes = new AtomicInteger();
 
-    private SendMessage pulseMessage;
+    private Message pulseMessage;
 
-    public Pulse(AbstractConnection context) {
+    Pulse(AbstractConnection context) {
         this.context = context;
     }
 
@@ -33,19 +35,31 @@ public class Pulse implements Runnable {
     }
 
     public synchronized void start() {
-        future = context.executorService.schedule(this, context.options.getPulseRate(), TimeUnit.SECONDS);
-        pulseMessage = new SendMessage();
-        pulseMessage.setBodyBytes(context.options.getProtocol().pulseData());
+        Options options = context.options;
+        int rate = options.getPulseRate();
+        future = options.getExecutorService()
+                .scheduleAtFixedRate(this, rate, rate, TimeUnit.SECONDS);
+        pulseMessage = new Message();
+        pulseMessage.setMessageType(MessageType.PULSE);
+        pulseMessage.setBodyBytes(options.getProtocol().pulseData());
     }
 
-    public synchronized void stop() {
+    synchronized void stop() {
         if (future != null) {
             future.cancel(false);
             future = null;
         }
         if (pulseMessage != null) {
-            pulseMessage.invalid();
             pulseMessage = null;
+        }
+        lostTimes.set(0);
+    }
+
+    synchronized void pulseOnce() {
+        if (future != null) {
+            future.cancel(false);
+            future = context.options.getExecutorService()
+                    .scheduleAtFixedRate(this, 0, context.options.getPulseRate(), TimeUnit.SECONDS);
         }
     }
 
@@ -53,10 +67,12 @@ public class Pulse implements Runnable {
     public void run() {
         if (lostTimes.getAndAdd(1) > context.options.getPulseLostTimes()) {
             Logger.w("pulse failed times up, invalid connection!");
-            lostTimes.set(0);
             context.disconnect();
         } else {
-            context.onPulse(pulseMessage);
+            Message message = pulseMessage;
+            if (message != null) {
+                context.onPulse(message);
+            }
         }
     }
 }

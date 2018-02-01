@@ -36,20 +36,26 @@ public class BlockingReader extends Looper implements Reader {
         int headLength = protocol.headSize();
         byte[] headBytes = new byte[headLength];
         readInputStream(inputStream, headBytes);
-        Message message = protocol.decodeHead(headBytes, options.getReadByteOrder());
-        int bodyLength = message.getBodySize();
+        int bodyLength = protocol.bodySize(headBytes);
         Logger.i("need read body length: " + bodyLength);
-        if (bodyLength > 0) {
+        if (bodyLength > options.getMaxReadDataKB() * 1024) {
+            throw new ReadException(
+                    "this socket input stream has some problem,body length to long:" + bodyLength
+                            + ",we'll disconnect");
+        } else if (bodyLength > 0) {
             byte[] data = new byte[bodyLength];
             readInputStream(inputStream, data);
+            Message message = protocol.decodeMessage(headBytes, data);
+            connection.taskExecutor().onReceive(message);
         } else if (bodyLength == 0) {
-            protocol.decodeMessage(message, new byte[0]);
+            Message message = protocol.decodeMessage(headBytes, new byte[0]);
+            connection.taskExecutor().onReceive(message);
         } else if (bodyLength < 0) {
             throw new ReadException(
                     "this socket input stream has some problem,wrong body length " + bodyLength
                             + ",we'll disconnect");
         }
-        connection.taskExecutor().onReceive(message);
+
 
     }
 
@@ -57,7 +63,11 @@ public class BlockingReader extends Looper implements Reader {
         int readCount = 0; // 已经成功读取的字节的个数
         int count = data.length;
         while (readCount < count) {
-            readCount += inputStream.read(data, readCount, count - readCount);
+            int len = inputStream.read(data, readCount, count - readCount);
+            if (len == -1) {
+                throw new IOException("input stream closed");
+            }
+            readCount += len;
         }
     }
 
@@ -74,7 +84,7 @@ public class BlockingReader extends Looper implements Reader {
     @Override
     protected void loopFinish(Exception e) {
         if (e != null) {
-            Logger.e("Blocking read error,thread is dead with exception:" + e.getMessage());
+            Logger.e("Blocking read error, thread is dead with exception: " + e.getMessage());
         }
         inputStream = null;
         connection.disconnect();

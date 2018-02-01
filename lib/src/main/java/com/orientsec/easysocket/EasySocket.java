@@ -20,17 +20,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class EasySocket {
     private static AtomicBoolean initialized = new AtomicBoolean();
-    static Context context;
 
     public static void init(@NonNull Application application) {
         if (!initialized.compareAndSet(false, true)) {
             throw new IllegalStateException("init only once!");
         }
-        EasySocket.context = application.getApplicationContext();
+        //EasySocket.context = application.getApplicationContext();
         ConnectionManager.getInstance().init(application);
     }
 
-    public Connection open(Options options) {
+    public static Connection open(Options options) {
         SocketConnection connection = new SocketConnection(options);
         ConnectionManager.getInstance().addConnection(connection);
         return connection;

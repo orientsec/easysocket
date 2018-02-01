@@ -47,12 +47,18 @@ public final class ConnectionInfo implements Serializable, Cloneable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (!(o instanceof ConnectionInfo)) { return false; }
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof ConnectionInfo)) {
+            return false;
+        }
 
         ConnectionInfo connectInfo = (ConnectionInfo) o;
 
-        if (port != connectInfo.port) { return false; }
+        if (port != connectInfo.port) {
+            return false;
+        }
         return host.equals(connectInfo.host);
     }
 

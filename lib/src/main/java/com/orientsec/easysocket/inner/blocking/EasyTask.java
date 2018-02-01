@@ -5,15 +5,11 @@ import com.orientsec.easysocket.Message;
 import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.Task;
 import com.orientsec.easysocket.TaskType;
-import com.orientsec.easysocket.exception.ConnectException;
-import com.orientsec.easysocket.exception.DecodeException;
 import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.exception.TimeoutException;
-import com.orientsec.easysocket.inner.SendMessage;
-import com.orientsec.easysocket.inner.blocking.SocketConnection;
+import com.orientsec.easysocket.exception.SerializeException;
+import com.orientsec.easysocket.utils.Logger;
 
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -25,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 
 class EasyTask<T, R> implements Task, Callback<Message> {
-    private static AtomicInteger id = new AtomicInteger();
+    private static AtomicInteger id = new AtomicInteger(1);
     /**
      * Task状态，总共有4种状态
      * 0 初始状态
@@ -34,7 +30,7 @@ class EasyTask<T, R> implements Task, Callback<Message> {
      * 3 取消
      */
     private AtomicInteger state = new AtomicInteger();
-    private SendMessage message;
+    private Message message;
     private Request<T, R> request;
     private TaskType taskType;
     private SocketConnection connection;
@@ -44,7 +40,7 @@ class EasyTask<T, R> implements Task, Callback<Message> {
         this.request = request;
         this.connection = connection;
         taskType = request.isSendOnly() ? TaskType.SEND_ONLY : TaskType.NORMAL;
-        message = new SendMessage();
+        message = new Message();
         message.setBody(request.getRequest());
         message.setTaskId(id.incrementAndGet());
     }
@@ -54,7 +50,7 @@ class EasyTask<T, R> implements Task, Callback<Message> {
      *
      * @return 请求消息体
      */
-    SendMessage getMessage() {
+    Message getMessage() {
         return message;
     }
 
@@ -72,7 +68,15 @@ class EasyTask<T, R> implements Task, Callback<Message> {
         if (!state.compareAndSet(0, 1)) {
             throw new IllegalStateException("Task has already executed!");
         }
-        connection.taskExecutor().execute(this);
+        try {
+            byte[] data = request.encode((T) message.getBody());
+            message.setBodyBytes(data);
+            message.setBodySize(data.length);
+            connection.taskExecutor().execute(this);
+        } catch (SerializeException e) {
+            onError(e);
+        }
+
     }
 
 
@@ -101,9 +105,9 @@ class EasyTask<T, R> implements Task, Callback<Message> {
         if (state.compareAndSet(1, 2)) {
             taskEnd();
             try {
-                R r = request.decode(res);
+                R r = request.decode(res.getBodyBytes());
                 connection.options().getDispatchExecutor().execute(() -> request.onSuccess(r));
-            } catch (DecodeException e) {
+            } catch (SerializeException e) {
                 connection.options().getDispatchExecutor().execute(() -> request.onError(e));
             }
         }

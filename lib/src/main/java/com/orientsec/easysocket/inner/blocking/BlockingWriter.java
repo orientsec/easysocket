@@ -1,18 +1,17 @@
 package com.orientsec.easysocket.inner.blocking;
 
+import com.orientsec.easysocket.Message;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.exception.WriteException;
 import com.orientsec.easysocket.inner.AbstractConnection;
 import com.orientsec.easysocket.inner.Looper;
 import com.orientsec.easysocket.inner.MessageType;
-import com.orientsec.easysocket.inner.SendMessage;
 import com.orientsec.easysocket.inner.Writer;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Product: EasySocket
@@ -28,8 +27,6 @@ public class BlockingWriter extends Looper implements Writer {
 
     private SocketConnection connection;
 
-    private LinkedBlockingQueue<SendMessage> messageQueue = new LinkedBlockingQueue<>();
-
     public BlockingWriter(AbstractConnection context) {
         this.connection = (SocketConnection) context;
         options = context.options();
@@ -38,30 +35,20 @@ public class BlockingWriter extends Looper implements Writer {
     @Override
     public void write() throws IOException {
         try {
-            SendMessage message = connection.taskExecutor().getMessageQueue().take();
-            if (!message.isValid()) {
-                return;
-            }
+            Message message = connection.taskExecutor().getMessageQueue().take();
             if (message.getMessageType() == MessageType.PULSE) {
                 mOutputStream.write(message.getBodyBytes());
                 mOutputStream.flush();
             } else {
                 try {
-                    options.getProtocol().encodeMessage(message);
-                    options.getProtocol().encodeHead(message);
+                    byte[] data = options.getProtocol().encodeMessage(message);
+                    mOutputStream.write(data);
+                    mOutputStream.flush();
+                    connection.taskExecutor().onSend(message);
                 } catch (WriteException e) {
                     connection.taskExecutor().onSendError(message, e);
-                    return;
                 }
-                byte[] head = message.getHeadBytes();
-                byte[] body = message.getBodyBytes();
-                byte[] sendBytes = new byte[head.length + body.length];
-                System.arraycopy(head, 0, sendBytes, 0, head.length);
-                System.arraycopy(body, 0, sendBytes, head.length, body.length);
-                mOutputStream.write(sendBytes);
-                mOutputStream.flush();
 
-                connection.taskExecutor().onSend(message);
             }
 
         } catch (InterruptedException e) {
@@ -82,7 +69,7 @@ public class BlockingWriter extends Looper implements Writer {
     @Override
     protected void loopFinish(Exception e) {
         if (e != null) {
-            Logger.e("Blocking write error,thread is dead with exception:" + e.getMessage());
+            Logger.e("Blocking write error, thread is dead with exception: " + e.getMessage());
         }
         mOutputStream = null;
         connection.disconnect();

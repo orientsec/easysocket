@@ -22,7 +22,7 @@ public abstract class Looper implements Runnable {
     private Exception exception;
 
     public synchronized void start() {
-        if (isStop) {
+        if (!isStop) {
             String threadName = getClass().getSimpleName();
             thread = new Thread(this, threadName);
             isStop = false;

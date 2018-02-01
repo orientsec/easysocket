@@ -1,6 +1,6 @@
 package com.orientsec.easysocket;
 
-import com.orientsec.easysocket.exception.DecodeException;
+import com.orientsec.easysocket.exception.SerializeException;
 
 /**
  * Product: EasySocket
@@ -43,7 +43,7 @@ public abstract class Request<T, R> implements Callback<R> {
         this.response = response;
     }
 
-    public abstract Message encode(T request);
+    public abstract byte[] encode(T request) throws SerializeException;
 
-    public abstract R decode(Message message) throws DecodeException;
+    public abstract R decode(byte[] response) throws SerializeException;
 }

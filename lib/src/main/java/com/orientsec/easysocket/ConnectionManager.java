@@ -2,6 +2,12 @@ package com.orientsec.easysocket;
 
 import android.app.Activity;
 import android.app.Application;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 
 import com.orientsec.easysocket.inner.AbstractConnection;
@@ -19,6 +25,8 @@ import java.util.List;
 public class ConnectionManager {
     private int count;
 
+    private Application application;
+
     private volatile boolean background;
 
     private List<AbstractConnection> connections = new ArrayList<>();
@@ -35,7 +43,11 @@ public class ConnectionManager {
     }
 
     void init(Application application) {
+        this.application = application;
         application.registerActivityLifecycleCallbacks(new EasySocketAppLifecycleListener());
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
+        application.registerReceiver(new NetworkStateReceiver(), intentFilter);
     }
 
     synchronized void addConnection(AbstractConnection connection) {
@@ -100,6 +112,39 @@ public class ConnectionManager {
 
         @Override
         public void onActivityDestroyed(Activity activity) {
+
+        }
+    }
+
+    public boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) application.getSystemService(Context.CONNECTIVITY_SERVICE);
+        // 获取当前网络状态信息
+        NetworkInfo info = connectivityManager != null ? connectivityManager.getActiveNetworkInfo() : null;
+        return info != null && info.isConnected();
+    }
+
+    /**
+     * 网络状态监听器
+     */
+    public interface OnNetworkStateChangedListener {
+        void onNetworkStateChanged(boolean available);
+    }
+
+    private class NetworkStateReceiver extends BroadcastReceiver {
+        private boolean init;
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (!init) {
+                init = true;
+                return;
+            }
+            if (ConnectivityManager.CONNECTIVITY_ACTION.equals(intent.getAction())) {
+                boolean isNetworkAvailable = isNetworkAvailable();
+                for (AbstractConnection connection : connections) {
+                    connection.onNetworkStateChanged(isNetworkAvailable);
+                }
+            }
 
         }
     }
