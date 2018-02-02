@@ -1,7 +1,5 @@
 package com.orientsec.easysocket;
 
-import com.orientsec.easysocket.exception.SerializeException;
-
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket
@@ -9,7 +7,7 @@ import com.orientsec.easysocket.exception.SerializeException;
  * Author: Fredric
  * coding is art not science
  */
-public abstract class Request<T, R> implements Callback<R> {
+public abstract class Request<T, R> {
     protected boolean sendOnly;
     protected T request;
     protected R response;
@@ -33,9 +31,10 @@ public abstract class Request<T, R> implements Callback<R> {
         this.request = request;
     }
 
+
     public Request(T request, boolean sendOnly) {
-        this.request = request;
         this.sendOnly = sendOnly;
+        this.request = request;
     }
 
     public Request(T request, R response) {
@@ -43,7 +42,8 @@ public abstract class Request<T, R> implements Callback<R> {
         this.response = response;
     }
 
-    public abstract byte[] encode(T request) throws SerializeException;
 
-    public abstract R decode(byte[] response) throws SerializeException;
+    public abstract byte[] encode(Message message) throws Exception;
+
+    public abstract void decode(Message message) throws Exception;
 }

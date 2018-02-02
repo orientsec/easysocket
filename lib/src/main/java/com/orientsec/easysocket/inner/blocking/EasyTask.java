@@ -5,9 +5,6 @@ import com.orientsec.easysocket.Message;
 import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.Task;
 import com.orientsec.easysocket.TaskType;
-import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.exception.SerializeException;
-import com.orientsec.easysocket.utils.Logger;
 
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -20,8 +17,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * coding is art not science
  */
 
-class EasyTask<T, R> implements Task, Callback<Message> {
-    private static AtomicInteger id = new AtomicInteger(1);
+class EasyTask<T, R> implements Task<R>, Callback<Message> {
+
     /**
      * Task状态，总共有4种状态
      * 0 初始状态
@@ -32,6 +29,7 @@ class EasyTask<T, R> implements Task, Callback<Message> {
     private AtomicInteger state = new AtomicInteger();
     private Message message;
     private Request<T, R> request;
+    private Callback<R> callback;
     private TaskType taskType;
     private SocketConnection connection;
     Future<Void> timeoutFuture;
@@ -42,7 +40,6 @@ class EasyTask<T, R> implements Task, Callback<Message> {
         taskType = request.isSendOnly() ? TaskType.SEND_ONLY : TaskType.NORMAL;
         message = new Message();
         message.setBody(request.getRequest());
-        message.setTaskId(id.incrementAndGet());
     }
 
     /**
@@ -64,16 +61,17 @@ class EasyTask<T, R> implements Task, Callback<Message> {
     }
 
     @Override
-    public void execute() {
+    public void execute(Callback<R> callback) {
         if (!state.compareAndSet(0, 1)) {
             throw new IllegalStateException("Task has already executed!");
         }
+        this.callback = callback;
         try {
-            byte[] data = request.encode((T) message.getBody());
+            byte[] data = request.encode(message);
             message.setBodyBytes(data);
             message.setBodySize(data.length);
             connection.taskExecutor().execute(this);
-        } catch (SerializeException e) {
+        } catch (Exception e) {
             onError(e);
         }
 
@@ -92,7 +90,6 @@ class EasyTask<T, R> implements Task, Callback<Message> {
             taskEnd();
             onCancel();
         }
-
     }
 
     @Override
@@ -101,14 +98,14 @@ class EasyTask<T, R> implements Task, Callback<Message> {
     }
 
     @Override
-    public void onSuccess(Message res) {
+    public void onSuccess(Message message) {
         if (state.compareAndSet(1, 2)) {
             taskEnd();
             try {
-                R r = request.decode(res.getBodyBytes());
-                connection.options().getDispatchExecutor().execute(() -> request.onSuccess(r));
-            } catch (SerializeException e) {
-                connection.options().getDispatchExecutor().execute(() -> request.onError(e));
+                request.decode(message);
+                connection.options().getDispatchExecutor().execute(() -> callback.onSuccess(request.getResponse()));
+            } catch (Exception e) {
+                connection.options().getDispatchExecutor().execute(() -> callback.onError(e));
             }
         }
     }
@@ -117,21 +114,21 @@ class EasyTask<T, R> implements Task, Callback<Message> {
     public void onSuccess() {
         if (state.compareAndSet(1, 2)) {
             taskEnd();
-            connection.options().getDispatchExecutor().execute(request::onSuccess);
+            connection.options().getDispatchExecutor().execute(callback::onSuccess);
         }
     }
 
     @Override
-    public void onError(EasyException e) {
+    public void onError(Exception e) {
         if (state.compareAndSet(1, 2)) {
             taskEnd();
-            connection.options().getDispatchExecutor().execute(() -> request.onError(e));
+            connection.options().getDispatchExecutor().execute(() -> callback.onError(e));
         }
     }
 
     @Override
     public void onCancel() {
-        connection.options().getDispatchExecutor().execute(request::onCancel);
+        connection.options().getDispatchExecutor().execute(callback::onCancel);
     }
 
     private void taskEnd() {

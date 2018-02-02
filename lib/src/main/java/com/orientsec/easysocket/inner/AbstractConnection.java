@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * coding is art not science
  */
 public abstract class AbstractConnection implements Connection, ConnectionManager.OnNetworkStateChangedListener {
-    protected final Object lock = new byte[0];
     /**
      * 0 空闲状态 0 -> 1; 0 -> 4
      * 1 连接中 1 -> 0; 1 -> 2; 1 -> 4
@@ -41,11 +40,11 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
      */
     protected AtomicInteger state = new AtomicInteger();
 
-    protected volatile boolean sleep;
+    private volatile long timestamp;
 
     private Set<ConnectEventListener> connectEventListeners = Collections.synchronizedSet(new HashSet<>());
 
-    private Reconnection reconnection;
+    private Connector connector;
 
     protected ConnectionInfo connectionInfo;
 
@@ -55,7 +54,6 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
 
     private ScheduledExecutorService executorService;
 
-    private Future<?> disconnectTask;
 
     public Options options() {
         return options;
@@ -65,7 +63,7 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
         this.options = options;
         executorService = options.getExecutorService();
         pulse = new Pulse(this);
-        reconnection = new Reconnection();
+        connector = new Connector();
         connectionInfo = options.getConnectionInfo();
     }
 
@@ -102,16 +100,13 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
     public void shutdown() {
         int currentState = state.getAndSet(4);
         if (currentState != 4) {
+            connector.stopDisconnect();
+            connector.stopReconnect();
             ConnectionManager.getInstance().removeConnection(this);
-
         }
         if (currentState == 2) {
             doOnDisconnect();
         }
-        /*if (currentState == 1) {
-            reconnection.stopReconnect();
-        }*/
-        executorService.shutdownNow();
     }
 
     public void connect() {
@@ -137,14 +132,12 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
     protected void doOnDisconnect() {
         //停止心跳
         pulse.stop();
-        //取消断开连接的任务
-        //cancelDisconnectTask();
     }
 
 
     protected void sendDisconnectEvent() {
         Logger.i("connection is disconnected!");
-        reconnection.onDisconnect();
+        connector.onDisconnect();
         if (connectEventListeners.size() > 0) {
             options.getDispatchExecutor().execute(() -> {
                 for (ConnectEventListener listener : connectEventListeners) {
@@ -156,7 +149,7 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
 
     protected void sendConnectEvent() {
         Logger.i("connection is established!");
-        reconnection.onConnect();
+        connector.onConnect();
         if (connectEventListeners.size() > 0) {
             options.getDispatchExecutor().execute(() -> {
                 for (ConnectEventListener listener : connectEventListeners) {
@@ -168,7 +161,7 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
 
     protected void sendConnectFailedEvent() {
         Logger.i("connection fail to establish!");
-        reconnection.onConnectFailed();
+        connector.onConnectFailed();
         if (connectEventListeners.size() > 0) {
             options.getDispatchExecutor().execute(() -> {
                 for (ConnectEventListener listener : connectEventListeners) {
@@ -181,45 +174,32 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
     @Override
     public void onNetworkStateChanged(boolean available) {
         if (available) {
-            reconnection.reset();
-            reconnection.reconnectDelay(1);
+            connector.reset();
+            connector.reconnectDelay(1);
         } else {
             disconnect();
         }
     }
 
-    public synchronized void setBackground() {
-        cancelDisconnectTask();
-        if (!isShutdown() && options.getLivePolicy() != LivePolicy.STRONG) {
-            disconnectTask = executorService.schedule(() -> {
-                if (ConnectionManager.getInstance().isBackground()) {
-                    Logger.i("connection is set to background");
-                    synchronized (lock) {
-                        sleep = true;
-                        reconnection.stopReconnect();
-                        disconnect();
-                    }
-                }
-                disconnectTask = null;
-            }, options.getBackgroundLiveTime(), TimeUnit.SECONDS);
-        }
+    public void setBackground() {
+        timestamp = System.currentTimeMillis();
+        connector.disconnectDelay();
     }
 
-    private void cancelDisconnectTask() {
-        if (disconnectTask != null) {
-            disconnectTask.cancel(true);
-            disconnectTask = null;
-        }
-    }
 
-    public synchronized void setForeground() {
-        sleep = false;
-        cancelDisconnectTask();
+    public void setForeground() {
+        timestamp = 0;
         pulse.pulseOnce();
+        connector.stopDisconnect();
+    }
+
+    private boolean isSleep() {
+        return timestamp != 0 && System.currentTimeMillis() - timestamp > options.getBackgroundLiveTime() * 1000;
     }
 
 
-    private class Reconnection implements ConnectEventListener {
+    private class Connector implements ConnectEventListener {
+        private final Object lock = new byte[0];
         /**
          * 默认重连时间(后面会以指数次增加)
          */
@@ -241,7 +221,9 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
          */
         private int backUpIndex = -1;
 
-        private volatile Future<?> reconnectTask;
+        private Future<?> reconnectTask;
+
+        private Future<?> disconnectTask;
 
         @Override
         public void onDisconnect() {
@@ -253,6 +235,9 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
         @Override
         public void onConnect() {
             reset();
+            if (isSleep()) {
+                disconnectDelay();
+            }
         }
 
         @Override
@@ -281,9 +266,11 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
         }
 
         private void stopReconnect() {
-            if (reconnectTask != null) {
-                reconnectTask.cancel(true);
-                reconnectTask = null;
+            synchronized (lock) {
+                if (reconnectTask != null) {
+                    reconnectTask.cancel(true);
+                    reconnectTask = null;
+                }
             }
         }
 
@@ -294,18 +281,44 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
         }
 
         private void reconnectDelay(int second) {
+            if (state.get() != 0 || isSleep()) {
+                return;
+            }
             synchronized (lock) {
-                if (state.get() == 0 && !sleep) {
-                    stopReconnect();
-                    Logger.i(" reconnect after " + second + " seconds...");
-                    reconnectTask = executorService.schedule(() -> {
-                        if (!sleep) {
-                            connect();
-                        }
-                        reconnectTask = null;
-                    }, second, TimeUnit.SECONDS);
-                }
+                stopReconnect();
+                Logger.i(" reconnect after " + second + " seconds...");
+                reconnectTask = executorService.schedule(() -> {
+                    if (!isSleep()) {
+                        connect();
+                    }
+                    reconnectTask = null;
+                }, second, TimeUnit.SECONDS);
+            }
+        }
 
+        private void stopDisconnect() {
+            synchronized (lock) {
+                if (disconnectTask != null) {
+                    disconnectTask.cancel(true);
+                    disconnectTask = null;
+                }
+            }
+        }
+
+        private void disconnectDelay() {
+            if (isShutdown() || options.getLivePolicy() != LivePolicy.STRONG) {
+                return;
+            }
+            synchronized (lock) {
+                stopDisconnect();
+                disconnectTask = executorService.schedule(() -> {
+                    if (isSleep()) {
+                        Logger.i("will disconnect, state: sleep");
+                        stopReconnect();
+                        disconnect();
+                    }
+                    disconnectTask = null;
+                }, options.getBackgroundLiveTime(), TimeUnit.SECONDS);
             }
         }
     }

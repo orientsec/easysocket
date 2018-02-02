@@ -50,7 +50,7 @@ public class SocketConnection extends AbstractConnection {
     }
 
     @Override
-    public <T, R> Task buildTask(Request<T, R> request) {
+    public <T, R> Task<R> buildTask(Request<T, R> request) {
         return new EasyTask<>(request, this);
     }
 
@@ -100,15 +100,7 @@ public class SocketConnection extends AbstractConnection {
                 writer.start();
                 reader.start();
                 if (state.compareAndSet(1, 2)) {
-                    if (sleep) {
-                        synchronized (lock) {
-                            if (isConnect()) {
-                                setBackground();
-                            }
-                        }
-                    } else {
-                        sendConnectEvent();
-                    }
+                    sendConnectEvent();
                 } else {
                     //关闭socket
                     closeSocketAndTasks();

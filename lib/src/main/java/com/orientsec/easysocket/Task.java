@@ -8,17 +8,17 @@ package com.orientsec.easysocket;
  * coding is art not science
  */
 
-public interface Task {
+public interface Task<T> {
 
     /**
      * Asynchronously send the request and notify {@code callback} of its response or if an error
      * occurred talking to the server, creating the request, or processing the response.
      */
-    void execute();
+    void execute(Callback<T> callback);
 
 
     /**
-     * Returns true if this call has been {@linkplain #execute() executed}.
+     * Returns true if this call has been {@linkplain #execute(Callback callback) executed}.
      * It is an error to execute or enqueue a call more than once.
      */
     boolean isExecuted();

@@ -38,7 +38,7 @@ public interface Connection {
      * @param request 请求
      * @return 任务
      */
-    <T, R> Task buildTask(Request<T, R> request);
+    <T, R> Task<R> buildTask(Request<T, R> request);
 
     /**
      * 添加连接事件监听器

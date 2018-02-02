@@ -1,8 +1,6 @@
 package com.orientsec.easysocket;
 
-import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.exception.ReadException;
-import com.orientsec.easysocket.exception.SerializeException;
 import com.orientsec.easysocket.exception.WriteException;
 import com.orientsec.easysocket.inner.MessageType;
 import com.orientsec.easysocket.utils.TaskAdapter;
@@ -23,7 +21,7 @@ public class Client {
     private static class MyProtocol implements Protocol {
         @Override
         public int headSize() {
-            return 8;
+            return 12;
         }
 
         @Override
@@ -35,12 +33,13 @@ public class Client {
         @Override
         public Message decodeMessage(byte[] header, byte[] bodyBytes) throws ReadException {
             ByteBuffer byteBuffer = ByteBuffer.wrap(header);
-            Message message = new Message();
+            Message message = new Message(0);
             message.setHeadBytes(header);
             message.setBodySize(byteBuffer.getInt());
             message.setTaskId(byteBuffer.getInt());
+            message.setCmd(byteBuffer.getInt());
             message.setBodyBytes(bodyBytes);
-            if (message.getTaskId() == 0) {
+            if (message.getCmd() == 0) {
                 message.setMessageType(MessageType.PULSE);
             }
             return message;
@@ -48,9 +47,10 @@ public class Client {
 
         @Override
         public byte[] encodeMessage(Message message) throws WriteException {
-            ByteBuffer byteBuffer = ByteBuffer.allocate(8);
+            ByteBuffer byteBuffer = ByteBuffer.allocate(12);
             byteBuffer.putInt(message.getBodySize());
             byteBuffer.putInt(message.getTaskId());
+            byteBuffer.putInt(message.getCmd());
             byte[] head = byteBuffer.array();
             byte[] body = message.getBodyBytes();
             byte[] sendBytes = new byte[head.length + body.length];
@@ -60,11 +60,9 @@ public class Client {
         }
 
         @Override
-        public byte[] pulseData() {
-            ByteBuffer byteBuffer = ByteBuffer.allocate(8);
-            byteBuffer.putInt(0);
-            byteBuffer.putInt(0);
-            return byteBuffer.array();
+        public byte[] pulseData(Message message) {
+            message.setCmd(0);
+            return new byte[0];
         }
     }
 
@@ -90,36 +88,18 @@ public class Client {
     }
 
     public Observable<String> request(String msg) {
-        return TaskAdapter.buildObservable(new Request<String, String>(msg) {
+        Task<String> task = connection.buildTask(new Request<String, String>(msg) {
             @Override
-            public byte[] encode(String message) {
-                return message.getBytes();
+            public byte[] encode(Message message) {
+                message.setCmd(1);
+                return msg.getBytes();
             }
 
             @Override
-            public String decode(byte[] response) throws SerializeException {
-                return new String(response);
+            public void decode(Message message) {
+                this.response = new String(message.getBodyBytes());
             }
-
-            @Override
-            public void onSuccess(String res) {
-
-            }
-
-            @Override
-            public void onSuccess() {
-
-            }
-
-            @Override
-            public void onError(EasyException e) {
-
-            }
-
-            @Override
-            public void onCancel() {
-
-            }
-        }, connection);
+        });
+        return TaskAdapter.adapter(task);
     }
 }

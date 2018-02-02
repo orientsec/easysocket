@@ -16,11 +16,13 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
         int id = msg.readInt();
-        if (id == 0) {
+        int cmd = msg.readInt();
+        if (cmd == 0) {
             System.out.println("receive heart beat");
             ByteBuf resBuf = Unpooled.buffer();
             resBuf.writeInt(0);
             resBuf.writeInt(id);
+            resBuf.writeInt(cmd);
             ctx.writeAndFlush(resBuf);
         } else {
             byte[] data = new byte[msg.readableBytes()];
@@ -32,6 +34,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
             byte[] resData = res.getBytes();
             resBuf.writeInt(resData.length);
             resBuf.writeInt(id);
+            resBuf.writeInt(cmd);
             resBuf.writeBytes(resData);
             ctx.writeAndFlush(resBuf);
         }

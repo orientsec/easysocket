@@ -24,8 +24,6 @@ public class Pulse implements Runnable {
 
     private AtomicInteger lostTimes = new AtomicInteger();
 
-    private Message pulseMessage;
-
     Pulse(AbstractConnection context) {
         this.context = context;
     }
@@ -39,18 +37,13 @@ public class Pulse implements Runnable {
         int rate = options.getPulseRate();
         future = options.getExecutorService()
                 .scheduleAtFixedRate(this, rate, rate, TimeUnit.SECONDS);
-        pulseMessage = new Message();
-        pulseMessage.setMessageType(MessageType.PULSE);
-        pulseMessage.setBodyBytes(options.getProtocol().pulseData());
+
     }
 
     synchronized void stop() {
         if (future != null) {
             future.cancel(false);
             future = null;
-        }
-        if (pulseMessage != null) {
-            pulseMessage = null;
         }
         lostTimes.set(0);
     }
@@ -69,10 +62,11 @@ public class Pulse implements Runnable {
             Logger.w("pulse failed times up, invalid connection!");
             context.disconnect();
         } else {
-            Message message = pulseMessage;
-            if (message != null) {
-                context.onPulse(message);
-            }
+            Message message = new Message();
+            byte[] data = context.options.getProtocol().pulseData(message);
+            message.setBody(data);
+            message.setBodySize(data.length);
+            context.onPulse(message);
         }
     }
 }

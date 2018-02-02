@@ -27,8 +27,6 @@ public class ConnectionManager {
 
     private Application application;
 
-    private volatile boolean background;
-
     private List<AbstractConnection> connections = new ArrayList<>();
 
     private static class InstanceHolder {
@@ -59,10 +57,6 @@ public class ConnectionManager {
         }*/
     }
 
-    public boolean isBackground() {
-        return background;
-    }
-
     public void removeConnection(AbstractConnection connection) {
         connections.remove(connection);
     }
@@ -76,7 +70,6 @@ public class ConnectionManager {
         @Override
         public synchronized void onActivityStarted(Activity activity) {
             if (count == 0) {
-                background = false;
                 for (AbstractConnection connection : connections) {
                     connection.setForeground();
                 }
@@ -98,7 +91,6 @@ public class ConnectionManager {
         public synchronized void onActivityStopped(Activity activity) {
             count--;
             if (count == 0) {
-                background = true;
                 for (AbstractConnection connection : connections) {
                     connection.setBackground();
                 }

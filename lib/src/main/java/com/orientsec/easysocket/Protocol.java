@@ -49,5 +49,5 @@ public interface Protocol {
      *
      * @return 心跳消息
      */
-    byte[] pulseData();
+    byte[] pulseData(Message message);
 }

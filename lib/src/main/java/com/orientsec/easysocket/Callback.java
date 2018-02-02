@@ -30,7 +30,7 @@ public interface Callback<T> {
      *
      * @param e 异常
      */
-    void onError(EasyException e);
+    void onError(Exception e);
 
     /**
      * 取消回调

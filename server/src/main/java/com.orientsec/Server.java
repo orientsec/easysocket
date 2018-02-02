@@ -43,7 +43,7 @@ public class Server {
 
         @Override
         protected void initChannel(T channel) throws Exception {
-            channel.pipeline().addLast(new LengthFieldBasedFrameDecoder(200 * 1024, 0, 4, 4, 4));
+            channel.pipeline().addLast(new LengthFieldBasedFrameDecoder(200 * 1024, 0, 4, 8, 4));
             channel.pipeline().addLast(new ServerHandler());
         }
 

@@ -6,7 +6,6 @@ import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.exception.WriteException;
 import com.orientsec.easysocket.inner.AbstractConnection;
 import com.orientsec.easysocket.inner.Looper;
-import com.orientsec.easysocket.inner.MessageType;
 import com.orientsec.easysocket.inner.Writer;
 import com.orientsec.easysocket.utils.Logger;
 
@@ -36,20 +35,19 @@ public class BlockingWriter extends Looper implements Writer {
     public void write() throws IOException {
         try {
             Message message = connection.taskExecutor().getMessageQueue().take();
-            if (message.getMessageType() == MessageType.PULSE) {
-                mOutputStream.write(message.getBodyBytes());
+            //if (message.getMessageType() == MessageType.PULSE) {
+            //    mOutputStream.write(message.getBodyBytes());
+            //    mOutputStream.flush();
+            //} else {
+            try {
+                byte[] data = options.getProtocol().encodeMessage(message);
+                mOutputStream.write(data);
                 mOutputStream.flush();
-            } else {
-                try {
-                    byte[] data = options.getProtocol().encodeMessage(message);
-                    mOutputStream.write(data);
-                    mOutputStream.flush();
-                    connection.taskExecutor().onSend(message);
-                } catch (WriteException e) {
-                    connection.taskExecutor().onSendError(message, e);
-                }
-
+                connection.taskExecutor().onSend(message);
+            } catch (WriteException e) {
+                connection.taskExecutor().onSendError(message, e);
             }
+            //}
 
         } catch (InterruptedException e) {
             //ignore;

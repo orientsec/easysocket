@@ -2,6 +2,8 @@ package com.orientsec.easysocket;
 
 import com.orientsec.easysocket.inner.MessageType;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket
@@ -11,6 +13,16 @@ import com.orientsec.easysocket.inner.MessageType;
  */
 
 public class Message {
+    private static AtomicInteger id = new AtomicInteger();
+
+    public Message() {
+        this.taskId = id.incrementAndGet();
+    }
+
+    public Message(int id) {
+        this.taskId = id;
+    }
+
     /**
      * 消息id
      */

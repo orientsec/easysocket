@@ -1,10 +1,7 @@
 package com.orientsec.easysocket.utils;
 
-import com.orientsec.easysocket.Connection;
-import com.orientsec.easysocket.Request;
+import com.orientsec.easysocket.Callback;
 import com.orientsec.easysocket.Task;
-import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.exception.SerializeException;
 
 import io.reactivex.Observable;
 import io.reactivex.Observer;
@@ -21,49 +18,23 @@ import io.reactivex.plugins.RxJavaPlugins;
  * coding is art not science
  */
 public class TaskAdapter {
-    public static <T, R> Observable<R> buildObservable(Request<T, R> request, Connection connection) {
-        return new TaskObservable<>(request, connection);
+    public static <T> Observable<T> adapter(Task<T> task) {
+        return new TaskObservable<>(task);
     }
 
-    private static class TaskObservable<T, R> extends Observable<R> {
-        private Request<T, R> delegate;
-        private Task task;
-        private volatile Observer<? super R> observer;
+    private static class TaskObservable<T> extends Observable<T> {
+        private Task<T> task;
+        private Observer<? super T> observer;
 
-        TaskObservable(Request<T, R> request, Connection connection) {
-            this.delegate = request;
-            task = connection.buildTask(new AdapterRequest());
+        TaskObservable(Task<T> task) {
+            this.task = task;
         }
 
-        class AdapterRequest extends Request<T, R> {
-            @Override
-            public boolean isSendOnly() {
-                return delegate.isSendOnly();
-            }
+        class AdapterCallback implements Callback<T> {
 
             @Override
-            public T getRequest() {
-                return delegate.getRequest();
-            }
-
-            @Override
-            public R getResponse() {
-                return delegate.getResponse();
-            }
-
-            @Override
-            public byte[] encode(T request) throws SerializeException {
-                return delegate.encode(request);
-            }
-
-            @Override
-            public R decode(byte[] response) throws SerializeException {
-                return delegate.decode(response);
-            }
-
-            @Override
-            public void onSuccess(R res) {
-                if (!task.isCanceled() && observer != null) {
+            public void onSuccess(T res) {
+                if (!task.isCanceled()) {
                     try {
                         observer.onNext(res);
                         observer.onComplete();
@@ -76,7 +47,7 @@ public class TaskAdapter {
 
             @Override
             public void onSuccess() {
-                if (!task.isCanceled() && observer != null) {
+                if (!task.isCanceled()) {
                     try {
                         observer.onNext(null);
                         observer.onComplete();
@@ -88,8 +59,8 @@ public class TaskAdapter {
             }
 
             @Override
-            public void onError(EasyException e) {
-                if (!task.isCanceled() && observer != null) {
+            public void onError(Exception e) {
+                if (!task.isCanceled()) {
                     try {
                         observer.onError(e);
                     } catch (Throwable inner) {
@@ -101,23 +72,21 @@ public class TaskAdapter {
 
             @Override
             public void onCancel() {
-                if (observer != null) {
-                    try {
-                        observer.onComplete();
-                        observer = null;
-                    } catch (Throwable inner) {
-                        Exceptions.throwIfFatal(inner);
-                        RxJavaPlugins.onError(inner);
-                    }
+                try {
+                    observer.onComplete();
+                } catch (Throwable inner) {
+                    Exceptions.throwIfFatal(inner);
+                    RxJavaPlugins.onError(inner);
                 }
             }
         }
 
+
         @Override
-        protected void subscribeActual(Observer<? super R> observer) {
+        protected void subscribeActual(Observer<? super T> observer) {
             this.observer = observer;
             observer.onSubscribe(new TaskDisposable(task));
-            task.execute();
+            task.execute(new AdapterCallback());
         }
 
         private final class TaskDisposable implements Disposable {
@@ -129,7 +98,6 @@ public class TaskAdapter {
 
             @Override
             public void dispose() {
-                observer = null;
                 task.cancel();
             }
 
