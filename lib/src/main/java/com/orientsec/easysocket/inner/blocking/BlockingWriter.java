@@ -2,6 +2,7 @@ package com.orientsec.easysocket.inner.blocking;
 
 import com.orientsec.easysocket.Message;
 import com.orientsec.easysocket.Options;
+import com.orientsec.easysocket.exception.AuthorizeException;
 import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.exception.WriteException;
 import com.orientsec.easysocket.inner.AbstractConnection;
@@ -11,6 +12,7 @@ import com.orientsec.easysocket.utils.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Product: EasySocket
@@ -21,42 +23,52 @@ import java.io.OutputStream;
  */
 public class BlockingWriter extends Looper implements Writer {
     private Options options;
-
     private OutputStream mOutputStream;
-
     private SocketConnection connection;
+    private LinkedBlockingQueue<Message> messageQueue;
+    private Authorize authorize;
 
-    public BlockingWriter(AbstractConnection context) {
+    BlockingWriter(AbstractConnection context) {
+        this(context, null);
+    }
+
+    BlockingWriter(AbstractConnection context, Authorize authorize) {
+        this.authorize = authorize;
         this.connection = (SocketConnection) context;
         options = context.options();
+        messageQueue = connection.taskExecutor().getMessageQueue();
+    }
+
+    private void write(Message message) throws IOException {
+        try {
+            byte[] data = options.getProtocol().encodeMessage(message);
+            mOutputStream.write(data);
+            mOutputStream.flush();
+            connection.taskExecutor().onSend(message);
+        } catch (WriteException e) {
+            connection.taskExecutor().onSendError(message, e);
+        }
     }
 
     @Override
     public void write() throws IOException {
         try {
-            Message message = connection.taskExecutor().getMessageQueue().take();
-            //if (message.getMessageType() == MessageType.PULSE) {
-            //    mOutputStream.write(message.getBodyBytes());
-            //    mOutputStream.flush();
-            //} else {
-            try {
-                byte[] data = options.getProtocol().encodeMessage(message);
-                mOutputStream.write(data);
-                mOutputStream.flush();
-                connection.taskExecutor().onSend(message);
-            } catch (WriteException e) {
-                connection.taskExecutor().onSendError(message, e);
-            }
-            //}
-
+            Message message = messageQueue.take();
+            write(message);
         } catch (InterruptedException e) {
             //ignore;
         }
     }
 
     @Override
-    protected void beforeLoop() throws IOException {
+    protected void beforeLoop() throws IOException, EasyException {
         mOutputStream = connection.socket().getOutputStream();
+        if (authorize != null) {
+            write(authorize.authorizeMessage());
+            if (!authorize.waitForAuthorize()) {
+                throw new AuthorizeException();
+            }
+        }
     }
 
     @Override

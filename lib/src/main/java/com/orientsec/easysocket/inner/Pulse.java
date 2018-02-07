@@ -64,9 +64,11 @@ public class Pulse implements Runnable {
         } else {
             Message message = new Message();
             byte[] data = context.options.getProtocol().pulseData(message);
-            message.setBody(data);
-            message.setBodySize(data.length);
-            context.onPulse(message);
+            if (data != null) {
+                message.setBodyBytes(data);
+                message.setBodySize(data.length);
+                context.onPulse(message);
+            }
         }
     }
 }

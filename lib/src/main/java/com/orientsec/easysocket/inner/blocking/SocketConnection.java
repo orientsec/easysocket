@@ -95,8 +95,14 @@ public class SocketConnection extends AbstractConnection {
             } else {
                 //启动心跳及读写线程
                 pulse.start();
-                writer = new BlockingWriter(SocketConnection.this);
-                reader = new BlockingReader(SocketConnection.this);
+                if (options.getProtocol().needAuthorize()) {
+                    Authorize authorize = new Authorize(this);
+                    writer = new BlockingWriter(this, authorize);
+                    reader = new BlockingReader(this, authorize);
+                } else {
+                    writer = new BlockingWriter(this);
+                    reader = new BlockingReader(this);
+                }
                 writer.start();
                 reader.start();
                 if (state.compareAndSet(1, 2)) {
@@ -105,11 +111,8 @@ public class SocketConnection extends AbstractConnection {
                     //关闭socket
                     closeSocketAndTasks();
                 }
-
             }
-
         });
-
     }
 
     private void closeSocketAndTasks() {

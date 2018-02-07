@@ -5,6 +5,7 @@ import com.orientsec.easysocket.Message;
 import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.Task;
 import com.orientsec.easysocket.TaskType;
+import com.orientsec.easysocket.inner.MessageType;
 
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -40,6 +41,7 @@ class EasyTask<T, R> implements Task<R>, Callback<Message> {
         taskType = request.isSendOnly() ? TaskType.SEND_ONLY : TaskType.NORMAL;
         message = new Message();
         message.setBody(request.getRequest());
+        message.setMessageType(MessageType.REQUEST);
     }
 
     /**
@@ -68,6 +70,9 @@ class EasyTask<T, R> implements Task<R>, Callback<Message> {
         this.callback = callback;
         try {
             byte[] data = request.encode(message);
+            if (data == null) {
+                data = new byte[0];
+            }
             message.setBodyBytes(data);
             message.setBodySize(data.length);
             connection.taskExecutor().execute(this);

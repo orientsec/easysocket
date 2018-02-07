@@ -12,7 +12,7 @@ public enum MessageType {
     /**
      * 请求返回消息
      */
-    RESPONSE,
+    REQUEST,
     /**
      * 推送消息
      */
@@ -20,5 +20,9 @@ public enum MessageType {
     /**
      * 心跳
      */
-    PULSE
+    PULSE,
+    /**
+     * 授权
+     */
+    AUTH
 }

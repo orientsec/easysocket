@@ -19,6 +19,8 @@ import io.reactivex.Observable;
 public class Client {
 
     private static class MyProtocol implements Protocol {
+        private int id;
+
         @Override
         public int headSize() {
             return 12;
@@ -41,16 +43,21 @@ public class Client {
             message.setBodyBytes(bodyBytes);
             if (message.getCmd() == 0) {
                 message.setMessageType(MessageType.PULSE);
+            } else if (message.getCmd() == 1) {
+                message.setMessageType(MessageType.AUTH);
+            } else {
+                message.setMessageType(MessageType.REQUEST);
             }
             return message;
         }
 
         @Override
         public byte[] encodeMessage(Message message) throws WriteException {
-            ByteBuffer byteBuffer = ByteBuffer.allocate(12);
+            ByteBuffer byteBuffer = ByteBuffer.allocate(16);
             byteBuffer.putInt(message.getBodySize());
             byteBuffer.putInt(message.getTaskId());
             byteBuffer.putInt(message.getCmd());
+            byteBuffer.putInt(id);
             byte[] head = byteBuffer.array();
             byte[] body = message.getBodyBytes();
             byte[] sendBytes = new byte[head.length + body.length];
@@ -63,6 +70,23 @@ public class Client {
         public byte[] pulseData(Message message) {
             message.setCmd(0);
             return new byte[0];
+        }
+
+        @Override
+        public boolean authorize(Message message) {
+            id = ByteBuffer.wrap(message.getBodyBytes()).getInt();
+            return true;
+        }
+
+        @Override
+        public byte[] authorizeData(Message message) {
+            message.setCmd(1);
+            return new byte[0];
+        }
+
+        @Override
+        public boolean needAuthorize() {
+            return true;
         }
     }
 
@@ -91,7 +115,7 @@ public class Client {
         Task<String> task = connection.buildTask(new Request<String, String>(msg) {
             @Override
             public byte[] encode(Message message) {
-                message.setCmd(1);
+                message.setCmd(2);
                 return msg.getBytes();
             }
 

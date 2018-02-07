@@ -5,6 +5,7 @@ import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Protocol;
 import com.orientsec.easysocket.exception.ReadException;
 import com.orientsec.easysocket.inner.Looper;
+import com.orientsec.easysocket.inner.MessageType;
 import com.orientsec.easysocket.inner.Reader;
 import com.orientsec.easysocket.utils.Logger;
 
@@ -25,9 +26,16 @@ public class BlockingReader extends Looper implements Reader {
 
     private SocketConnection connection;
 
-    public BlockingReader(SocketConnection connection) {
+    private Authorize authorize;
+
+    BlockingReader(SocketConnection connection, Authorize authorize) {
+        this.authorize = authorize;
         this.connection = connection;
         options = connection.options();
+    }
+
+    BlockingReader(SocketConnection connection) {
+        this(connection, null);
     }
 
     @Override
@@ -46,17 +54,25 @@ public class BlockingReader extends Looper implements Reader {
             byte[] data = new byte[bodyLength];
             readInputStream(inputStream, data);
             Message message = protocol.decodeMessage(headBytes, data);
-            connection.taskExecutor().onReceive(message);
+            handleMessage(message);
         } else if (bodyLength == 0) {
             Message message = protocol.decodeMessage(headBytes, new byte[0]);
-            connection.taskExecutor().onReceive(message);
+            handleMessage(message);
         } else if (bodyLength < 0) {
             throw new ReadException(
                     "this socket input stream has some problem,wrong body length " + bodyLength
                             + ",we'll disconnect");
         }
+    }
 
-
+    private void handleMessage(Message message) {
+        if (message.getMessageType() == MessageType.AUTH) {
+            if (authorize != null) {
+                authorize.onAuthorize(message);
+            }
+        } else {
+            connection.taskExecutor().onReceive(message);
+        }
     }
 
     private void readInputStream(InputStream inputStream, byte[] data) throws IOException {

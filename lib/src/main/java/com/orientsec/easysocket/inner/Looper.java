@@ -1,6 +1,5 @@
 package com.orientsec.easysocket.inner;
 
-import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.io.IOException;
@@ -54,11 +53,11 @@ public abstract class Looper implements Runnable {
         return loopTimes;
     }
 
-    protected void beforeLoop() throws IOException {
+    protected void beforeLoop() throws Exception {
 
     }
 
-    protected abstract void runInLoopThread() throws IOException, EasyException;
+    protected abstract void runInLoopThread() throws Exception;
 
     protected abstract void loopFinish(Exception e);
 

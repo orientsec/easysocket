@@ -37,7 +37,7 @@ public class BlockingExecutor implements TaskExecutor<EasyTask> {
         return messageQueue;
     }
 
-    public BlockingExecutor(SocketConnection connection) {
+    BlockingExecutor(SocketConnection connection) {
         this.connection = connection;
         pushHandler = connection.options().getPushHandler();
     }
@@ -111,4 +111,6 @@ public class BlockingExecutor implements TaskExecutor<EasyTask> {
         }
         taskMap.clear();
     }
+
+
 }
