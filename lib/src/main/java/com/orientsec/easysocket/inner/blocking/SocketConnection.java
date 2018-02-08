@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
+import javax.net.ssl.SSLContext;
+
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket.inner.blocking
@@ -74,13 +76,18 @@ public class SocketConnection extends AbstractConnection {
             }
             Logger.i("开始连接 " + connectionInfo.getHost() + ":" + connectionInfo.getPort() + " Socket服务器");
             try {
-                socket = new Socket();
+                SSLContext sslContext = options.getProtocol().sslContext();
+                if (sslContext == null) {
+                    socket = new Socket();
+                } else {
+                    socket = sslContext.getSocketFactory().createSocket();
+                }
                 //关闭Nagle算法,无论TCP数据报大小,立即发送
                 socket.setTcpNoDelay(true);
                 socket.setKeepAlive(true);
                 socket.setPerformancePreferences(1, 2, 0);
                 socket.connect(new InetSocketAddress(connectionInfo.getHost(), connectionInfo.getPort()), options.getConnectTimeOut());
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
                 closeSocketAndTasks();
                 if (state.compareAndSet(1, 0)) {

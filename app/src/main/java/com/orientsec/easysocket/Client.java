@@ -7,6 +7,8 @@ import com.orientsec.easysocket.inner.MessageType;
 
 import java.nio.ByteBuffer;
 
+import javax.net.ssl.SSLContext;
+
 import io.reactivex.Observable;
 
 /**
@@ -87,6 +89,11 @@ public class Client {
         @Override
         public boolean needAuthorize() {
             return true;
+        }
+
+        @Override
+        public SSLContext sslContext() throws Exception {
+            return null;
         }
     }
 

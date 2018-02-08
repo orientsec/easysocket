@@ -3,6 +3,8 @@ package com.orientsec.easysocket;
 import com.orientsec.easysocket.exception.ReadException;
 import com.orientsec.easysocket.exception.WriteException;
 
+import javax.net.ssl.SSLContext;
+
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket
@@ -73,4 +75,6 @@ public interface Protocol {
      * @return 是否需要授权
      */
     boolean needAuthorize();
+
+    SSLContext sslContext() throws Exception;
 }
