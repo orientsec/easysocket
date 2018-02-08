@@ -1,9 +1,9 @@
 package com.orientsec.easysocket;
 
+import com.orientsec.easysocket.adapter.TaskAdapter;
 import com.orientsec.easysocket.exception.ReadException;
 import com.orientsec.easysocket.exception.WriteException;
 import com.orientsec.easysocket.inner.MessageType;
-import com.orientsec.easysocket.utils.TaskAdapter;
 
 import java.nio.ByteBuffer;
 
@@ -124,6 +124,6 @@ public class Client {
                 this.response = new String(message.getBodyBytes());
             }
         });
-        return TaskAdapter.adapter(task);
+        return TaskAdapter.toObservable(task);
     }
 }

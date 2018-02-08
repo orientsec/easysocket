@@ -35,10 +35,11 @@ class Authorize {
         Message message = new Message();
         message.setMessageType(MessageType.AUTH);
         byte[] data = protocol.authorizeData(message);
-        if (data != null) {
-            message.setBodyBytes(data);
-            message.setBodySize(data.length);
+        if (data == null) {
+            data = new byte[0];
         }
+        message.setBodyBytes(data);
+        message.setBodySize(data.length);
         return message;
     }
 
