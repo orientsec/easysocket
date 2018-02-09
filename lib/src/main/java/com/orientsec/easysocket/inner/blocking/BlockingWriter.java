@@ -7,6 +7,7 @@ import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.exception.WriteException;
 import com.orientsec.easysocket.inner.AbstractConnection;
 import com.orientsec.easysocket.inner.Looper;
+import com.orientsec.easysocket.inner.MessageType;
 import com.orientsec.easysocket.inner.Writer;
 import com.orientsec.easysocket.utils.Logger;
 
@@ -64,7 +65,7 @@ public class BlockingWriter extends Looper implements Writer {
     protected void beforeLoop() throws IOException, EasyException {
         mOutputStream = connection.socket().getOutputStream();
         if (authorize != null) {
-            write(authorize.authorizeMessage());
+            write(connection.buildMessage(MessageType.AUTH));
             if (!authorize.waitForAuthorize()) {
                 throw new AuthorizeException();
             }
@@ -79,6 +80,7 @@ public class BlockingWriter extends Looper implements Writer {
     @Override
     protected void loopFinish(Exception e) {
         if (e != null) {
+            e.printStackTrace();
             Logger.e("Blocking write error, thread is dead with exception: " + e.getMessage());
         }
         mOutputStream = null;

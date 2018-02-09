@@ -322,4 +322,6 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
             }
         }
     }
+
+    protected abstract Message buildMessage(MessageType messageType);
 }

@@ -5,11 +5,13 @@ import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.Task;
 import com.orientsec.easysocket.inner.AbstractConnection;
+import com.orientsec.easysocket.inner.MessageType;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.ssl.SSLContext;
 
@@ -21,6 +23,7 @@ import javax.net.ssl.SSLContext;
  * coding is art not science
  */
 public class SocketConnection extends AbstractConnection {
+    private AtomicInteger messageId = new AtomicInteger();
 
     private Socket socket;
 
@@ -150,5 +153,10 @@ public class SocketConnection extends AbstractConnection {
             state.compareAndSet(3, 0);
             sendDisconnectEvent();
         });
+    }
+
+    @Override
+    protected Message buildMessage(MessageType messageType) {
+        return new Message(messageType, messageId.incrementAndGet());
     }
 }

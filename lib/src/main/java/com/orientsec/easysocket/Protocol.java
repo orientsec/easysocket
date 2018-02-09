@@ -46,28 +46,14 @@ public interface Protocol {
      */
     byte[] encodeMessage(Message message) throws WriteException;
 
-    /**
-     * 心跳消息体
-     *
-     * @return 心跳消息
-     */
-    byte[] pulseData(Message message);
 
     /**
      * 授权检验过程
      *
-     * @param message 授权消息
+     * @param data 授权消息
      * @return 授权结果
      */
-    boolean authorize(Message message);
-
-    /**
-     * 授权数据包
-     *
-     * @param message 授权消息
-     * @return 授权请求数据包
-     */
-    byte[] authorizeData(Message message);
+    boolean authorize(Object data);
 
     /**
      * 是否需要授权

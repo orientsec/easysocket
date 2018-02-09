@@ -65,7 +65,7 @@ public class BlockingExecutor implements TaskExecutor<EasyTask> {
         } else {
             EasyTask easyTask = taskMap.remove(message.getTaskId());
             if (easyTask != null) {
-                easyTask.onSuccess(message);
+                easyTask.onSuccess(message.getBody());
             }
         }
     }

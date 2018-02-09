@@ -100,6 +100,7 @@ public class BlockingReader extends Looper implements Reader {
     @Override
     protected void loopFinish(Exception e) {
         if (e != null) {
+            e.printStackTrace();
             Logger.e("Blocking read error, thread is dead with exception: " + e.getMessage());
         }
         inputStream = null;

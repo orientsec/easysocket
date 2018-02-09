@@ -10,7 +10,7 @@ package com.orientsec.easysocket.inner;
 
 public enum MessageType {
     /**
-     * 请求返回消息
+     * 请求消息
      */
     REQUEST,
     /**

@@ -8,7 +8,7 @@ package com.orientsec.easysocket;
  * coding is art not science
  */
 public abstract class Request<T, R> {
-    protected boolean sendOnly;
+    private boolean sendOnly;
     protected T request;
     protected R response;
 
@@ -43,7 +43,7 @@ public abstract class Request<T, R> {
     }
 
 
-    public abstract byte[] encode(Message message) throws Exception;
+    public abstract Object encode() throws Exception;
 
-    public abstract void decode(Message message) throws Exception;
+    public abstract R decode(Object data) throws Exception;
 }

@@ -37,31 +37,41 @@ public class Client {
         @Override
         public Message decodeMessage(byte[] header, byte[] bodyBytes) throws ReadException {
             ByteBuffer byteBuffer = ByteBuffer.wrap(header);
-            Message message = new Message(0);
-            message.setHeadBytes(header);
-            message.setBodySize(byteBuffer.getInt());
-            message.setTaskId(byteBuffer.getInt());
-            message.setCmd(byteBuffer.getInt());
-            message.setBodyBytes(bodyBytes);
-            if (message.getCmd() == 0) {
-                message.setMessageType(MessageType.PULSE);
-            } else if (message.getCmd() == 1) {
-                message.setMessageType(MessageType.AUTH);
+            Message message;
+            byteBuffer.getInt();
+            int taskId = byteBuffer.getInt();
+            int cmd = byteBuffer.getInt();
+            if (cmd == 0) {
+                message = new Message(MessageType.PULSE);
+            } else if (cmd == 1) {
+                message = new Message(MessageType.AUTH);
             } else {
-                message.setMessageType(MessageType.REQUEST);
+                message = new Message(MessageType.REQUEST);
             }
+            message.setCmd(cmd);
+            message.setTaskId(taskId);
+            message.setBody(bodyBytes);
             return message;
         }
 
         @Override
         public byte[] encodeMessage(Message message) throws WriteException {
+            byte[] body = (byte[]) message.getBody();
+            if (body == null) {
+                body = new byte[0];
+            }
             ByteBuffer byteBuffer = ByteBuffer.allocate(16);
-            byteBuffer.putInt(message.getBodySize());
+            byteBuffer.putInt(body.length);
             byteBuffer.putInt(message.getTaskId());
-            byteBuffer.putInt(message.getCmd());
+            if (message.getMessageType() == MessageType.PULSE) {
+                byteBuffer.putInt(0);
+            } else if (message.getMessageType() == MessageType.AUTH) {
+                byteBuffer.putInt(1);
+            } else {
+                byteBuffer.putInt(2);
+            }
             byteBuffer.putInt(id);
             byte[] head = byteBuffer.array();
-            byte[] body = message.getBodyBytes();
             byte[] sendBytes = new byte[head.length + body.length];
             System.arraycopy(head, 0, sendBytes, 0, head.length);
             System.arraycopy(body, 0, sendBytes, head.length, body.length);
@@ -69,21 +79,9 @@ public class Client {
         }
 
         @Override
-        public byte[] pulseData(Message message) {
-            message.setCmd(0);
-            return new byte[0];
-        }
-
-        @Override
-        public boolean authorize(Message message) {
-            id = ByteBuffer.wrap(message.getBodyBytes()).getInt();
+        public boolean authorize(Object data) {
+            id = ByteBuffer.wrap((byte[]) data).getInt();
             return true;
-        }
-
-        @Override
-        public byte[] authorizeData(Message message) {
-            message.setCmd(1);
-            return new byte[0];
         }
 
         @Override
@@ -121,14 +119,13 @@ public class Client {
     public Observable<String> request(String msg) {
         Task<String> task = connection.buildTask(new Request<String, String>(msg) {
             @Override
-            public byte[] encode(Message message) {
-                message.setCmd(2);
+            public Object encode() {
                 return msg.getBytes();
             }
 
             @Override
-            public void decode(Message message) {
-                this.response = new String(message.getBodyBytes());
+            public String decode(Object data) {
+                return new String((byte[]) data);
             }
         });
         return TaskAdapter.toObservable(task);

@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * coding is art not science
  */
 
-class EasyTask<T, R> implements Task<R>, Callback<Message> {
+class EasyTask<T, R> implements Task<R>, Callback {
 
     /**
      * Task状态，总共有4种状态
@@ -39,9 +39,7 @@ class EasyTask<T, R> implements Task<R>, Callback<Message> {
         this.request = request;
         this.connection = connection;
         taskType = request.isSendOnly() ? TaskType.SEND_ONLY : TaskType.NORMAL;
-        message = new Message();
-        message.setBody(request.getRequest());
-        message.setMessageType(MessageType.REQUEST);
+        message = connection.buildMessage(MessageType.REQUEST);
     }
 
     /**
@@ -69,12 +67,7 @@ class EasyTask<T, R> implements Task<R>, Callback<Message> {
         }
         this.callback = callback;
         try {
-            byte[] data = request.encode(message);
-            if (data == null) {
-                data = new byte[0];
-            }
-            message.setBodyBytes(data);
-            message.setBodySize(data.length);
+            message.setBody(request.encode());
             connection.taskExecutor().execute(this);
         } catch (Exception e) {
             onError(e);
@@ -103,12 +96,12 @@ class EasyTask<T, R> implements Task<R>, Callback<Message> {
     }
 
     @Override
-    public void onSuccess(Message message) {
+    public void onSuccess(Object data) {
         if (state.compareAndSet(1, 2)) {
             taskEnd();
             try {
-                request.decode(message);
-                connection.options().getDispatchExecutor().execute(() -> callback.onSuccess(request.getResponse()));
+                R response = request.decode(data);
+                connection.options().getDispatchExecutor().execute(() -> callback.onSuccess(response));
             } catch (Exception e) {
                 connection.options().getDispatchExecutor().execute(() -> callback.onError(e));
             }

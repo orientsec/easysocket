@@ -1,6 +1,5 @@
 package com.orientsec.easysocket.inner;
 
-import com.orientsec.easysocket.Message;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.utils.Logger;
 
@@ -62,14 +61,7 @@ public class Pulse implements Runnable {
             Logger.w("pulse failed times up, invalid connection!");
             context.disconnect();
         } else {
-            Message message = new Message();
-            byte[] data = context.options.getProtocol().pulseData(message);
-            if (data == null) {
-                data = new byte[0];
-            }
-            message.setBodyBytes(data);
-            message.setBodySize(data.length);
-            context.onPulse(message);
+            context.onPulse(context.buildMessage(MessageType.PULSE));
         }
     }
 }

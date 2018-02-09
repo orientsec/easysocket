@@ -4,7 +4,6 @@ import com.orientsec.easysocket.Message;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Protocol;
 import com.orientsec.easysocket.inner.AbstractConnection;
-import com.orientsec.easysocket.inner.MessageType;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -30,19 +29,6 @@ class Authorize {
         protocol = options.getProtocol();
     }
 
-
-    Message authorizeMessage() {
-        Message message = new Message();
-        message.setMessageType(MessageType.AUTH);
-        byte[] data = protocol.authorizeData(message);
-        if (data == null) {
-            data = new byte[0];
-        }
-        message.setBodyBytes(data);
-        message.setBodySize(data.length);
-        return message;
-    }
-
     boolean waitForAuthorize() {
         countDownLatch = new CountDownLatch(1);
         try {
@@ -54,7 +40,7 @@ class Authorize {
 
     void onAuthorize(Message message) {
         if (!authorized) {
-            authorized = protocol.authorize(message);
+            authorized = protocol.authorize(message.getBody());
             countDownLatch.countDown();
         }
     }
