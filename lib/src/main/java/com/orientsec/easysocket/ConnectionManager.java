@@ -21,6 +21,8 @@ import java.util.List;
  * Time: 2017/12/27 17:23
  * Author: Fredric
  * coding is art not science
+ * <p>
+ * 连接管理
  */
 public class ConnectionManager {
     private int count;
@@ -40,6 +42,11 @@ public class ConnectionManager {
         return InstanceHolder.INSTANCE;
     }
 
+    /**
+     * 初始化，注册Activity生命周期监听及网络状态监听
+     *
+     * @param application 应用
+     */
     void init(Application application) {
         this.application = application;
         application.registerActivityLifecycleCallbacks(new EasySocketAppLifecycleListener());
@@ -61,6 +68,9 @@ public class ConnectionManager {
         connections.remove(connection);
     }
 
+    /**
+     * Activity生命周期监听。用于控制连接的前后台切换
+     */
     private class EasySocketAppLifecycleListener implements Application.ActivityLifecycleCallbacks {
 
         @Override
@@ -108,6 +118,11 @@ public class ConnectionManager {
         }
     }
 
+    /**
+     * 网络是否可用
+     *
+     * @return 网络是否可用
+     */
     public boolean isNetworkAvailable() {
         ConnectivityManager connectivityManager = (ConnectivityManager) application.getSystemService(Context.CONNECTIVITY_SERVICE);
         // 获取当前网络状态信息
@@ -122,6 +137,9 @@ public class ConnectionManager {
         void onNetworkStateChanged(boolean available);
     }
 
+    /**
+     * 网络状态的广播监听
+     */
     private class NetworkStateReceiver extends BroadcastReceiver {
         private boolean init;
 

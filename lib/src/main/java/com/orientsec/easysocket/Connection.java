@@ -9,7 +9,7 @@ package com.orientsec.easysocket;
  */
 public interface Connection {
     /**
-     * 启动连接
+     * 启动连接, 如果连接以经启动，无效果。
      */
     void start();
 
@@ -35,8 +35,8 @@ public interface Connection {
     /**
      * 创建一个请求任务
      *
-     * @param request 请求
-     * @return 任务
+     * @param request 发往服务端的请求
+     * @return 可执行任务
      */
     <T, R> Task<R> buildTask(Request<T, R> request);
 

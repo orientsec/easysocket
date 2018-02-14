@@ -20,6 +20,9 @@ public abstract class Looper implements Runnable {
 
     private Exception exception;
 
+    /**
+     * 启动
+     */
     public synchronized void start() {
         if (!isStop) {
             String threadName = getClass().getSimpleName();

@@ -16,7 +16,7 @@ public interface ConnectEventListener {
     void onDisconnect();
 
     /**
-     * 当连接连接建立成功后
+     * 连接连接建立成功后的回调
      */
     void onConnect();
 

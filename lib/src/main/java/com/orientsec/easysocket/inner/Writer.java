@@ -10,5 +10,10 @@ import java.io.IOException;
  * coding is art not science
  */
 public interface Writer {
+    /**
+     * 消息写入
+     *
+     * @throws IOException IOException
+     */
     void write() throws IOException;
 }

@@ -62,8 +62,14 @@ public class Options {
      */
     private int maxReadDataKB;
 
+    /**
+     * 请求超时时间 单位秒
+     */
     private int requestTimeOut;
 
+    /**
+     * 连接超时时间 单位秒
+     */
     private int connectTimeOut;
 
     /**
@@ -80,8 +86,14 @@ public class Options {
      */
     private int backgroundLiveTime;
 
+    /**
+     * 后台策略
+     */
     private LivePolicy livePolicy;
 
+    /**
+     * 连接的任务执行器
+     */
     private ScheduledExecutorService executorService;
 
     private Options(Builder builder) {

@@ -12,5 +12,12 @@ import java.io.IOException;
  * coding is art not science
  */
 public interface Reader {
+    /**
+     * 消息写入
+     *
+     * @throws IOException   IOException
+     * @throws ReadException 读异常，发生在{@link com.orientsec.easysocket.Protocol#decodeMessage(byte[], byte[])}
+     *                       过程中
+     */
     void read() throws IOException, ReadException;
 }

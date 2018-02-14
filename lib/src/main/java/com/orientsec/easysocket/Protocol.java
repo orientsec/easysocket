@@ -48,10 +48,10 @@ public interface Protocol {
 
 
     /**
-     * 授权检验过程
+     * 授权检验过程, 可以通过解析{@param data}获取、校验授权数据
      *
-     * @param data 授权消息
-     * @return 授权结果
+     * @param data 从{@link Message#getBody()}获取的授权消息体
+     * @return 授权结果。如果true，保持连接；如果为false，连接立即断开
      */
     boolean authorize(Object data);
 
@@ -62,5 +62,11 @@ public interface Protocol {
      */
     boolean needAuthorize();
 
+    /**
+     * 提供ssl连接的{@link SSLContext}
+     *
+     * @return SSLContext，如果为{@code null},建立普通连接，如果非空，使用SSLContext建立ssl连接
+     * @throws Exception SSLContext创建过程中的异常
+     */
     SSLContext sslContext() throws Exception;
 }

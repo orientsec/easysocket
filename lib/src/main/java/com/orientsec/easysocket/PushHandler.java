@@ -11,7 +11,7 @@ package com.orientsec.easysocket;
  */
 public interface PushHandler {
     /**
-     * 推送消息
+     * 推送消息回调
      *
      * @param id      消息id
      * @param message 消息体

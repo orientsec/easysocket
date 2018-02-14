@@ -1,7 +1,5 @@
 package com.orientsec.easysocket;
 
-import com.orientsec.easysocket.exception.EasyException;
-
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket
@@ -15,6 +13,7 @@ import com.orientsec.easysocket.exception.EasyException;
 public interface Callback<T> {
     /**
      * 成功回调
+     * Task类型为{@linkplain TaskType#NORMAL}
      *
      * @param res 响应消息
      */
@@ -22,6 +21,7 @@ public interface Callback<T> {
 
     /**
      * 成功回调
+     * Task类型为{@linkplain TaskType#SEND_ONLY}
      */
     void onSuccess();
 

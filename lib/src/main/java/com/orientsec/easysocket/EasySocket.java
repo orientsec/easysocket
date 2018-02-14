@@ -1,13 +1,10 @@
 package com.orientsec.easysocket;
 
 import android.app.Application;
-import android.content.Context;
 import android.support.annotation.NonNull;
 
 import com.orientsec.easysocket.inner.blocking.SocketConnection;
 
-import java.net.InetAddress;
-import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -21,6 +18,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class EasySocket {
     private static AtomicBoolean initialized = new AtomicBoolean();
 
+    /**
+     * 初始化，在应用启动时执行
+     *
+     * @param application 应用上下文
+     */
     public static void init(@NonNull Application application) {
         if (!initialized.compareAndSet(false, true)) {
             throw new IllegalStateException("init only once!");
@@ -29,6 +31,12 @@ public class EasySocket {
         ConnectionManager.getInstance().init(application);
     }
 
+    /**
+     * 创建一个{@link Connection}
+     *
+     * @param options 连接设置选项
+     * @return 连接
+     */
     public static Connection open(Options options) {
         SocketConnection connection = new SocketConnection(options);
         ConnectionManager.getInstance().addConnection(connection);
