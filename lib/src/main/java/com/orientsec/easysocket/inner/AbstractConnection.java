@@ -54,7 +54,6 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
 
     private ScheduledExecutorService executorService;
 
-
     public Options options() {
         return options;
     }
@@ -126,6 +125,11 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
      */
     protected abstract void doOnConnect();
 
+    @Override
+    public boolean isAvailable() {
+        return !connector.connectFailed;
+    }
+
     /**
      * 启动断开连接任务,停止心跳、清理连接资源
      */
@@ -157,9 +161,6 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
             options.getDispatchExecutor().execute(() -> {
                 for (ConnectEventListener listener : connectEventListeners) {
                     listener.onDisconnect();
-                    if (!isNetworkAvailable) {
-                        listener.onConnectFailed();
-                    }
                 }
             });
         }
@@ -233,8 +234,11 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
 
         private Future<?> disconnectTask;
 
+        private boolean connectFailed;
+
         @Override
         public void onConnect() {
+            connectFailed = false;
             reset();
             if (isSleep()) {
                 disconnectDelay();
@@ -248,6 +252,7 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
 
         @Override
         public void onConnectFailed() {
+            connectFailed = true;
             //连接失败达到阈值,需要切换备用线路
             if (++connectionFailedTimes >= MAX_CONNECTION_FAILED_TIMES) {
                 reset();

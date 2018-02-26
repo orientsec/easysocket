@@ -33,6 +33,13 @@ public interface Connection {
     boolean isConnect();
 
     /**
+     * 连接是否可达
+     *
+     * @return 是否可达
+     */
+    boolean isAvailable();
+
+    /**
      * 创建一个请求任务
      *
      * @param request 发往服务端的请求
