@@ -134,19 +134,6 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
         pulse.stop();
     }
 
-
-    protected void sendDisconnectEvent() {
-        Logger.i("connection is disconnected!");
-        connector.onDisconnect();
-        if (connectEventListeners.size() > 0) {
-            options.getDispatchExecutor().execute(() -> {
-                for (ConnectEventListener listener : connectEventListeners) {
-                    listener.onDisconnect();
-                }
-            });
-        }
-    }
-
     protected void sendConnectEvent() {
         Logger.i("connection is established!");
         connector.onConnect();
@@ -159,9 +146,30 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
         }
     }
 
+    protected void sendDisconnectEvent() {
+        Logger.i("connection is disconnected!");
+        boolean isNetworkAvailable = ConnectionManager.getInstance().isNetworkAvailable();
+        if (isNetworkAvailable) {
+            connector.onDisconnect();
+        }
+
+        if (connectEventListeners.size() > 0) {
+            options.getDispatchExecutor().execute(() -> {
+                for (ConnectEventListener listener : connectEventListeners) {
+                    listener.onDisconnect();
+                    if (!isNetworkAvailable) {
+                        listener.onConnectFailed();
+                    }
+                }
+            });
+        }
+    }
+
     protected void sendConnectFailedEvent() {
         Logger.i("connection fail to establish!");
-        connector.onConnectFailed();
+        if (ConnectionManager.getInstance().isNetworkAvailable()) {
+            connector.onConnectFailed();
+        }
         if (connectEventListeners.size() > 0) {
             options.getDispatchExecutor().execute(() -> {
                 for (ConnectEventListener listener : connectEventListeners) {
@@ -226,13 +234,6 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
         private Future<?> disconnectTask;
 
         @Override
-        public void onDisconnect() {
-            if (ConnectionManager.getInstance().isNetworkAvailable()) {
-                reconnectDelay(DEFAULT);
-            }
-        }
-
-        @Override
         public void onConnect() {
             reset();
             if (isSleep()) {
@@ -241,10 +242,12 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
         }
 
         @Override
+        public void onDisconnect() {
+            reconnectDelay(DEFAULT);
+        }
+
+        @Override
         public void onConnectFailed() {
-            if (!ConnectionManager.getInstance().isNetworkAvailable()) {
-                return;
-            }
             //连接失败达到阈值,需要切换备用线路
             if (++connectionFailedTimes >= MAX_CONNECTION_FAILED_TIMES) {
                 reset();
