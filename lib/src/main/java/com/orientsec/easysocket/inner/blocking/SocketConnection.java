@@ -77,7 +77,7 @@ public class SocketConnection extends AbstractConnection {
             if (isShutdown()) {
                 return;
             }
-            Logger.i("开始连接 " + connectionInfo.getHost() + ":" + connectionInfo.getPort() + " Socket服务器");
+            Logger.i("begin socket connect, host:" + connectionInfo.getHost() + ", port:" + connectionInfo.getPort());
             try {
                 SSLContext sslContext = options.getProtocol().sslContext();
                 if (sslContext == null) {

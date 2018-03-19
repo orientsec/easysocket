@@ -139,7 +139,7 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
     }
 
     protected void sendConnectEvent() {
-        Logger.i("connection is established!");
+        Logger.i("connection is established, host:" + connectionInfo.getHost() + ", port:" + connectionInfo.getPort());
         connector.onConnect();
         if (connectEventListeners.size() > 0) {
             options.getDispatchExecutor().execute(() -> {
@@ -151,7 +151,7 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
     }
 
     protected void sendDisconnectEvent() {
-        Logger.i("connection is disconnected!");
+        Logger.i("connection is disconnected, host:" + connectionInfo.getHost() + ", port:" + connectionInfo.getPort());
         boolean isNetworkAvailable = ConnectionManager.getInstance().isNetworkAvailable();
         if (isNetworkAvailable) {
             connector.onDisconnect();
@@ -167,7 +167,7 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
     }
 
     protected void sendConnectFailedEvent() {
-        Logger.i("connection fail to establish!");
+        Logger.i("connection fail to establish, host:" + connectionInfo.getHost() + ", port:" + connectionInfo.getPort());
         if (ConnectionManager.getInstance().isNetworkAvailable()) {
             connector.onConnectFailed();
         }
@@ -273,6 +273,9 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
 
         }
 
+        /**
+         * 停止重连任务
+         */
         private void stopReconnect() {
             synchronized (lock) {
                 if (reconnectTask != null) {
@@ -282,6 +285,17 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
             }
         }
 
+        /**
+         * 停止断开连接任务
+         */
+        private void stopDisconnect() {
+            synchronized (lock) {
+                if (disconnectTask != null) {
+                    disconnectTask.cancel(true);
+                    disconnectTask = null;
+                }
+            }
+        }
 
         private void reset() {
             reconnectTimeDelay = DEFAULT;
@@ -289,27 +303,20 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
         }
 
         private void reconnectDelay(int second) {
-            if (state.get() != 0 || isSleep()) {
-                return;
-            }
             synchronized (lock) {
+                if (state.get() != 0 || isSleep()) {
+                    return;
+                }
                 stopReconnect();
                 Logger.i(" reconnect after " + second + " seconds...");
                 reconnectTask = executorService.schedule(() -> {
-                    if (!isSleep()) {
-                        connect();
+                    synchronized (lock) {
+                        stopReconnect();
+                        if (!isSleep()) {
+                            connect();
+                        }
                     }
-                    reconnectTask = null;
                 }, second, TimeUnit.SECONDS);
-            }
-        }
-
-        private void stopDisconnect() {
-            synchronized (lock) {
-                if (disconnectTask != null) {
-                    disconnectTask.cancel(true);
-                    disconnectTask = null;
-                }
             }
         }
 
@@ -320,12 +327,14 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
             synchronized (lock) {
                 stopDisconnect();
                 disconnectTask = executorService.schedule(() -> {
-                    if (isSleep()) {
-                        Logger.i("will disconnect, state: sleep");
-                        stopReconnect();
-                        disconnect();
+                    synchronized (lock) {
+                        stopDisconnect();
+                        if (isSleep()) {
+                            Logger.i("will disconnect, state: sleep");
+                            stopReconnect();
+                            disconnect();
+                        }
                     }
-                    disconnectTask = null;
                 }, options.getBackgroundLiveTime(), TimeUnit.SECONDS);
             }
         }

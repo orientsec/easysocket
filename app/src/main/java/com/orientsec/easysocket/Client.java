@@ -108,7 +108,7 @@ public class Client {
     private Client() {
         Options.debug = true;
         Options options = new Options.Builder()
-                .connectionInfo(new ConnectionInfo("192.168.106.36", 10010))
+                .connectionInfo(new ConnectionInfo("192.168.106.13", 10010))
                 .protocol(new MyProtocol())
                 .pulseRate(30)
                 .backgroundLiveTime(60)

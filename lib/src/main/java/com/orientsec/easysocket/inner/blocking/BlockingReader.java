@@ -45,11 +45,11 @@ public class BlockingReader extends Looper implements Reader {
         byte[] headBytes = new byte[headLength];
         readInputStream(inputStream, headBytes);
         int bodyLength = protocol.bodySize(headBytes);
-        Logger.i("need read body length: " + bodyLength);
+        //Logger.i("need read body length: " + bodyLength);
         if (bodyLength > options.getMaxReadDataKB() * 1024) {
             throw new ReadException(
-                    "this socket input stream has some problem,body length to long:" + bodyLength
-                            + ",we'll disconnect");
+                    "this socket input stream has some problem, body length to long:" + bodyLength
+                            + ", we'll disconnect");
         } else if (bodyLength > 0) {
             byte[] data = new byte[bodyLength];
             readInputStream(inputStream, data);
@@ -60,8 +60,8 @@ public class BlockingReader extends Looper implements Reader {
             handleMessage(message);
         } else if (bodyLength < 0) {
             throw new ReadException(
-                    "this socket input stream has some problem,wrong body length " + bodyLength
-                            + ",we'll disconnect");
+                    "this socket input stream has some problem, wrong body length " + bodyLength
+                            + ", we'll disconnect");
         }
     }
 
