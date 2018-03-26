@@ -72,7 +72,7 @@ public class BlockingExecutor implements TaskExecutor<EasyTask> {
 
     @Override
     public void onSendStart(Message message) {
-        EasyTask easyTask = taskMap.remove(message.getTaskId());
+        EasyTask easyTask = taskMap.get(message.getTaskId());
         if (easyTask != null) {
             easyTask.onStart();
         }

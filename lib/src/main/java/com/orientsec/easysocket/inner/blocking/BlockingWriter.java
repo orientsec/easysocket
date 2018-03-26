@@ -42,6 +42,7 @@ public class BlockingWriter extends Looper implements Writer {
 
     private void write(Message message) throws IOException {
         try {
+            connection.taskExecutor().onSendStart(message);
             byte[] data = options.getProtocol().encodeMessage(message);
             mOutputStream.write(data);
             mOutputStream.flush();
