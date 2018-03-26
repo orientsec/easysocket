@@ -26,12 +26,20 @@ public interface TaskExecutor<T extends Task> {
      */
     void onReceive(Message message);
 
+
+    /**
+     * 开始发送消息
+     *
+     * @param message 消息体
+     */
+    void onSendStart(Message message);
+
     /**
      * 消息发送回调
      *
      * @param message 消息体
      */
-    void onSend(Message message);
+    void onSendSuccess(Message message);
 
     /**
      * 消息发送失败回调

@@ -28,6 +28,11 @@ class TaskObservable<T> extends Observable<T> {
     class AdapterCallback implements Callback<T> {
 
         @Override
+        public void onStart() {
+
+        }
+
+        @Override
         public void onSuccess(T res) {
             if (!task.isCanceled()) {
                 try {

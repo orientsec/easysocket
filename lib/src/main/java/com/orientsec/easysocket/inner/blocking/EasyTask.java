@@ -23,9 +23,10 @@ class EasyTask<T, R> implements Task<R>, Callback {
     /**
      * Task状态，总共有4种状态
      * 0 初始状态
-     * 1 执行中
-     * 2 完成
-     * 3 取消
+     * 1 等待执行
+     * 2 执行中
+     * 3 完成
+     * 4 取消
      */
     private AtomicInteger state = new AtomicInteger();
     private Message message;
@@ -83,7 +84,7 @@ class EasyTask<T, R> implements Task<R>, Callback {
 
     @Override
     public void cancel() {
-        if (state.compareAndSet(1, 3)) {
+        if (state.compareAndSet(1, 3) || state.compareAndSet(2, 3)) {
             connection.taskExecutor().remove(this);
             taskEnd();
             onCancel();
@@ -92,12 +93,19 @@ class EasyTask<T, R> implements Task<R>, Callback {
 
     @Override
     public boolean isCanceled() {
-        return state.get() == 3;
+        return state.get() == 4;
+    }
+
+    @Override
+    public void onStart() {
+        if (state.compareAndSet(1, 2)) {
+            connection.options().getDispatchExecutor().execute(() -> callback.onStart());
+        }
     }
 
     @Override
     public void onSuccess(Object data) {
-        if (state.compareAndSet(1, 2)) {
+        if (state.compareAndSet(2, 3)) {
             taskEnd();
             try {
                 R response = request.decode(data);
@@ -110,7 +118,7 @@ class EasyTask<T, R> implements Task<R>, Callback {
 
     @Override
     public void onSuccess() {
-        if (state.compareAndSet(1, 2)) {
+        if (state.compareAndSet(2, 3)) {
             taskEnd();
             connection.options().getDispatchExecutor().execute(callback::onSuccess);
         }
@@ -118,7 +126,7 @@ class EasyTask<T, R> implements Task<R>, Callback {
 
     @Override
     public void onError(Exception e) {
-        if (state.compareAndSet(1, 2)) {
+        if (state.compareAndSet(2, 3)) {
             taskEnd();
             connection.options().getDispatchExecutor().execute(() -> callback.onError(e));
         }

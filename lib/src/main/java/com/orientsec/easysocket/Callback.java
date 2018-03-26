@@ -12,6 +12,11 @@ package com.orientsec.easysocket;
 
 public interface Callback<T> {
     /**
+     * 请求开始执行回调
+     */
+    void onStart();
+
+    /**
      * 成功回调
      * Task类型为{@linkplain TaskType#NORMAL}
      *
