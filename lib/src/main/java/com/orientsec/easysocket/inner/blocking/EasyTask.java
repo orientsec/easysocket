@@ -84,7 +84,7 @@ class EasyTask<T, R> implements Task<R>, Callback {
 
     @Override
     public void cancel() {
-        if (state.compareAndSet(1, 3) || state.compareAndSet(2, 3)) {
+        if (compareAndSet(state, 4, 1, 2)) {
             connection.taskExecutor().remove(this);
             taskEnd();
             onCancel();
@@ -126,7 +126,7 @@ class EasyTask<T, R> implements Task<R>, Callback {
 
     @Override
     public void onError(Exception e) {
-        if (state.compareAndSet(2, 3)) {
+        if (compareAndSet(state, 3, 1, 2)) {
             taskEnd();
             connection.options().getDispatchExecutor().execute(() -> callback.onError(e));
         }
@@ -141,5 +141,26 @@ class EasyTask<T, R> implements Task<R>, Callback {
         if (timeoutFuture != null) {
             timeoutFuture.cancel(false);
         }
+    }
+
+    private boolean compareAndSet(AtomicInteger i, int value, int... range) {
+        int prev;
+        do {
+            prev = i.get();
+            if (range.length == 0) {
+                return false;
+            }
+            boolean contains = false;
+            for (int aRange : range) {
+                if (prev == aRange) {
+                    contains = true;
+                    break;
+                }
+            }
+            if (!contains) {
+                return false;
+            }
+        } while (!i.compareAndSet(prev, value));
+        return true;
     }
 }
