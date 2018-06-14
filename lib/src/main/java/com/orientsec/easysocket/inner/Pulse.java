@@ -72,7 +72,7 @@ public class Pulse implements Runnable {
         if (lostTimes.getAndAdd(1) > context.options.getPulseLostTimes()) {
             //心跳失败超过上限后断开连接
             Logger.w("pulse failed times up, invalid connection!");
-            context.disconnect();
+            context.disconnect(3);
         } else {
             //发送心跳消息
             context.onPulse(context.buildMessage(MessageType.PULSE));

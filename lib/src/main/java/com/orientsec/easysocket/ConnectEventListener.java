@@ -12,8 +12,18 @@ package com.orientsec.easysocket;
 public interface ConnectEventListener {
     /**
      * 连接断开后进行的回调
+     *
+     * @param error 0 正常断开
+     *              1 IO异常
+     *              2 网络不可用
+     *              3 心跳检测
+     *              4 睡眠
+     *              999 未知异常
+     *              -1 消息读取出错
+     *              -2 授权失败
+     *
      */
-    void onDisconnect();
+    void onDisconnect(int error);
 
     /**
      * 连接连接建立成功后的回调

@@ -138,8 +138,8 @@ public class SocketConnection extends AbstractConnection {
     }
 
     @Override
-    protected void doOnDisconnect() {
-        super.doOnDisconnect();
+    protected void disconnectTask(int error) {
+        super.disconnectTask(error);
         if (reader != null) {
             reader.shutdown();
             reader = null;
@@ -151,7 +151,7 @@ public class SocketConnection extends AbstractConnection {
         runOnSubThread(() -> {
             closeSocketAndTasks();
             state.compareAndSet(3, 0);
-            sendDisconnectEvent();
+            sendDisconnectEvent(error);
         });
     }
 

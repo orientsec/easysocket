@@ -3,7 +3,6 @@ package com.orientsec.easysocket.inner.blocking;
 import com.orientsec.easysocket.Message;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.exception.AuthorizeException;
-import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.exception.WriteException;
 import com.orientsec.easysocket.inner.AbstractConnection;
 import com.orientsec.easysocket.inner.Looper;
@@ -63,7 +62,7 @@ public class BlockingWriter extends Looper implements Writer {
     }
 
     @Override
-    protected void beforeLoop() throws IOException, EasyException {
+    protected void beforeLoop() throws IOException, AuthorizeException {
         mOutputStream = connection.socket().getOutputStream();
         if (authorize != null) {
             write(connection.buildMessage(MessageType.AUTH));
@@ -74,17 +73,24 @@ public class BlockingWriter extends Looper implements Writer {
     }
 
     @Override
-    protected void runInLoopThread() throws IOException, EasyException {
+    protected void runInLoopThread() throws IOException {
         write();
     }
 
     @Override
     protected void loopFinish(Exception e) {
+        int error = 999;
         if (e != null) {
-            e.printStackTrace();
+            //e.printStackTrace();
             Logger.e("Blocking write error, thread is dead with exception: " + e.getMessage());
+            if (e instanceof IOException) {
+                error = 1;
+            } else if (e instanceof AuthorizeException) {
+                error = -2;
+            }
         }
         mOutputStream = null;
-        connection.disconnect();
+
+        connection.disconnect(error);
     }
 }

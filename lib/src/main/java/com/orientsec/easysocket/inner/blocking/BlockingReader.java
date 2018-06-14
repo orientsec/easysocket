@@ -58,7 +58,7 @@ public class BlockingReader extends Looper implements Reader {
         } else if (bodyLength == 0) {
             Message message = protocol.decodeMessage(headBytes, new byte[0]);
             handleMessage(message);
-        } else if (bodyLength < 0) {
+        } else {
             throw new ReadException(
                     "this socket input stream has some problem, wrong body length " + bodyLength
                             + ", we'll disconnect");
@@ -99,11 +99,17 @@ public class BlockingReader extends Looper implements Reader {
 
     @Override
     protected void loopFinish(Exception e) {
+        int error = 999;
         if (e != null) {
-            e.printStackTrace();
+            //e.printStackTrace();
             Logger.e("Blocking read error, thread is dead with exception: " + e.getMessage());
+            if (e instanceof IOException) {
+                error = 1;
+            } else if (e instanceof ReadException) {
+                error = -1;
+            }
         }
         inputStream = null;
-        connection.disconnect();
+        connection.disconnect(error);
     }
 }

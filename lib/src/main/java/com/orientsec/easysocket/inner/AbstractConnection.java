@@ -104,7 +104,7 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
             ConnectionManager.getInstance().removeConnection(this);
         }
         if (currentState == 2) {
-            doOnDisconnect();
+            disconnectTask(0);
         }
     }
 
@@ -114,9 +114,9 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
         }
     }
 
-    public void disconnect() {
+    public void disconnect(int error) {
         if (state.compareAndSet(2, 3)) {
-            doOnDisconnect();
+            disconnectTask(error);
         }
     }
 
@@ -133,7 +133,7 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
     /**
      * 启动断开连接任务,停止心跳、清理连接资源
      */
-    protected void doOnDisconnect() {
+    protected void disconnectTask(int error) {
         //停止心跳
         pulse.stop();
     }
@@ -150,17 +150,17 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
         }
     }
 
-    protected void sendDisconnectEvent() {
+    protected void sendDisconnectEvent(int error) {
         Logger.i("connection is disconnected, host:" + connectionInfo.getHost() + ", port:" + connectionInfo.getPort());
         boolean isNetworkAvailable = ConnectionManager.getInstance().isNetworkAvailable();
         if (isNetworkAvailable) {
-            connector.onDisconnect();
+            connector.onDisconnect(error);
         }
 
         if (connectEventListeners.size() > 0) {
             options.getDispatchExecutor().execute(() -> {
                 for (ConnectEventListener listener : connectEventListeners) {
-                    listener.onDisconnect();
+                    listener.onDisconnect(error);
                 }
             });
         }
@@ -186,7 +186,7 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
             connector.reset();
             connector.reconnectDelay(1);
         } else {
-            disconnect();
+            disconnect(2);
         }
     }
 
@@ -246,7 +246,10 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
         }
 
         @Override
-        public void onDisconnect() {
+        public void onDisconnect(int error) {
+            if (error < 0) {
+                switchServer();
+            }
             reconnectDelay(DEFAULT);
         }
 
@@ -255,22 +258,28 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
             connectFailed = true;
             //连接失败达到阈值,需要切换备用线路
             if (++connectionFailedTimes >= MAX_CONNECTION_FAILED_TIMES) {
-                reset();
-                List<ConnectionInfo> connectionInfoList = options.getBackupConnectionInfoList();
-                if (connectionInfoList != null && connectionInfoList.size() > 0) {
-                    if (++backUpIndex >= connectionInfoList.size()) {
-                        Logger.i("switch to main server");
-                        backUpIndex = -1;
-                        connectionInfo = options.getConnectionInfo();
-                    } else {
-                        Logger.i("switch to backup server");
-                        connectionInfo = connectionInfoList.get(backUpIndex);
-                    }
-                }
+                switchServer();
             }
             reconnectDelay(reconnectTimeDelay);
             reconnectTimeDelay = reconnectTimeDelay * 2;//x+2x+4x
+        }
 
+        /**
+         * 切换服务器
+         */
+        private void switchServer() {
+            reset();
+            List<ConnectionInfo> connectionInfoList = options.getBackupConnectionInfoList();
+            if (connectionInfoList != null && connectionInfoList.size() > 0) {
+                if (++backUpIndex >= connectionInfoList.size()) {
+                    Logger.i("switch to main server");
+                    backUpIndex = -1;
+                    connectionInfo = options.getConnectionInfo();
+                } else {
+                    Logger.i("switch to backup server");
+                    connectionInfo = connectionInfoList.get(backUpIndex);
+                }
+            }
         }
 
         /**
@@ -332,7 +341,7 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
                         if (isSleep()) {
                             Logger.i("will disconnect, state: sleep");
                             stopReconnect();
-                            disconnect();
+                            disconnect(4);
                         }
                     }
                 }, options.getBackgroundLiveTime(), TimeUnit.SECONDS);
