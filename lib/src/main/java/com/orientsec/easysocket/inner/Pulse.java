@@ -16,14 +16,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * 心跳管理器
  */
-public class Pulse implements Runnable {
-    private AbstractConnection context;
+public class Pulse<T> implements Runnable {
+    private AbstractConnection<T> context;
 
     private ScheduledFuture future;
 
     private AtomicInteger lostTimes = new AtomicInteger();
 
-    Pulse(AbstractConnection context) {
+    Pulse(AbstractConnection<T> context) {
         this.context = context;
     }
 

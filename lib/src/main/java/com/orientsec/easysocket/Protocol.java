@@ -15,7 +15,7 @@ import javax.net.ssl.SSLContext;
  * 数据协议
  */
 
-public interface Protocol {
+public interface Protocol<T> {
     /**
      * 获得包头长度
      *
@@ -36,7 +36,7 @@ public interface Protocol {
      * @param bodyBytes 包体字节数组
      * @return 消息体
      */
-    Message decodeMessage(byte[] header, byte[] bodyBytes) throws ReadException;
+    Message<T> decodeMessage(byte[] header, byte[] bodyBytes) throws ReadException;
 
     /**
      * 消息数据转换
@@ -44,7 +44,7 @@ public interface Protocol {
      * @param message 消息体
      * @return 消息体的二进制数组
      */
-    byte[] encodeMessage(Message message) throws WriteException;
+    byte[] encodeMessage(Message<T> message) throws WriteException;
 
 
     /**
@@ -53,7 +53,7 @@ public interface Protocol {
      * @param data 从{@link Message#getBody()}获取的授权消息体
      * @return 授权结果。如果true，保持连接；如果为false，连接立即断开
      */
-    boolean authorize(Object data);
+    boolean authorize(T data);
 
     /**
      * 是否需要授权

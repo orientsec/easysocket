@@ -20,7 +20,7 @@ import io.reactivex.Observable;
  */
 public class Client {
 
-    private static class MyProtocol implements Protocol {
+    private static class MyProtocol implements Protocol<byte[]> {
         private int id;
 
         @Override
@@ -35,28 +35,27 @@ public class Client {
         }
 
         @Override
-        public Message decodeMessage(byte[] header, byte[] bodyBytes) throws ReadException {
+        public Message<byte[]> decodeMessage(byte[] header, byte[] bodyBytes) throws ReadException {
             ByteBuffer byteBuffer = ByteBuffer.wrap(header);
-            Message message;
+            Message<byte[]> message;
             byteBuffer.getInt();
             int taskId = byteBuffer.getInt();
             int cmd = byteBuffer.getInt();
             if (cmd == 0) {
-                message = new Message(MessageType.PULSE);
+                message = new Message<>(MessageType.PULSE);
             } else if (cmd == 1) {
-                message = new Message(MessageType.AUTH);
+                message = new Message<>(MessageType.AUTH);
             } else {
-                message = new Message(MessageType.REQUEST);
+                message = new Message<>(MessageType.REQUEST);
             }
-            message.setCmd(cmd);
             message.setTaskId(taskId);
             message.setBody(bodyBytes);
             return message;
         }
 
         @Override
-        public byte[] encodeMessage(Message message) throws WriteException {
-            byte[] body = (byte[]) message.getBody();
+        public byte[] encodeMessage(Message<byte[]> message) throws WriteException {
+            byte[] body = message.getBody();
             if (body == null) {
                 body = new byte[0];
             }
@@ -79,8 +78,8 @@ public class Client {
         }
 
         @Override
-        public boolean authorize(Object data) {
-            id = ByteBuffer.wrap((byte[]) data).getInt();
+        public boolean authorize(byte[] data) {
+            id = ByteBuffer.wrap(data).getInt();
             return true;
         }
 
@@ -95,7 +94,7 @@ public class Client {
         }
     }
 
-    private Connection connection;
+    private Connection<byte[]> connection;
 
     private static class ClientHolder {
         private static Client client = new Client();
@@ -107,7 +106,7 @@ public class Client {
 
     private Client() {
         Options.debug = true;
-        Options options = new Options.Builder()
+        Options<byte[]> options = new Options.Builder<byte[]>()
                 .connectionInfo(new ConnectionInfo("192.168.106.13", 10010))
                 .protocol(new MyProtocol())
                 .pulseRate(30)
@@ -117,15 +116,15 @@ public class Client {
     }
 
     public Observable<String> request(String msg) {
-        Task<String> task = connection.buildTask(new Request<String, String>(msg) {
+        Task<String> task = connection.buildTask(new Request<byte[], String, String>(msg) {
             @Override
-            public Object encode() {
+            public byte[] encode() {
                 return msg.getBytes();
             }
 
             @Override
-            public String decode(Object data) {
-                return new String((byte[]) data);
+            public String decode(byte[] data) {
+                return new String(data);
             }
         });
         return TaskAdapter.toObservable(task);

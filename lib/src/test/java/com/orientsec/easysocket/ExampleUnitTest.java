@@ -2,6 +2,7 @@ package com.orientsec.easysocket;
 
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
@@ -39,5 +40,26 @@ public class ExampleUnitTest {
             }
         } while (!i.compareAndSet(prev, value));
         return true;
+    }
+
+    @Test
+    public void testBuffer() {
+        ByteBuffer buffer = ByteBuffer.allocate(16);
+        buffer.putInt(4);
+        buffer.put("abcd".getBytes());
+        buffer.putInt(4);
+        buffer.putInt(125);
+        buffer.clear();
+        int len = buffer.getInt();
+        byte[] data = new byte[len];
+        buffer.get(data);
+        String a = new String(data);
+        System.out.println("--:" + a);
+        int valueLen = buffer.getInt();
+        byte[] data2 = new byte[valueLen];
+        buffer.get(data2);
+        String b = new String(data2);
+        //int value = buffer.getInt();
+        System.out.println("value:" + b);
     }
 }

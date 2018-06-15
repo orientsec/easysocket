@@ -8,13 +8,13 @@ package com.orientsec.easysocket;
  * coding is art not science
  */
 
-public interface Task<T> {
+public interface Task<RESPONSE> {
 
     /**
      * Asynchronously send the request and notify {@code callback} of its response or if an error
      * occurred talking to the server, creating the request, or processing the response.
      */
-    void execute(Callback<T> callback);
+    void execute(Callback<RESPONSE> callback);
 
 
     /**

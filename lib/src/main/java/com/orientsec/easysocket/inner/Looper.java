@@ -44,7 +44,7 @@ public abstract class Looper implements Runnable {
                 loopTimes++;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            //e.printStackTrace();
             exception = e;
         } finally {
             this.loopFinish(exception);

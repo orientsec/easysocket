@@ -22,7 +22,7 @@ import javax.net.ssl.SSLContext;
  * Author: Fredric
  * coding is art not science
  */
-public class SocketConnection extends AbstractConnection {
+public class SocketConnection<T> extends AbstractConnection<T> {
     private AtomicInteger messageId = new AtomicInteger();
 
     private Socket socket;
@@ -31,20 +31,20 @@ public class SocketConnection extends AbstractConnection {
 
     private BlockingWriter writer;
 
-    private BlockingExecutor executor;
+    private BlockingExecutor<T> executor;
 
-    public SocketConnection(Options options) {
+    public SocketConnection(Options<T> options) {
         super(options);
-        executor = new BlockingExecutor(this);
+        executor = new BlockingExecutor<>(this);
     }
 
     @Override
-    public BlockingExecutor taskExecutor() {
+    public BlockingExecutor<T> taskExecutor() {
         return executor;
     }
 
     @Override
-    public void onPulse(Message message) {
+    public void onPulse(Message<T> message) {
         executor.getMessageQueue().offer(message);
     }
 
@@ -55,7 +55,7 @@ public class SocketConnection extends AbstractConnection {
     }
 
     @Override
-    public <T, R> Task<R> buildTask(Request<T, R> request) {
+    public <REQUEST, RESPONSE> Task<RESPONSE> buildTask(Request<T, REQUEST, RESPONSE> request) {
         return new EasyTask<>(request, this);
     }
 
@@ -107,11 +107,11 @@ public class SocketConnection extends AbstractConnection {
                 pulse.start();
                 if (options.getProtocol().needAuthorize()) {
                     Authorize authorize = new Authorize(this);
-                    writer = new BlockingWriter(this, authorize);
-                    reader = new BlockingReader(this, authorize);
+                    writer = new BlockingWriter<>(this, authorize);
+                    reader = new BlockingReader<>(this, authorize);
                 } else {
-                    writer = new BlockingWriter(this);
-                    reader = new BlockingReader(this);
+                    writer = new BlockingWriter<>(this);
+                    reader = new BlockingReader<>(this);
                 }
                 writer.start();
                 reader.start();
@@ -156,7 +156,7 @@ public class SocketConnection extends AbstractConnection {
     }
 
     @Override
-    protected Message buildMessage(MessageType messageType) {
-        return new Message(messageType, messageId.incrementAndGet());
+    protected Message<T> buildMessage(MessageType messageType) {
+        return new Message<>(messageType, messageId.incrementAndGet());
     }
 }

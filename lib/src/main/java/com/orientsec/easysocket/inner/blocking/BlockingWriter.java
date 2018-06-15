@@ -21,20 +21,20 @@ import java.util.concurrent.LinkedBlockingQueue;
  * Author: Fredric
  * coding is art not science
  */
-public class BlockingWriter extends Looper implements Writer {
+public class BlockingWriter<T> extends Looper implements Writer {
     private Options options;
     private OutputStream mOutputStream;
-    private SocketConnection connection;
-    private LinkedBlockingQueue<Message> messageQueue;
+    private SocketConnection<T> connection;
+    private LinkedBlockingQueue<Message<T>> messageQueue;
     private Authorize authorize;
 
-    BlockingWriter(AbstractConnection context) {
+    BlockingWriter(AbstractConnection<T> context) {
         this(context, null);
     }
 
-    BlockingWriter(AbstractConnection context, Authorize authorize) {
+    BlockingWriter(AbstractConnection<T> context, Authorize authorize) {
         this.authorize = authorize;
-        this.connection = (SocketConnection) context;
+        this.connection = (SocketConnection<T>) context;
         options = context.options();
         messageQueue = connection.taskExecutor().getMessageQueue();
     }

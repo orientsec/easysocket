@@ -9,12 +9,11 @@ package com.orientsec.easysocket;
  * <p>
  * 推送消息监听
  */
-public interface PushHandler {
+public interface PushHandler<T> {
     /**
      * 推送消息回调
      *
-     * @param id      消息id
      * @param message 消息体
      */
-    void onPush(int id, Message message);
+    void onPush(T message);
 }

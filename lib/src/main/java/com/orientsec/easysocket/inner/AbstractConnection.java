@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Author: Fredric
  * coding is art not science
  */
-public abstract class AbstractConnection implements Connection, ConnectionManager.OnNetworkStateChangedListener {
+public abstract class AbstractConnection<T> implements Connection<T>, ConnectionManager.OnNetworkStateChangedListener {
     /**
      * 0 空闲状态 0 -> 1; 0 -> 4
      * 1 连接中 1 -> 0; 1 -> 2; 1 -> 4
@@ -48,20 +48,20 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
 
     protected ConnectionInfo connectionInfo;
 
-    protected Options options;
+    protected Options<T> options;
 
     protected Pulse pulse;
 
     private ScheduledExecutorService executorService;
 
-    public Options options() {
+    public Options<T> options() {
         return options;
     }
 
-    protected AbstractConnection(Options options) {
+    protected AbstractConnection(Options<T> options) {
         this.options = options;
         executorService = options.getExecutorService();
-        pulse = new Pulse(this);
+        pulse = new Pulse<>(this);
         connector = new Connector();
         connectionInfo = options.getConnectionInfo();
     }
@@ -70,9 +70,9 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
         return pulse;
     }
 
-    public abstract void onPulse(Message message);
+    public abstract void onPulse(Message<T> message);
 
-    public abstract TaskExecutor<? extends Task> taskExecutor();
+    public abstract TaskExecutor<T, ? extends Task<?>> taskExecutor();
 
     @Override
     public boolean isShutdown() {
@@ -349,5 +349,5 @@ public abstract class AbstractConnection implements Connection, ConnectionManage
         }
     }
 
-    protected abstract Message buildMessage(MessageType messageType);
+    protected abstract Message<T> buildMessage(MessageType messageType);
 }

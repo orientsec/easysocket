@@ -10,7 +10,7 @@ package com.orientsec.easysocket;
  * 请求结果回调
  */
 
-public interface Callback<T> {
+public interface Callback<RESPONSE> {
     /**
      * 请求开始执行回调
      */
@@ -22,7 +22,7 @@ public interface Callback<T> {
      *
      * @param res 响应消息
      */
-    void onSuccess(T res);
+    void onSuccess(RESPONSE res);
 
     /**
      * 成功回调

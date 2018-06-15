@@ -7,7 +7,7 @@ package com.orientsec.easysocket;
  * Author: Fredric
  * coding is art not science
  */
-public interface Connection {
+public interface Connection<T> {
     /**
      * 启动连接, 如果连接以经启动，无效果。
      */
@@ -45,7 +45,7 @@ public interface Connection {
      * @param request 发往服务端的请求
      * @return 可执行任务
      */
-    <T, R> Task<R> buildTask(Request<T, R> request);
+    <REQUEST, RESPONSE> Task<RESPONSE> buildTask(Request<T, REQUEST, RESPONSE> request);
 
     /**
      * 添加连接事件监听器

@@ -21,7 +21,7 @@ import java.util.concurrent.ScheduledExecutorService;
  * <p>
  * 连接配置类
  */
-public class Options {
+public class Options<T> {
     /**
      * 是否是调试模式
      */
@@ -45,11 +45,11 @@ public class Options {
     /**
      * 数据协议
      */
-    private Protocol protocol;
+    private Protocol<T> protocol;
     /**
      * 推送消息处理器
      */
-    private PushHandler pushHandler;
+    private PushHandler<T> pushHandler;
     /**
      * 消息分发执行器
      * 推送消息，连接状态监听回调，请求回调，都执行在Executor所在线程
@@ -96,7 +96,7 @@ public class Options {
      */
     private ScheduledExecutorService executorService;
 
-    private Options(Builder builder) {
+    private Options(Builder<T> builder) {
         connectionInfo = builder.connectionInfo;
         backupConnectionInfoList = builder.backupConnectionInfoList;
         writeOrder = builder.writeOrder;
@@ -118,7 +118,7 @@ public class Options {
         return debug;
     }
 
-    public Protocol getProtocol() {
+    public Protocol<T> getProtocol() {
         return protocol;
     }
 
@@ -158,7 +158,7 @@ public class Options {
         return livePolicy;
     }
 
-    public PushHandler getPushHandler() {
+    public PushHandler<T> getPushHandler() {
         return pushHandler;
     }
 
@@ -180,8 +180,8 @@ public class Options {
 
     private static class DefaultPushHandler implements PushHandler {
         @Override
-        public void onPush(int id, Message message) {
-            Logger.i("unhandled push event, cmd:" + id);
+        public void onPush(Object message) {
+            Logger.i("unhandled push event");
         }
     }
 
@@ -199,13 +199,13 @@ public class Options {
     }
 
 
-    public static final class Builder {
+    public static final class Builder<T> {
         private ConnectionInfo connectionInfo;
         private List<ConnectionInfo> backupConnectionInfoList;
         private ByteOrder writeOrder = ByteOrder.BIG_ENDIAN;
         private ByteOrder readByteOrder = ByteOrder.BIG_ENDIAN;
-        private Protocol protocol;
-        private PushHandler pushHandler;
+        private Protocol<T> protocol;
+        private PushHandler<T> pushHandler;
         private Executor dispatchExecutor;
         private int maxReadDataKB = 1024;
         private int requestTimeOut = 5;
@@ -219,86 +219,86 @@ public class Options {
         public Builder() {
         }
 
-        public Builder connectionInfo(ConnectionInfo val) {
+        public Builder<T> connectionInfo(ConnectionInfo val) {
             connectionInfo = val;
             return this;
         }
 
-        public Builder backupConnectionInfoList(List<ConnectionInfo> val) {
+        public Builder<T> backupConnectionInfoList(List<ConnectionInfo> val) {
             backupConnectionInfoList = val;
             return this;
         }
 
-        public Builder writeOrder(@NonNull ByteOrder val) {
+        public Builder<T> writeOrder(@NonNull ByteOrder val) {
             writeOrder = val;
             return this;
         }
 
-        public Builder readByteOrder(@NonNull ByteOrder val) {
+        public Builder<T> readByteOrder(@NonNull ByteOrder val) {
             readByteOrder = val;
             return this;
         }
 
-        public Builder protocol(Protocol val) {
+        public Builder<T> protocol(Protocol<T> val) {
             protocol = val;
             return this;
         }
 
-        public Builder pushHandler(PushHandler val) {
+        public Builder<T> pushHandler(PushHandler<T> val) {
             pushHandler = val;
             return this;
         }
 
-        public Builder executorService(ScheduledExecutorService val) {
+        public Builder<T> executorService(ScheduledExecutorService val) {
             executorService = val;
             return this;
         }
 
-        public Builder dispatchExecutor(Executor val) {
+        public Builder<T> dispatchExecutor(Executor val) {
             dispatchExecutor = val;
             return this;
         }
 
-        public Builder maxReadDataKB(int val) {
+        public Builder<T> maxReadDataKB(int val) {
             maxReadDataKB = val;
             return this;
         }
 
-        public Builder requestTimeOut(int val) {
+        public Builder<T> requestTimeOut(int val) {
             requestTimeOut = val;
             return this;
         }
 
-        public Builder connectTimeOut(int val) {
+        public Builder<T> connectTimeOut(int val) {
             connectTimeOut = val;
             return this;
         }
 
-        public Builder pulseRate(int val) {
+        public Builder<T> pulseRate(int val) {
             pulseRate = val;
             return this;
         }
 
-        public Builder pulseLostTimes(int val) {
+        public Builder<T> pulseLostTimes(int val) {
             pulseLostTimes = val;
             return this;
         }
 
-        public Builder backgroundLiveTime(int val) {
+        public Builder<T> backgroundLiveTime(int val) {
             backgroundLiveTime = val;
             return this;
         }
 
-        public Builder livePolicy(@NonNull LivePolicy val) {
+        public Builder<T> livePolicy(@NonNull LivePolicy val) {
             livePolicy = val;
             return this;
         }
 
-        public Options build() {
+        public Options<T> build() {
             if (!checkParams()) {
                 throw new IllegalArgumentException();
             }
-            return new Options(this);
+            return new Options<>(this);
         }
 
         private boolean checkParams() {

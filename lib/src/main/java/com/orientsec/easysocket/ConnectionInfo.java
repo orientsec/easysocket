@@ -39,12 +39,6 @@ public final class ConnectionInfo implements Serializable, Cloneable {
         return port;
     }
 
-
-    @Override
-    public ConnectionInfo clone() {
-        return new ConnectionInfo(host, port);
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -56,10 +50,7 @@ public final class ConnectionInfo implements Serializable, Cloneable {
 
         ConnectionInfo connectInfo = (ConnectionInfo) o;
 
-        if (port != connectInfo.port) {
-            return false;
-        }
-        return host.equals(connectInfo.host);
+        return port == connectInfo.port && host.equals(connectInfo.host);
     }
 
     @Override

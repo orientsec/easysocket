@@ -23,32 +23,32 @@ import java.util.concurrent.TimeUnit;
  * Author: Fredric
  * coding is art not science
  */
-public class BlockingExecutor implements TaskExecutor<EasyTask> {
+public class BlockingExecutor<T> implements TaskExecutor<T, EasyTask<T, ?, ?>> {
 
-    private Map<Integer, EasyTask> taskMap = new ConcurrentHashMap<>();
+    private Map<Integer, EasyTask<T, ?, ?>> taskMap = new ConcurrentHashMap<>();
 
-    private LinkedBlockingQueue<Message> messageQueue = new LinkedBlockingQueue<>();
+    private LinkedBlockingQueue<Message<T>> messageQueue = new LinkedBlockingQueue<>();
 
     private SocketConnection connection;
 
-    private PushHandler pushHandler;
+    private PushHandler<T> pushHandler;
 
-    LinkedBlockingQueue<Message> getMessageQueue() {
+    LinkedBlockingQueue<Message<T>> getMessageQueue() {
         return messageQueue;
     }
 
-    BlockingExecutor(SocketConnection connection) {
+    BlockingExecutor(SocketConnection<T> connection) {
         this.connection = connection;
         pushHandler = connection.options().getPushHandler();
     }
 
     @Override
-    public void execute(EasyTask task) {
+    public void execute(EasyTask<T, ?, ?> task) {
         if (connection.isShutdown()) {
             throw new IllegalStateException("connection is show down!");
         }
         connection.connect();
-        Message message = task.getMessage();
+        Message<T> message = task.getMessage();
         taskMap.put(message.getTaskId(), task);
         if (!messageQueue.offer(message)) {
             taskMap.remove(message.getTaskId());
@@ -57,13 +57,13 @@ public class BlockingExecutor implements TaskExecutor<EasyTask> {
     }
 
     @Override
-    public void onReceive(Message message) {
+    public void onReceive(Message<T> message) {
         if (message.getMessageType() == MessageType.PULSE) {
             connection.pulse().feed();
         } else if (message.getMessageType() == MessageType.PUSH) {
-            connection.options().getDispatchExecutor().execute(() -> pushHandler.onPush(message.getCmd(), message));
+            connection.options().getDispatchExecutor().execute(() -> pushHandler.onPush(message.getBody()));
         } else {
-            EasyTask easyTask = taskMap.remove(message.getTaskId());
+            EasyTask<T, ?, ?> easyTask = taskMap.remove(message.getTaskId());
             if (easyTask != null) {
                 easyTask.onSuccess(message.getBody());
             }
@@ -113,8 +113,8 @@ public class BlockingExecutor implements TaskExecutor<EasyTask> {
     void onConnectionClosed() {
         ConnectException exception = new ConnectException("connect failed");
         messageQueue.clear();
-        Set<Map.Entry<Integer, EasyTask>> entrySet = taskMap.entrySet();
-        for (Map.Entry<Integer, EasyTask> entry : entrySet) {
+        Set<Map.Entry<Integer, EasyTask<T, ?, ?>>> entrySet = taskMap.entrySet();
+        for (Map.Entry<Integer, EasyTask<T, ?, ?>> entry : entrySet) {
             entry.getValue().onError(exception);
         }
         taskMap.clear();

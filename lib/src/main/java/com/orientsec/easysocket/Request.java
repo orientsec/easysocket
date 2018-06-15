@@ -9,43 +9,43 @@ package com.orientsec.easysocket;
  * <p>
  * Request send to server
  *
- * @param <T> request param type
- * @param <R> response param type
+ * @param <REQUEST> request param type
+ * @param <RESPONSE> response param type
  */
-public abstract class Request<T, R> {
+public abstract class Request<T, REQUEST, RESPONSE> {
     /**
      * this request is only send, there is no response from server
      */
     private boolean sendOnly;
-    protected T request;
-    protected R response;
+    protected REQUEST request;
+    protected RESPONSE response;
 
     public boolean isSendOnly() {
         return sendOnly;
     }
 
-    public T getRequest() {
+    public REQUEST getRequest() {
         return request;
     }
 
-    public R getResponse() {
+    public RESPONSE getResponse() {
         return response;
     }
 
     protected Request() {
     }
 
-    public Request(T request) {
+    public Request(REQUEST request) {
         this.request = request;
     }
 
 
-    public Request(T request, boolean sendOnly) {
+    public Request(REQUEST request, boolean sendOnly) {
         this.sendOnly = sendOnly;
         this.request = request;
     }
 
-    public Request(T request, R response) {
+    public Request(REQUEST request, RESPONSE response) {
         this.request = request;
         this.response = response;
     }
@@ -58,7 +58,7 @@ public abstract class Request<T, R> {
      * @return 处理后的发送数据 类型和{@link Message#getBody()}一致
      * @throws Exception 数据处理中的异常
      */
-    public abstract Object encode() throws Exception;
+    public abstract T encode() throws Exception;
 
     /**
      * 获取的服务器消息经过{@link Protocol#decodeMessage(byte[], byte[])}
@@ -66,8 +66,8 @@ public abstract class Request<T, R> {
      * 并且可以进行统一的异常封装及其他的一些业务处理。
      *
      * @param data
-     * @return
-     * @throws Exception
+     * @return 返回结果
+     * @throws Exception 异常
      */
-    public abstract R decode(Object data) throws Exception;
+    public abstract RESPONSE decode(T data) throws Exception;
 }

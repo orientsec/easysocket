@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * coding is art not science
  */
 
-class EasyTask<T, R> implements Task<R>, Callback {
+class EasyTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callback<T> {
 
     /**
      * Task状态，总共有4种状态
@@ -29,14 +29,14 @@ class EasyTask<T, R> implements Task<R>, Callback {
      * 4 取消
      */
     private AtomicInteger state = new AtomicInteger();
-    private Message message;
-    private Request<T, R> request;
-    private Callback<R> callback;
+    private Message<T> message;
+    private Request<T, REQUEST, RESPONSE> request;
+    private Callback<RESPONSE> callback;
     private TaskType taskType;
-    private SocketConnection connection;
+    private SocketConnection<T> connection;
     Future<Void> timeoutFuture;
 
-    EasyTask(Request<T, R> request, SocketConnection connection) {
+    EasyTask(Request<T, REQUEST, RESPONSE> request, SocketConnection<T> connection) {
         this.request = request;
         this.connection = connection;
         taskType = request.isSendOnly() ? TaskType.SEND_ONLY : TaskType.NORMAL;
@@ -48,7 +48,7 @@ class EasyTask<T, R> implements Task<R>, Callback {
      *
      * @return 请求消息体
      */
-    Message getMessage() {
+    Message<T> getMessage() {
         return message;
     }
 
@@ -62,7 +62,7 @@ class EasyTask<T, R> implements Task<R>, Callback {
     }
 
     @Override
-    public void execute(Callback<R> callback) {
+    public void execute(Callback<RESPONSE> callback) {
         if (!state.compareAndSet(0, 1)) {
             throw new IllegalStateException("Task has already executed!");
         }
@@ -104,11 +104,11 @@ class EasyTask<T, R> implements Task<R>, Callback {
     }
 
     @Override
-    public void onSuccess(Object data) {
+    public void onSuccess(T data) {
         if (state.compareAndSet(2, 3)) {
             taskEnd();
             try {
-                R response = request.decode(data);
+                RESPONSE response = request.decode(data);
                 connection.options().getDispatchExecutor().execute(() -> callback.onSuccess(response));
             } catch (Exception e) {
                 connection.options().getDispatchExecutor().execute(() -> callback.onError(e));

@@ -11,20 +11,20 @@ import com.orientsec.easysocket.exception.WriteException;
  * Author: Fredric
  * coding is art not science
  */
-public interface TaskExecutor<T extends Task> {
+public interface TaskExecutor<T, TA extends Task<?>> {
     /**
      * 执行任务, 如果connection未启动，执行后开始进行连接
      *
      * @param task 任务
      */
-    void execute(T task);
+    void execute(TA task);
 
     /**
      * 接收分发消息
      *
      * @param message 消息体
      */
-    void onReceive(Message message);
+    void onReceive(Message<T> message);
 
 
     /**
@@ -32,14 +32,14 @@ public interface TaskExecutor<T extends Task> {
      *
      * @param message 消息体
      */
-    void onSendStart(Message message);
+    void onSendStart(Message<T> message);
 
     /**
      * 消息发送回调
      *
      * @param message 消息体
      */
-    void onSendSuccess(Message message);
+    void onSendSuccess(Message<T> message);
 
     /**
      * 消息发送失败回调
@@ -47,7 +47,7 @@ public interface TaskExecutor<T extends Task> {
      * @param message   消息体
      * @param exception WriteException
      */
-    void onSendError(Message message, WriteException exception);
+    void onSendError(Message<T> message, WriteException exception);
 
     /**
      * 移除任务
@@ -56,5 +56,5 @@ public interface TaskExecutor<T extends Task> {
      *
      * @param task 任务
      */
-    void remove(T task);
+    void remove(TA task);
 }

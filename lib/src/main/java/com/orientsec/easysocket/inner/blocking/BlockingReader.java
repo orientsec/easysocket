@@ -19,28 +19,28 @@ import java.io.InputStream;
  * Author: Fredric
  * coding is art not science
  */
-public class BlockingReader extends Looper implements Reader {
+public class BlockingReader<T> extends Looper implements Reader {
     private InputStream inputStream;
 
-    private Options options;
+    private Options<T> options;
 
-    private SocketConnection connection;
+    private SocketConnection<T> connection;
 
     private Authorize authorize;
 
-    BlockingReader(SocketConnection connection, Authorize authorize) {
+    BlockingReader(SocketConnection<T> connection, Authorize authorize) {
         this.authorize = authorize;
         this.connection = connection;
         options = connection.options();
     }
 
-    BlockingReader(SocketConnection connection) {
+    BlockingReader(SocketConnection<T> connection) {
         this(connection, null);
     }
 
     @Override
     public void read() throws IOException, ReadException {
-        Protocol protocol = options.getProtocol();
+        Protocol<T> protocol = options.getProtocol();
         int headLength = protocol.headSize();
         byte[] headBytes = new byte[headLength];
         readInputStream(inputStream, headBytes);
@@ -53,10 +53,10 @@ public class BlockingReader extends Looper implements Reader {
         } else if (bodyLength > 0) {
             byte[] data = new byte[bodyLength];
             readInputStream(inputStream, data);
-            Message message = protocol.decodeMessage(headBytes, data);
+            Message<T> message = protocol.decodeMessage(headBytes, data);
             handleMessage(message);
         } else if (bodyLength == 0) {
-            Message message = protocol.decodeMessage(headBytes, new byte[0]);
+            Message<T> message = protocol.decodeMessage(headBytes, new byte[0]);
             handleMessage(message);
         } else {
             throw new ReadException(
@@ -65,7 +65,7 @@ public class BlockingReader extends Looper implements Reader {
         }
     }
 
-    private void handleMessage(Message message) {
+    private void handleMessage(Message<T> message) {
         if (message.getMessageType() == MessageType.AUTH) {
             if (authorize != null) {
                 authorize.onAuthorize(message);
