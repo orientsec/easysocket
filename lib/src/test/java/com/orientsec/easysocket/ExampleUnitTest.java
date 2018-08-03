@@ -62,4 +62,12 @@ public class ExampleUnitTest {
         //int value = buffer.getInt();
         System.out.println("value:" + b);
     }
+
+    @Test
+    public void testChar(){
+        ByteBuffer buffer = ByteBuffer.allocate(16);
+        byte b = (byte)'1';
+        buffer.put((byte)'1');
+
+    }
 }

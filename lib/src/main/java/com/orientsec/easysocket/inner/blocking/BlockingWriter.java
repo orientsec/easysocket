@@ -22,7 +22,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * coding is art not science
  */
 public class BlockingWriter<T> extends Looper implements Writer {
-    private Options options;
+    private Options<T> options;
     private OutputStream mOutputStream;
     private SocketConnection<T> connection;
     private LinkedBlockingQueue<Message<T>> messageQueue;
@@ -39,7 +39,7 @@ public class BlockingWriter<T> extends Looper implements Writer {
         messageQueue = connection.taskExecutor().getMessageQueue();
     }
 
-    private void write(Message message) throws IOException {
+    private void write(Message<T> message) throws IOException {
         try {
             connection.taskExecutor().onSendStart(message);
             byte[] data = options.getProtocol().encodeMessage(message);
@@ -54,7 +54,7 @@ public class BlockingWriter<T> extends Looper implements Writer {
     @Override
     public void write() throws IOException {
         try {
-            Message message = messageQueue.take();
+            Message<T> message = messageQueue.take();
             write(message);
         } catch (InterruptedException e) {
             //ignore;

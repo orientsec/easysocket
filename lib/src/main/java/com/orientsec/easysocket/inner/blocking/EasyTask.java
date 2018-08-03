@@ -48,7 +48,7 @@ class EasyTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callback<T> {
      *
      * @return 请求消息体
      */
-    Message<T> getMessage() {
+    public Message<T> getMessage() {
         return message;
     }
 
@@ -73,7 +73,6 @@ class EasyTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callback<T> {
         } catch (Exception e) {
             onError(e);
         }
-
     }
 
 
