@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * coding is art not science
  */
 
-class EasyTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callback<T> {
+public class EasyTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callback<T> {
 
     /**
      * Task状态，总共有4种状态
