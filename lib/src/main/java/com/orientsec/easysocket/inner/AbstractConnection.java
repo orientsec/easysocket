@@ -214,10 +214,6 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
          */
         private static final int DEFAULT = 3;
         /**
-         * 最大连接失败次数,不包括断开异常
-         */
-        private static final int MAX_CONNECTION_FAILED_TIMES = 5;
-        /**
          * 延时连接时间
          */
         private int reconnectTimeDelay = DEFAULT;
@@ -257,7 +253,7 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
         public void onConnectFailed() {
             connectFailed = true;
             //连接失败达到阈值,需要切换备用线路
-            if (++connectionFailedTimes >= MAX_CONNECTION_FAILED_TIMES) {
+            if (++connectionFailedTimes >= options.getRetryTimes()) {
                 switchServer();
             }
             reconnectDelay(reconnectTimeDelay);

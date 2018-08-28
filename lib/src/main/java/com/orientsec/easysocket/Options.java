@@ -96,6 +96,11 @@ public class Options<T> {
      */
     private ScheduledExecutorService executorService;
 
+    /**
+     * 失败重连尝试次数
+     */
+    private int retryTimes;
+
     private Options(Builder<T> builder) {
         connectionInfo = builder.connectionInfo;
         backupConnectionInfoList = builder.backupConnectionInfoList;
@@ -112,6 +117,7 @@ public class Options<T> {
         backgroundLiveTime = builder.backgroundLiveTime;
         livePolicy = builder.livePolicy;
         executorService = builder.executorService;
+        retryTimes = builder.retryTimes;
     }
 
     public static boolean isDebug() {
@@ -178,9 +184,13 @@ public class Options<T> {
         return executorService;
     }
 
-    private static class DefaultPushHandler implements PushHandler {
+    public int getRetryTimes() {
+        return retryTimes;
+    }
+
+    private static class DefaultPushHandler<T> implements PushHandler<T> {
         @Override
-        public void onPush(Object message) {
+        public void onPush(T message) {
             Logger.i("unhandled push event");
         }
     }
@@ -215,6 +225,7 @@ public class Options<T> {
         private int backgroundLiveTime = 120;
         private LivePolicy livePolicy = LivePolicy.DEFAULT;
         private ScheduledExecutorService executorService;
+        private int retryTimes = 3;
 
         public Builder() {
         }
@@ -294,6 +305,11 @@ public class Options<T> {
             return this;
         }
 
+        public Builder<T> retryTimes(int val) {
+            retryTimes = val;
+            return this;
+        }
+
         public Options<T> build() {
             if (!checkParams()) {
                 throw new IllegalArgumentException();
@@ -330,10 +346,13 @@ public class Options<T> {
                 backgroundLiveTime = 120;
             }
             if (pushHandler == null) {
-                pushHandler = new DefaultPushHandler();
+                pushHandler = new DefaultPushHandler<>();
             }
             if (executorService == null) {
                 executorService = ExecutorHolder.executorService;
+            }
+            if (retryTimes < 0) {
+                retryTimes = 3;
             }
             return true;
         }
