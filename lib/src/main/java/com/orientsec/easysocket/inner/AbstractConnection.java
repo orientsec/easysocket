@@ -1,6 +1,5 @@
 package com.orientsec.easysocket.inner;
 
-import android.support.annotation.NonNull;
 
 import com.orientsec.easysocket.ConnectEventListener;
 import com.orientsec.easysocket.Connection;
@@ -20,6 +19,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import io.reactivex.annotations.NonNull;
 
 /**
  * Product: EasySocket

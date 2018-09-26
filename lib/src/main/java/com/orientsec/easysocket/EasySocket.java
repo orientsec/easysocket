@@ -1,11 +1,12 @@
 package com.orientsec.easysocket;
 
 import android.app.Application;
-import android.support.annotation.NonNull;
 
 import com.orientsec.easysocket.inner.blocking.SocketConnection;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import io.reactivex.annotations.NonNull;
 
 /**
  * Product: EasySocket

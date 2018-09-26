@@ -2,7 +2,6 @@ package com.orientsec.easysocket;
 
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.NonNull;
 
 import com.orientsec.easysocket.utils.Logger;
 
@@ -11,6 +10,8 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+
+import io.reactivex.annotations.NonNull;
 
 /**
  * Product: EasySocket
