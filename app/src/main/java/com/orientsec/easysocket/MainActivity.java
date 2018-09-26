@@ -14,7 +14,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         textView = findViewById(R.id.text);
         findViewById(R.id.button).setOnClickListener(v -> Client.getInstance().request("hello")
-                .subscribe(s -> textView.setText(s), e -> {
+                .subscribe(s -> {
+                    ConnectionInfo info = Client.getInstance().connection.getConnectionInfo();
+                    textView.setText("from host:" + info.getHost() + " port:" + info.getPort() + "\n" + s);
+                }, e -> {
                     errorTimes++;
                     textView.setText("error:" + errorTimes);
                 }));

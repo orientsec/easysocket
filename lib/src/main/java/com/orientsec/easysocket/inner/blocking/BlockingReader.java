@@ -26,9 +26,9 @@ public class BlockingReader<T> extends Looper implements Reader {
 
     private SocketConnection<T> connection;
 
-    private Authorize authorize;
+    private Authorize<T> authorize;
 
-    BlockingReader(SocketConnection<T> connection, Authorize authorize) {
+    BlockingReader(SocketConnection<T> connection, Authorize<T> authorize) {
         this.authorize = authorize;
         this.connection = connection;
         options = connection.options();

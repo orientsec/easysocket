@@ -61,4 +61,10 @@ public interface Connection<T> {
      */
     void removeConnectEventListener(ConnectEventListener listener);
 
+    /**
+     * 获取当前连接站点信息
+     *
+     * @return 当前连接站点信息
+     */
+    ConnectionInfo getConnectionInfo();
 }

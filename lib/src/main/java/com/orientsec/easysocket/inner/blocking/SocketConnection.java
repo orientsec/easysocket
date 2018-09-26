@@ -1,5 +1,6 @@
 package com.orientsec.easysocket.inner.blocking;
 
+import com.orientsec.easysocket.ConnectionInfo;
 import com.orientsec.easysocket.Message;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Request;
@@ -9,6 +10,7 @@ import com.orientsec.easysocket.inner.MessageType;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -106,7 +108,7 @@ public class SocketConnection<T> extends AbstractConnection<T> {
                 //启动心跳及读写线程
                 pulse.start();
                 if (options.getProtocol().needAuthorize()) {
-                    Authorize authorize = new Authorize(this);
+                    Authorize<T> authorize = new Authorize<>(this);
                     writer = new BlockingWriter<>(this, authorize);
                     reader = new BlockingReader<>(this, authorize);
                 } else {
@@ -158,5 +160,22 @@ public class SocketConnection<T> extends AbstractConnection<T> {
     @Override
     protected Message<T> buildMessage(MessageType messageType) {
         return new Message<>(messageType, messageId.incrementAndGet());
+    }
+
+    @Override
+    public ConnectionInfo getConnectionInfo() {
+        if (isConnect()) {
+            Socket socket = this.socket;
+            if (socket != null) {
+                InetSocketAddress address = (InetSocketAddress) socket.getRemoteSocketAddress();
+                if (address != null) {
+                    InetAddress inetAddress = address.getAddress();
+                    if (inetAddress != null) {
+                        return new ConnectionInfo(inetAddress.getHostAddress(), address.getPort());
+                    }
+                }
+            }
+        }
+        return null;
     }
 }

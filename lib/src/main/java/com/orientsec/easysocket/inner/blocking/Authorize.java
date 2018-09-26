@@ -15,16 +15,16 @@ import java.util.concurrent.TimeUnit;
  * Author: Fredric
  * coding is art not science
  */
-class Authorize {
-    private Protocol protocol;
+class Authorize<T> {
+    private Protocol<T> protocol;
 
     private CountDownLatch countDownLatch;
 
-    private Options options;
+    private Options<T> options;
 
     private volatile boolean authorized;
 
-    Authorize(AbstractConnection connection) {
+    Authorize(AbstractConnection<T> connection) {
         options = connection.options();
         protocol = options.getProtocol();
     }
@@ -38,7 +38,7 @@ class Authorize {
         return authorized;
     }
 
-    void onAuthorize(Message message) {
+    void onAuthorize(Message<T> message) {
         if (!authorized) {
             authorized = protocol.authorize(message.getBody());
             countDownLatch.countDown();
