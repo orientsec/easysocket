@@ -121,6 +121,12 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
         }
     }
 
+    public void onLogin() {
+        if (state.get() == 2) {
+            sendLoginEvent();
+        }
+    }
+
     /**
      * 启动建立连接任务
      */
@@ -162,6 +168,18 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
             options.getDispatchExecutor().execute(() -> {
                 for (ConnectEventListener listener : connectEventListeners) {
                     listener.onDisconnect(error);
+                }
+            });
+        }
+    }
+
+    private void sendLoginEvent() {
+        Logger.i("connection is login success, host:" + connectionInfo.getHost() + ", port:" + connectionInfo.getPort());
+        connector.onLogin();
+        if (connectEventListeners.size() > 0) {
+            options.getDispatchExecutor().execute(() -> {
+                for (ConnectEventListener listener : connectEventListeners) {
+                    listener.onLogin();
                 }
             });
         }
@@ -235,19 +253,16 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
 
         @Override
         public void onConnect() {
-            connectFailed = false;
-            reset();
-            if (isSleep()) {
-                disconnectDelay();
-            }
+
         }
 
         @Override
         public void onDisconnect(int error) {
-            if (error < 0) {
+            connectFailed = true;
+            if (error < 0 || ++connectionFailedTimes >= options.getRetryTimes()) {
                 switchServer();
             }
-            reconnectDelay(DEFAULT);
+            reconnectDelay(reconnectTimeDelay);
         }
 
         @Override
@@ -258,7 +273,16 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
                 switchServer();
             }
             reconnectDelay(reconnectTimeDelay);
-            reconnectTimeDelay = reconnectTimeDelay * 2;//x+2x+4x
+            //reconnectTimeDelay = reconnectTimeDelay * 2;//x+2x+4x
+        }
+
+        @Override
+        public void onLogin() {
+            connectFailed = false;
+            reset();
+            if (isSleep()) {
+                disconnectDelay();
+            }
         }
 
         /**

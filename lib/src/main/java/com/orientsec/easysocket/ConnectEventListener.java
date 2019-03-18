@@ -21,7 +21,6 @@ public interface ConnectEventListener {
      *              999 未知异常
      *              -1 消息读取出错
      *              -2 授权失败
-     *
      */
     void onDisconnect(int error);
 
@@ -35,4 +34,10 @@ public interface ConnectEventListener {
      * 如果服务器出现故障,网络出现异常都将导致该方法被回调
      */
     void onConnectFailed();
+
+    /**
+     * 登入服务器回调，所有请求在登入成功之后才能发起。
+     * 客户端接入服务器后，有可能会被主动断开，需要通过login事件确认是否成功接入。
+     */
+    void onLogin();
 }

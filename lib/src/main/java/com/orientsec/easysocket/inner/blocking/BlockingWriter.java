@@ -67,9 +67,10 @@ public class BlockingWriter<T> extends Looper implements Writer {
         if (authorize != null) {
             write(connection.buildMessage(MessageType.AUTH));
             if (!authorize.waitForAuthorize()) {
-                throw new AuthorizeException();
+                throw new AuthorizeException("auth failed!");
             }
         }
+        connection.onLogin();
     }
 
     @Override

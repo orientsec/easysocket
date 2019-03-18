@@ -10,4 +10,7 @@ package com.orientsec.easysocket.exception;
  * 授权异常
  */
 public class AuthorizeException extends EasyException {
+    public AuthorizeException(String message) {
+        super(message);
+    }
 }
