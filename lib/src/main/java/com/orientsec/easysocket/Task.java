@@ -34,5 +34,5 @@ public interface Task<RESPONSE> {
      */
     boolean isCanceled();
 
-
+    Request<?, ?, RESPONSE> request();
 }

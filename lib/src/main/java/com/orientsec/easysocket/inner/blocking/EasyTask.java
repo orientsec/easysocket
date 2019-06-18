@@ -162,4 +162,9 @@ public class EasyTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callback<
         } while (!i.compareAndSet(prev, value));
         return true;
     }
+
+    @Override
+    public Request<?, ?, RESPONSE> request() {
+        return request;
+    }
 }
