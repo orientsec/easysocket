@@ -203,7 +203,7 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
     public void onNetworkStateChanged(boolean available) {
         if (available) {
             connector.reset();
-            connector.reconnectDelay(1);
+            connector.reconnectDelay();
         } else {
             disconnect(2);
         }
@@ -228,14 +228,6 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
 
     private class Connector implements ConnectEventListener {
         private final Object lock = new byte[0];
-        /**
-         * 默认重连时间(后面会以指数次增加)
-         */
-        private static final int DEFAULT = 3;
-        /**
-         * 延时连接时间
-         */
-        private int reconnectTimeDelay = DEFAULT;
         /**
          * 连接失败次数,不包括断开异常
          */
@@ -262,7 +254,7 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
             if (error < 0 || ++connectionFailedTimes >= options.getRetryTimes()) {
                 switchServer();
             }
-            reconnectDelay(reconnectTimeDelay);
+            reconnectDelay();
         }
 
         @Override
@@ -272,7 +264,7 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
             if (++connectionFailedTimes >= options.getRetryTimes()) {
                 switchServer();
             }
-            reconnectDelay(reconnectTimeDelay);
+            reconnectDelay();
             //reconnectTimeDelay = reconnectTimeDelay * 2;//x+2x+4x
         }
 
@@ -328,17 +320,17 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
         }
 
         private void reset() {
-            reconnectTimeDelay = DEFAULT;
             connectionFailedTimes = 0;
         }
 
-        private void reconnectDelay(int second) {
+        private void reconnectDelay() {
             synchronized (lock) {
                 if (state.get() != 0 || isSleep()) {
                     return;
                 }
                 stopReconnect();
-                Logger.i(" reconnect after " + second + " seconds...");
+                int delay = options.getConnectInterval();
+                Logger.i(" reconnect after " + delay + " seconds...");
                 reconnectTask = executorService.schedule(() -> {
                     synchronized (lock) {
                         stopReconnect();
@@ -346,7 +338,7 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
                             connect();
                         }
                     }
-                }, second, TimeUnit.SECONDS);
+                }, delay, TimeUnit.SECONDS);
             }
         }
 

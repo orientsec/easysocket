@@ -48,11 +48,15 @@ public class BlockingExecutor<T> implements TaskExecutor<T, EasyTask<T, ?, ?>> {
             throw new IllegalStateException("connection is show down!");
         }
         connection.connect();
-        Message<T> message = task.getMessage();
-        taskMap.put(message.getTaskId(), task);
-        if (!messageQueue.offer(message)) {
-            taskMap.remove(message.getTaskId());
-            task.onError(new EasyException("task refuse to execute!"));
+        if (connection.isConnect()) {
+            Message<T> message = task.getMessage();
+            taskMap.put(message.getTaskId(), task);
+            if (!messageQueue.offer(message)) {
+                taskMap.remove(message.getTaskId());
+                task.onError(new EasyException("task refuse to execute!"));
+            }
+        } else {
+            task.onError(new ConnectException("no connection!"));
         }
     }
 

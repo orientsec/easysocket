@@ -102,6 +102,11 @@ public class Options<T> {
      */
     private int retryTimes;
 
+    /**
+     * 连接间隔
+     */
+    private int connectInterval;
+
     private Options(Builder<T> builder) {
         connectionInfo = builder.connectionInfo;
         backupConnectionInfoList = builder.backupConnectionInfoList;
@@ -119,6 +124,7 @@ public class Options<T> {
         livePolicy = builder.livePolicy;
         executorService = builder.executorService;
         retryTimes = builder.retryTimes;
+        connectInterval = builder.connectInterval;
     }
 
     public static boolean isDebug() {
@@ -189,6 +195,10 @@ public class Options<T> {
         return retryTimes;
     }
 
+    public int getConnectInterval() {
+        return connectInterval;
+    }
+
     private static class DefaultPushHandler<T> implements PushHandler<T> {
         @Override
         public void onPush(T message) {
@@ -226,7 +236,8 @@ public class Options<T> {
         private int backgroundLiveTime = 120;
         private LivePolicy livePolicy = LivePolicy.DEFAULT;
         private ScheduledExecutorService executorService;
-        private int retryTimes = 3;
+        private int retryTimes;
+        private int connectInterval;
 
         public Builder() {
         }
@@ -311,6 +322,11 @@ public class Options<T> {
             return this;
         }
 
+        public Builder<T> connectInterval(int val) {
+            connectInterval = val;
+            return this;
+        }
+
         public Options<T> build() {
             if (!checkParams()) {
                 throw new IllegalArgumentException();
@@ -353,7 +369,10 @@ public class Options<T> {
                 executorService = ExecutorHolder.executorService;
             }
             if (retryTimes < 0) {
-                retryTimes = 3;
+                retryTimes = 0;
+            }
+            if (connectInterval < 0) {
+                connectInterval = 0;
             }
             return true;
         }
