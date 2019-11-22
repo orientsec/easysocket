@@ -7,10 +7,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.Bundle;
 
 import com.orientsec.easysocket.inner.AbstractConnection;
+import com.orientsec.easysocket.utils.NetUtils;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -28,6 +28,8 @@ public class ConnectionManager {
     private int count;
 
     private Application application;
+
+    private boolean isNetworkAvailable;
 
     //fix ConcurrentModificationException when Iterator
     private List<AbstractConnection> connections = new CopyOnWriteArrayList<>();
@@ -51,6 +53,7 @@ public class ConnectionManager {
     void init(Application application) {
         this.application = application;
         application.registerActivityLifecycleCallbacks(new EasySocketAppLifecycleListener());
+        isNetworkAvailable = NetUtils.isNetworkAvailable(application);
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
         application.registerReceiver(new NetworkStateReceiver(), intentFilter);
@@ -67,6 +70,10 @@ public class ConnectionManager {
 
     public void removeConnection(AbstractConnection connection) {
         connections.remove(connection);
+    }
+
+    public boolean isNetworkAvailable() {
+        return isNetworkAvailable;
     }
 
     /**
@@ -120,18 +127,6 @@ public class ConnectionManager {
     }
 
     /**
-     * 网络是否可用
-     *
-     * @return 网络是否可用
-     */
-    public boolean isNetworkAvailable() {
-        ConnectivityManager connectivityManager = (ConnectivityManager) application.getSystemService(Context.CONNECTIVITY_SERVICE);
-        // 获取当前网络状态信息
-        NetworkInfo info = connectivityManager != null ? connectivityManager.getActiveNetworkInfo() : null;
-        return info != null && info.isConnected();
-    }
-
-    /**
      * 网络状态监听器
      */
     public interface OnNetworkStateChangedListener {
@@ -151,7 +146,8 @@ public class ConnectionManager {
                 return;
             }
             if (ConnectivityManager.CONNECTIVITY_ACTION.equals(intent.getAction())) {
-                boolean isNetworkAvailable = isNetworkAvailable();
+                boolean isNetworkAvailable = NetUtils.isNetworkAvailable(application);
+                ConnectionManager.this.isNetworkAvailable = isNetworkAvailable;
                 for (AbstractConnection connection : connections) {
                     connection.onNetworkStateChanged(isNetworkAvailable);
                 }

@@ -1,10 +1,12 @@
 package com.orientsec.easysocket.inner.blocking;
 
+import com.orientsec.easysocket.ConnectionManager;
 import com.orientsec.easysocket.Message;
 import com.orientsec.easysocket.PushHandler;
 import com.orientsec.easysocket.TaskType;
 import com.orientsec.easysocket.exception.ConnectException;
 import com.orientsec.easysocket.exception.EasyException;
+import com.orientsec.easysocket.exception.NetworkException;
 import com.orientsec.easysocket.exception.TimeoutException;
 import com.orientsec.easysocket.exception.WriteException;
 import com.orientsec.easysocket.inner.MessageType;
@@ -48,7 +50,7 @@ public class BlockingExecutor<T> implements TaskExecutor<T, EasyTask<T, ?, ?>> {
             throw new IllegalStateException("connection is show down!");
         }
         connection.connect();
-        if (connection.isConnect()) {
+        if (ConnectionManager.getInstance().isNetworkAvailable()) {
             Message<T> message = task.getMessage();
             taskMap.put(message.getTaskId(), task);
             if (!messageQueue.offer(message)) {
@@ -56,7 +58,7 @@ public class BlockingExecutor<T> implements TaskExecutor<T, EasyTask<T, ?, ?>> {
                 task.onError(new EasyException("task refuse to execute!"));
             }
         } else {
-            task.onError(new ConnectException("no connection!"));
+            task.onError(new NetworkException("network is unavailable!"));
         }
     }
 
