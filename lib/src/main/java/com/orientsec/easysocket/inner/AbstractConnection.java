@@ -332,7 +332,7 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
                     return;
                 }
                 stopReconnect();
-                long delay = options.getConnectInterval() - (System.currentTimeMillis() - connectTimestamp) / 1000;
+                long delay = options.getConnectInterval() - (System.currentTimeMillis() - connectTimestamp);
                 Runnable reconnect = () -> {
                     synchronized (lock) {
                         stopReconnect();
@@ -342,8 +342,8 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
                     }
                 };
                 if (delay > 0) {
-                    Logger.i("reconnect after " + delay + " seconds...");
-                    reconnectTask = executorService.schedule(reconnect, delay, TimeUnit.SECONDS);
+                    Logger.i("reconnect after " + delay + " mill seconds...");
+                    reconnectTask = executorService.schedule(reconnect, delay, TimeUnit.MILLISECONDS);
                 } else {
                     Logger.i("reconnect immediately");
                     reconnectTask = executorService.submit(reconnect);

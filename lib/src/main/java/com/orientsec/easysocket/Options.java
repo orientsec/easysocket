@@ -371,8 +371,8 @@ public class Options<T> {
             if (retryTimes < 0) {
                 retryTimes = 0;
             }
-            if (connectInterval < 1) {
-                connectInterval = 1;
+            if (connectInterval < 1000) {
+                connectInterval = 3000;
             }
             return true;
         }
