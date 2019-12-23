@@ -43,6 +43,8 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
 
     private volatile long timestamp;
 
+    private volatile long connectTimestamp;
+
     private Set<ConnectEventListener> connectEventListeners = Collections.synchronizedSet(new HashSet<>());
 
     private Connector connector;
@@ -111,6 +113,7 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
 
     public void connect() {
         if (state.compareAndSet(0, 1)) {
+            connectTimestamp = System.currentTimeMillis();
             doOnConnect();
         }
     }
@@ -329,16 +332,22 @@ public abstract class AbstractConnection<T> implements Connection<T>, Connection
                     return;
                 }
                 stopReconnect();
-                int delay = options.getConnectInterval();
-                Logger.i(" reconnect after " + delay + " seconds...");
-                reconnectTask = executorService.schedule(() -> {
+                long delay = options.getConnectInterval() - (System.currentTimeMillis() - connectTimestamp) / 1000;
+                Runnable reconnect = () -> {
                     synchronized (lock) {
                         stopReconnect();
                         if (!isSleep()) {
                             connect();
                         }
                     }
-                }, delay, TimeUnit.SECONDS);
+                };
+                if (delay > 0) {
+                    Logger.i("reconnect after " + delay + " seconds...");
+                    reconnectTask = executorService.schedule(reconnect, delay, TimeUnit.SECONDS);
+                } else {
+                    Logger.i("reconnect immediately");
+                    reconnectTask = executorService.submit(reconnect);
+                }
             }
         }
 

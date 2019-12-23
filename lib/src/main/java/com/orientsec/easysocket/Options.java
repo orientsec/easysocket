@@ -237,7 +237,7 @@ public class Options<T> {
         private LivePolicy livePolicy = LivePolicy.DEFAULT;
         private ScheduledExecutorService executorService;
         private int retryTimes;
-        private int connectInterval;
+        private int connectInterval = 3000;
 
         public Builder() {
         }
@@ -371,8 +371,8 @@ public class Options<T> {
             if (retryTimes < 0) {
                 retryTimes = 0;
             }
-            if (connectInterval < 0) {
-                connectInterval = 0;
+            if (connectInterval < 1) {
+                connectInterval = 1;
             }
             return true;
         }
