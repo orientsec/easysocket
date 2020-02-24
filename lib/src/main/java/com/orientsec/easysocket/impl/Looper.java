@@ -1,4 +1,4 @@
-package com.orientsec.easysocket.inner;
+package com.orientsec.easysocket.impl;
 
 import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.utils.Logger;
@@ -49,7 +49,7 @@ public abstract class Looper implements Runnable {
         } finally {
             this.loopFinish(exception);
             exception = null;
-            Logger.i(Thread.currentThread().getName() + " is shutting down");
+            Logger.i("Looper " + Thread.currentThread().getName() + " is shutting down");
         }
     }
 

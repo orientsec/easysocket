@@ -59,4 +59,12 @@ public final class ConnectionInfo implements Serializable, Cloneable {
         result = 31 * result + port;
         return result;
     }
+
+    @Override
+    public String toString() {
+        return "ConnectionInfo{" +
+                "host='" + host + '\'' +
+                ", port=" + port +
+                '}';
+    }
 }

@@ -41,4 +41,32 @@ public interface Callback<RESPONSE> {
      * 取消回调
      */
     void onCancel();
+
+    class EmptyCallback<R> implements Callback<R> {
+
+        @Override
+        public void onStart() {
+
+        }
+
+        @Override
+        public void onSuccess(R res) {
+
+        }
+
+        @Override
+        public void onSuccess() {
+
+        }
+
+        @Override
+        public void onError(Exception e) {
+
+        }
+
+        @Override
+        public void onCancel() {
+
+        }
+    }
 }

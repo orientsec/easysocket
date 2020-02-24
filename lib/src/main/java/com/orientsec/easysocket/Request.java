@@ -1,5 +1,7 @@
 package com.orientsec.easysocket;
 
+import com.orientsec.easysocket.exception.EasyException;
+
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket
@@ -9,7 +11,7 @@ package com.orientsec.easysocket;
  * <p>
  * Request send to server
  *
- * @param <REQUEST> request param type
+ * @param <REQUEST>  request param type
  * @param <RESPONSE> response param type
  */
 public abstract class Request<T, REQUEST, RESPONSE> {
@@ -55,19 +57,19 @@ public abstract class Request<T, REQUEST, RESPONSE> {
      * handle request data here.
      * 对入参进行处理，可以进行统一的业务数据填充、校验，数据编码等
      *
-     * @return 处理后的发送数据 类型和{@link Message#getBody()}一致
-     * @throws Exception 数据处理中的异常
+     * @return 处理后的发送数据 类型和{@link Packet#getBody()}一致
+     * @throws EasyException 数据处理中的异常
      */
-    public abstract T encode() throws Exception;
+    public abstract byte[] encode(int sequenceId) throws EasyException;
 
     /**
-     * 获取的服务器消息经过{@link Protocol#decodeMessage(byte[], byte[])}
-     * 处理后，得到{@link Message}。 在这里将{@link Message#getBody()}转换为返回结果。
+     * 获取的服务器消息经过{@link HeadParser#decodePacket(HeadParser.Head, byte[])}
+     * 处理后，得到{@link Packet}。 在这里将{@link Packet#getBody()}转换为返回结果。
      * 并且可以进行统一的异常封装及其他的一些业务处理。
      *
-     * @param data
+     * @param data 消息数据
      * @return 返回结果
-     * @throws Exception 异常
+     * @throws EasyException 异常
      */
-    public abstract RESPONSE decode(T data) throws Exception;
+    public abstract RESPONSE decode(T data) throws EasyException;
 }

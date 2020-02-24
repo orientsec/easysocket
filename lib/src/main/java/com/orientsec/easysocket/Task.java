@@ -16,6 +16,7 @@ public interface Task<RESPONSE> {
      */
     void execute(Callback<RESPONSE> callback);
 
+    void execute();
 
     /**
      * Returns true if this call has been {@linkplain #execute(Callback callback) executed}.
@@ -34,5 +35,5 @@ public interface Task<RESPONSE> {
      */
     boolean isCanceled();
 
-    Request<?, ?, RESPONSE> request();
+    Request<?, ?, RESPONSE> getRequest();
 }

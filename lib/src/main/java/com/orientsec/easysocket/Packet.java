@@ -1,6 +1,7 @@
 package com.orientsec.easysocket;
 
-import com.orientsec.easysocket.inner.MessageType;
+
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Product: EasySocket
@@ -10,22 +11,21 @@ import com.orientsec.easysocket.inner.MessageType;
  * coding is art not science
  */
 
-public class Message<T> {
+public class Packet<T> {
 
-    public Message(MessageType messageType) {
-        this(messageType, 0);
+    public Packet(@NotNull String packetType) {
+        this(packetType, 0);
     }
 
-    public Message(MessageType messageType, int taskId) {
+    public Packet(@NotNull String packetType, int taskId) {
         this.taskId = taskId;
-        this.messageType = messageType;
+        this.packetType = packetType;
     }
 
     /**
      * 消息id
      */
     private int taskId;
-
     /**
      * 包体
      */
@@ -34,7 +34,8 @@ public class Message<T> {
     /**
      * 消息类型
      */
-    private MessageType messageType;
+    @NotNull
+    private String packetType;
 
     /**
      * 获取任务id
@@ -44,10 +45,6 @@ public class Message<T> {
      */
     public int getTaskId() {
         return taskId;
-    }
-
-    public void setTaskId(int taskId) {
-        this.taskId = taskId;
     }
 
     /**
@@ -69,7 +66,9 @@ public class Message<T> {
      *
      * @return 消息类型
      */
-    public MessageType getMessageType() {
-        return messageType;
+    @NotNull
+    public String getPacketType() {
+        return packetType;
     }
+
 }

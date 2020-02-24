@@ -1,5 +1,7 @@
 package com.orientsec.easysocket;
 
+import com.orientsec.easysocket.impl.MessageHandler;
+
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket
@@ -9,11 +11,6 @@ package com.orientsec.easysocket;
  * <p>
  * 推送消息监听
  */
-public interface PushHandler<T> {
-    /**
-     * 推送消息回调
-     *
-     * @param message 消息体
-     */
-    void onPush(T message);
+public interface PushHandler<T> extends MessageHandler<T> {
+
 }

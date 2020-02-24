@@ -9,15 +9,19 @@ package com.orientsec.easysocket.exception;
  */
 
 public class EasyException extends Exception {
+    private Event event;
 
-    public EasyException() {
-    }
-
-    public EasyException(String message) {
+    public EasyException(Event event, String message) {
         super(message);
+        this.event = event;
     }
 
-    public EasyException(String message, Throwable cause) {
+    public EasyException(Event event, String message, Throwable cause) {
         super(message, cause);
+        this.event = event;
+    }
+
+    public Event getEvent() {
+        return event;
     }
 }

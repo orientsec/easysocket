@@ -1,9 +1,8 @@
-package com.orientsec.easysocket.inner.blocking;
+package com.orientsec.easysocket.impl;
 
-import com.orientsec.easysocket.Message;
+import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.Options;
-import com.orientsec.easysocket.Protocol;
-import com.orientsec.easysocket.inner.AbstractConnection;
+import com.orientsec.easysocket.HeadParser;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -16,7 +15,7 @@ import java.util.concurrent.TimeUnit;
  * coding is art not science
  */
 class Authorize<T> {
-    private Protocol<T> protocol;
+    private HeadParser<T> headParser;
 
     private CountDownLatch countDownLatch;
 
@@ -26,7 +25,7 @@ class Authorize<T> {
 
     Authorize(AbstractConnection<T> connection) {
         options = connection.options();
-        protocol = options.getProtocol();
+        headParser = options.getHeadParser();
     }
 
     boolean waitForAuthorize() {
@@ -38,9 +37,9 @@ class Authorize<T> {
         return authorized;
     }
 
-    void onAuthorize(Message<T> message) {
+    void onAuthorize(Packet<T> packet) {
         if (!authorized) {
-            authorized = protocol.authorize(message.getBody());
+            authorized = headParser.authorize(packet.getBody());
             countDownLatch.countDown();
         }
     }

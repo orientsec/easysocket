@@ -1,6 +1,7 @@
-package com.orientsec.easysocket.inner;
+package com.orientsec.easysocket.impl;
 
-import com.orientsec.easysocket.exception.ReadException;
+import com.orientsec.easysocket.HeadParser;
+import com.orientsec.easysocket.exception.EasyException;
 
 import java.io.IOException;
 
@@ -16,8 +17,8 @@ public interface Reader {
      * 消息写入
      *
      * @throws IOException   IOException
-     * @throws ReadException 读异常，发生在{@link com.orientsec.easysocket.Protocol#decodeMessage(byte[], byte[])}
+     * @throws EasyException 读异常，发生在{@link HeadParser#decodePacket(HeadParser.Head, byte[])}
      *                       过程中
      */
-    void read() throws IOException, ReadException;
+    void read() throws IOException, EasyException;
 }

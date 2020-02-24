@@ -1,9 +1,8 @@
 package com.orientsec.easysocket;
 
 import com.orientsec.easysocket.adapter.TaskAdapter;
-import com.orientsec.easysocket.exception.ReadException;
-import com.orientsec.easysocket.exception.WriteException;
-import com.orientsec.easysocket.inner.MessageType;
+import com.orientsec.easysocket.exception.EasyException;
+import com.orientsec.easysocket.impl.PacketType;
 
 import java.nio.ByteBuffer;
 
@@ -20,7 +19,7 @@ import io.reactivex.Observable;
  */
 public class Client {
 
-    private static class MyProtocol implements Protocol<byte[]> {
+    private static class MyHeadParser implements HeadParser<byte[]> {
         private int id;
 
         @Override
@@ -29,42 +28,42 @@ public class Client {
         }
 
         @Override
-        public int bodySize(byte[] header) throws ReadException {
+        public int bodySize(byte[] header) throws EasyException {
             ByteBuffer byteBuffer = ByteBuffer.wrap(header);
             return byteBuffer.getInt();
         }
 
         @Override
-        public Message<byte[]> decodeMessage(byte[] header, byte[] bodyBytes) throws ReadException {
+        public Packet<byte[]> decodeMessage(byte[] header, byte[] bodyBytes) throws EasyException {
             ByteBuffer byteBuffer = ByteBuffer.wrap(header);
-            Message<byte[]> message;
+            Packet<byte[]> packet;
             byteBuffer.getInt();
             int taskId = byteBuffer.getInt();
             int cmd = byteBuffer.getInt();
             if (cmd == 0) {
-                message = new Message<>(MessageType.PULSE);
+                packet = new Packet<>(PacketType.PULSE);
             } else if (cmd == 1) {
-                message = new Message<>(MessageType.AUTH);
+                packet = new Packet<>(PacketType.SINGLE);
             } else {
-                message = new Message<>(MessageType.REQUEST);
+                packet = new Packet<>(PacketType.RESPONSE);
             }
-            message.setTaskId(taskId);
-            message.setBody(bodyBytes);
-            return message;
+            packet.setTaskId(taskId);
+            packet.setBody(bodyBytes);
+            return packet;
         }
 
         @Override
-        public byte[] encodeMessage(Message<byte[]> message) throws WriteException {
-            byte[] body = message.getBody();
+        public byte[] encodeMessage(Packet<byte[]> packet) throws WriteException {
+            byte[] body = packet.getBody();
             if (body == null) {
                 body = new byte[0];
             }
             ByteBuffer byteBuffer = ByteBuffer.allocate(16);
             byteBuffer.putInt(body.length);
-            byteBuffer.putInt(message.getTaskId());
-            if (message.getMessageType() == MessageType.PULSE) {
+            byteBuffer.putInt(packet.getTaskId());
+            if (packet.getPacketType().equals(PacketType.PULSE)) {
                 byteBuffer.putInt(0);
-            } else if (message.getMessageType() == MessageType.AUTH) {
+            } else if (packet.getPacketType().equals(PacketType.SINGLE)) {
                 byteBuffer.putInt(1);
             } else {
                 byteBuffer.putInt(2);
@@ -108,7 +107,7 @@ public class Client {
         Options.debug = true;
         Options<byte[]> options = new Options.Builder<byte[]>()
                 .connectionInfo(new ConnectionInfo("192.168.106.129", 10010))
-                .protocol(new MyProtocol())
+                .protocol(new MyHeadParser())
                 .pulseRate(30)
                 .backgroundLiveTime(60)
                 .build();
@@ -118,7 +117,7 @@ public class Client {
     public Observable<String> request(String msg) {
         Task<String> task = connection.buildTask(new Request<byte[], String, String>(msg) {
             @Override
-            public byte[] encode() {
+            public byte[] encode(Packet<byte[]> message) {
                 return msg.getBytes();
             }
 

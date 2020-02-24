@@ -1,4 +1,4 @@
-package com.orientsec.easysocket.inner;
+package com.orientsec.easysocket.impl;
 
 /**
  * Product: EasySocket
@@ -8,21 +8,17 @@ package com.orientsec.easysocket.inner;
  * coding is art not science
  */
 
-public enum MessageType {
+public class PacketType {
     /**
      * 请求消息
      */
-    REQUEST,
+    public static final String RESPONSE = "response";
     /**
      * 推送消息
      */
-    PUSH,
+    public static final String PUSH = "push";
     /**
      * 心跳
      */
-    PULSE,
-    /**
-     * 授权
-     */
-    AUTH
+    public static final String PULSE = "pulse";
 }

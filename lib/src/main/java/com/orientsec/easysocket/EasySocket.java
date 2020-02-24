@@ -1,9 +1,19 @@
 package com.orientsec.easysocket;
 
 import android.app.Application;
+import android.os.Handler;
+import android.os.Looper;
 
-import com.orientsec.easysocket.inner.blocking.SocketConnection;
+import com.orientsec.easysocket.impl.SocketConnection;
+import com.orientsec.easysocket.utils.Logger;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.reactivex.annotations.NonNull;
@@ -42,5 +52,39 @@ public class EasySocket {
         SocketConnection<T> connection = new SocketConnection<>(options);
         ConnectionManager.getInstance().addConnection(connection);
         return connection;
+    }
+
+    static class Executor {
+        static ScheduledExecutorService scheduledExecutor
+                = Executors.newSingleThreadScheduledExecutor();
+
+        static ExecutorService managerExecutor
+                = new ThreadPoolExecutor(0, 4,
+                30L, TimeUnit.SECONDS,
+                new SynchronousQueue<>(),
+                r -> new Thread("Easy socket manager executor."));
+
+        static ExecutorService codecExecutor
+                = new ThreadPoolExecutor(2, 4,
+                30L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(),
+                r -> new Thread("Easy socket codec executor."));
+    }
+
+    static class DefaultPushHandler<T> implements PushHandler<T> {
+
+        @Override
+        public void handleMessage(Packet<T> packet) {
+            Logger.i("unhandled push event");
+        }
+    }
+
+    static class MainThreadExecutor implements java.util.concurrent.Executor {
+        private Handler handler = new Handler(Looper.getMainLooper());
+
+        @Override
+        public void execute(@NonNull Runnable command) {
+            handler.post(command);
+        }
     }
 }

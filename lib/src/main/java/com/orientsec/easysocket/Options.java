@@ -1,14 +1,7 @@
 package com.orientsec.easysocket;
 
-import android.os.Handler;
-import android.os.Looper;
-
-import com.orientsec.easysocket.utils.Logger;
-
-import java.nio.ByteOrder;
 import java.util.List;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 import io.reactivex.annotations.NonNull;
@@ -27,6 +20,8 @@ public class Options<T> {
      * 是否是调试模式
      */
     public static boolean debug;
+
+    private PulseHandler<T> pulseHandler;
     /**
      * 站点信息
      */
@@ -36,27 +31,33 @@ public class Options<T> {
      */
     private List<ConnectionInfo> backupConnectionInfoList;
     /**
-     * 写入Socket管道中给服务器的字节序
+     * Socket factory
      */
-    private ByteOrder writeOrder;
-    /**
-     * 从Socket管道中读取字节序时的字节序
-     */
-    private ByteOrder readByteOrder;
+    private SocketFactory socketFactory;
     /**
      * 数据协议
      */
-    private Protocol<T> protocol;
+    private HeadParser<T> headParser;
     /**
      * 推送消息处理器
      */
     private PushHandler<T> pushHandler;
     /**
      * 消息分发执行器
-     * 推送消息，连接状态监听回调，请求回调，都执行在Executor所在线程
+     * 连接状态监听回调，请求回调，都执行在Executor所在线程
      */
-    private Executor dispatchExecutor;
+    private Executor callbackExecutor;
 
+    /**
+     * 连接管理线程池
+     * 启动连接、关闭连接的执行线程池
+     */
+    private Executor managerExecutor;
+
+    /**
+     * 编解码执行器
+     */
+    private Executor codecExecutor;
     /**
      * 最大读取数据的K数(KB)<br>
      * 防止服务器返回数据体过大的数据导致前端内存溢出.
@@ -95,7 +96,7 @@ public class Options<T> {
     /**
      * 连接的任务执行器
      */
-    private ScheduledExecutorService executorService;
+    private ScheduledExecutorService scheduledExecutor;
 
     /**
      * 失败重连尝试次数
@@ -108,13 +109,15 @@ public class Options<T> {
     private int connectInterval;
 
     private Options(Builder<T> builder) {
+        pulseHandler = builder.pulseHandler;
         connectionInfo = builder.connectionInfo;
         backupConnectionInfoList = builder.backupConnectionInfoList;
-        writeOrder = builder.writeOrder;
-        readByteOrder = builder.readByteOrder;
-        protocol = builder.protocol;
+        socketFactory = builder.socketFactory;
+        headParser = builder.headParser;
         pushHandler = builder.pushHandler;
-        dispatchExecutor = builder.dispatchExecutor;
+        callbackExecutor = builder.callbackExecutor;
+        managerExecutor = builder.managerExecutor;
+        codecExecutor = builder.codecExecutor;
         maxReadDataKB = builder.maxReadDataKB;
         requestTimeOut = builder.requestTimeOut;
         connectTimeOut = builder.connectTimeOut;
@@ -122,7 +125,7 @@ public class Options<T> {
         pulseLostTimes = builder.pulseLostTimes;
         backgroundLiveTime = builder.backgroundLiveTime;
         livePolicy = builder.livePolicy;
-        executorService = builder.executorService;
+        scheduledExecutor = builder.scheduledExecutor;
         retryTimes = builder.retryTimes;
         connectInterval = builder.connectInterval;
     }
@@ -131,20 +134,28 @@ public class Options<T> {
         return debug;
     }
 
-    public Protocol<T> getProtocol() {
-        return protocol;
+    public PulseHandler<T> getPulseHandler() {
+        return pulseHandler;
     }
 
-    public ByteOrder getWriteOrder() {
-        return writeOrder;
+    public HeadParser<T> getHeadParser() {
+        return headParser;
     }
 
-    public ByteOrder getReadByteOrder() {
-        return readByteOrder;
+    public SocketFactory getSocketFactory() {
+        return socketFactory;
     }
 
-    public Executor getDispatchExecutor() {
-        return dispatchExecutor;
+    public Executor getCallbackExecutor() {
+        return callbackExecutor;
+    }
+
+    public Executor getManagerExecutor() {
+        return managerExecutor;
+    }
+
+    public Executor getCodecExecutor() {
+        return codecExecutor;
     }
 
     public int getMaxReadDataKB() {
@@ -187,8 +198,8 @@ public class Options<T> {
         return backupConnectionInfoList;
     }
 
-    public ScheduledExecutorService getExecutorService() {
-        return executorService;
+    public ScheduledExecutorService getScheduledExecutor() {
+        return scheduledExecutor;
     }
 
     public int getRetryTimes() {
@@ -199,35 +210,17 @@ public class Options<T> {
         return connectInterval;
     }
 
-    private static class DefaultPushHandler<T> implements PushHandler<T> {
-        @Override
-        public void onPush(T message) {
-            Logger.i("unhandled push event");
-        }
-    }
-
-    private static class MainThreadExecutor implements Executor {
-        private Handler handler = new Handler(Looper.getMainLooper());
-
-        @Override
-        public void execute(@NonNull Runnable command) {
-            handler.post(command);
-        }
-    }
-
-    private static class ExecutorHolder {
-        private static ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-    }
-
-
     public static final class Builder<T> {
+        private PulseHandler<T> pulseHandler;
         private ConnectionInfo connectionInfo;
         private List<ConnectionInfo> backupConnectionInfoList;
-        private ByteOrder writeOrder = ByteOrder.BIG_ENDIAN;
-        private ByteOrder readByteOrder = ByteOrder.BIG_ENDIAN;
-        private Protocol<T> protocol;
+        private SocketFactory socketFactory;
+        private HeadParser<T> headParser;
         private PushHandler<T> pushHandler;
-        private Executor dispatchExecutor;
+        private Executor callbackExecutor;
+        private Executor managerExecutor;
+        private Executor codecExecutor;
+        private ScheduledExecutorService scheduledExecutor;
         private int maxReadDataKB = 1024;
         private int requestTimeOut = 5;
         private int connectTimeOut = 5000;
@@ -235,11 +228,15 @@ public class Options<T> {
         private int pulseLostTimes = 2;
         private int backgroundLiveTime = 120;
         private LivePolicy livePolicy = LivePolicy.DEFAULT;
-        private ScheduledExecutorService executorService;
         private int retryTimes;
         private int connectInterval = 3000;
 
         public Builder() {
+        }
+
+        public Builder<T> pulseHandler(PulseHandler<T> val) {
+            pulseHandler = val;
+            return this;
         }
 
         public Builder<T> connectionInfo(ConnectionInfo val) {
@@ -252,18 +249,8 @@ public class Options<T> {
             return this;
         }
 
-        public Builder<T> writeOrder(@NonNull ByteOrder val) {
-            writeOrder = val;
-            return this;
-        }
-
-        public Builder<T> readByteOrder(@NonNull ByteOrder val) {
-            readByteOrder = val;
-            return this;
-        }
-
-        public Builder<T> protocol(Protocol<T> val) {
-            protocol = val;
+        public Builder<T> protocol(HeadParser<T> val) {
+            headParser = val;
             return this;
         }
 
@@ -272,13 +259,23 @@ public class Options<T> {
             return this;
         }
 
-        public Builder<T> executorService(ScheduledExecutorService val) {
-            executorService = val;
+        public Builder<T> scheduledExecutor(ScheduledExecutorService val) {
+            scheduledExecutor = val;
             return this;
         }
 
-        public Builder<T> dispatchExecutor(Executor val) {
-            dispatchExecutor = val;
+        public Builder<T> callbackExecutor(Executor val) {
+            callbackExecutor = val;
+            return this;
+        }
+
+        public Builder<T> managerExecutor(Executor val) {
+            managerExecutor = val;
+            return this;
+        }
+
+        public Builder<T> codecExecutor(Executor val) {
+            codecExecutor = val;
             return this;
         }
 
@@ -327,6 +324,11 @@ public class Options<T> {
             return this;
         }
 
+        public Builder<T> socketFactory(SocketFactory val) {
+            socketFactory = val;
+            return this;
+        }
+
         public Options<T> build() {
             if (!checkParams()) {
                 throw new IllegalArgumentException();
@@ -338,42 +340,52 @@ public class Options<T> {
             if (connectionInfo == null) {
                 return false;
             }
-            if (protocol == null) {
+            if (headParser == null) {
                 return false;
             }
-            if (dispatchExecutor == null) {
-                dispatchExecutor = new MainThreadExecutor();
+            if (maxReadDataKB <= 0) {
+                return false;
             }
-            if (maxReadDataKB < 100 || maxReadDataKB > 1024) {
-                maxReadDataKB = 1024;
-            }
-            if (connectTimeOut < 500) {
-                connectTimeOut = 5000;
+            if (connectTimeOut < 0) {
+                return false;
             }
             if (requestTimeOut <= 0) {
-                requestTimeOut = 5;
+                return false;
             }
-            if (pulseRate < 30 || pulseRate > 300) {
-                pulseRate = 60;
+            if (pulseRate < 30) {
+                return false;
             }
             if (pulseLostTimes < 0) {
                 return false;
             }
-            if (backgroundLiveTime < 30) {
-                backgroundLiveTime = 120;
-            }
-            if (pushHandler == null) {
-                pushHandler = new DefaultPushHandler<>();
-            }
-            if (executorService == null) {
-                executorService = ExecutorHolder.executorService;
+            if (backgroundLiveTime <= 30) {
+                return false;
             }
             if (retryTimes < 0) {
-                retryTimes = 0;
+                return false;
             }
-            if (connectInterval < 1000) {
-                connectInterval = 3000;
+            if (connectInterval <= 1000) {
+                return false;
             }
+            if (socketFactory == null) {
+                socketFactory = new DefaultSocketFactory();
+            }
+            if (pushHandler == null) {
+                pushHandler = new EasySocket.DefaultPushHandler<>();
+            }
+            if (callbackExecutor == null) {
+                callbackExecutor = new EasySocket.MainThreadExecutor();
+            }
+            if (managerExecutor == null) {
+                managerExecutor = EasySocket.Executor.managerExecutor;
+            }
+            if (codecExecutor == null) {
+                codecExecutor = EasySocket.Executor.codecExecutor;
+            }
+            if (scheduledExecutor == null) {
+                scheduledExecutor = EasySocket.Executor.scheduledExecutor;
+            }
+
             return true;
         }
     }

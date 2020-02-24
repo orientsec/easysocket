@@ -9,7 +9,7 @@ import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 
-import com.orientsec.easysocket.inner.AbstractConnection;
+import com.orientsec.easysocket.impl.AbstractConnection;
 import com.orientsec.easysocket.utils.NetUtils;
 
 import java.util.List;
