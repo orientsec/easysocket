@@ -47,6 +47,12 @@ public interface Connection<T> {
      */
     <REQUEST, RESPONSE> Task<RESPONSE> buildTask(Request<T, REQUEST, RESPONSE> request);
 
+    <REQUEST, RESPONSE> Task<RESPONSE>
+    buildTask(Request<T, REQUEST, RESPONSE> request, boolean sync);
+
+    <REQUEST, RESPONSE> Task<RESPONSE>
+    buildTask(Request<T, REQUEST, RESPONSE> request, boolean init, boolean sync);
+
     /**
      * 添加连接事件监听器
      *

@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class RequestManager<T> implements TaskManager<T, RequestTask<T, ?, ?>> {
     private final byte[] lock = new byte[0];
-    private AtomicInteger taskId = new AtomicInteger();
+    private AtomicInteger taskId = new AtomicInteger(1);
 
     private SparseArray<RequestTask<T, ?, ?>> taskArray;
 

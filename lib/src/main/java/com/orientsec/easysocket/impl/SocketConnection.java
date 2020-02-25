@@ -61,10 +61,22 @@ public class SocketConnection<T> extends AbstractConnection<T>
     }
 
     @Override
-    public <REQUEST, RESPONSE> Task<RESPONSE> buildTask(Request<T, REQUEST, RESPONSE> request) {
+    public <REQUEST, RESPONSE> Task<RESPONSE>
+    buildTask(Request<T, REQUEST, RESPONSE> request) {
         return new RequestTask<>(request, this);
     }
 
+    @Override
+    public <REQUEST, RESPONSE> Task<RESPONSE>
+    buildTask(Request<T, REQUEST, RESPONSE> request, boolean sync) {
+        return new RequestTask<>(request, this, false, sync);
+    }
+
+    @Override
+    public <REQUEST, RESPONSE> Task<RESPONSE>
+    buildTask(Request<T, REQUEST, RESPONSE> request, boolean init, boolean sync) {
+        return new RequestTask<>(request, this, init, sync);
+    }
 
     Socket socket() throws IOException {
         if (socket != null) {
@@ -217,13 +229,7 @@ public class SocketConnection<T> extends AbstractConnection<T>
         }
     }
 
-    private class Callback implements Initializer.Callback<T> {
-
-        @Override
-        public <REQUEST, RESPONSE> Task<RESPONSE>
-        buildTask(Request<T, REQUEST, RESPONSE> request) {
-            return new RequestTask<>(request, SocketConnection.this, true);
-        }
+    private class Callback implements Initializer.Callback {
 
         @Override
         public void onSuccess() {

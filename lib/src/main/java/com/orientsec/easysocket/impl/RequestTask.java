@@ -48,18 +48,20 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callba
     private int taskId;
     private byte[] data;
     private boolean initTask;
+    private boolean sync;
 
     RequestTask(Request<T, REQUEST, RESPONSE> request,
                 SocketConnection<T> connection) {
-        this(request, connection, false);
+        this(request, connection, false, false);
     }
 
     RequestTask(Request<T, REQUEST, RESPONSE> request,
-                SocketConnection<T> connection, boolean initTask) {
+                SocketConnection<T> connection, boolean initTask, boolean sync) {
         this.request = request;
         this.connection = connection;
         this.options = connection.options;
         this.initTask = initTask;
+        this.sync = sync;
         callbackExecutor = options.getCallbackExecutor();
         codecExecutor = options.getCodecExecutor();
         taskManager = connection.taskManager();
@@ -106,7 +108,11 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callba
         if (ConnectionManager.getInstance().isNetworkAvailable()) {
             codecExecutor.execute(() -> {
                 try {
-                    taskId = taskManager.generateTaskId();
+                    if (!sync) {
+                        taskId = taskManager.generateTaskId();
+                    } else {
+                        taskId = SYNC_TASK_ID;
+                    }
                     data = getRequest().encode(taskId);
                     if (!taskManager.add(this)) {
                         onError(new EasyException(Event.TASK_REFUSED,

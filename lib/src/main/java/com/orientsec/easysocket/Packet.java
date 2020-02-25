@@ -13,13 +13,14 @@ import org.jetbrains.annotations.NotNull;
 
 public class Packet<T> {
 
-    public Packet(@NotNull String packetType) {
-        this(packetType, 0);
+    public Packet(@NotNull String packetType, T body) {
+        this(packetType, Task.SYNC_TASK_ID, body);
     }
 
-    public Packet(@NotNull String packetType, int taskId) {
+    public Packet(@NotNull String packetType, int taskId, T body) {
         this.taskId = taskId;
         this.packetType = packetType;
+        this.body = body;
     }
 
     /**
@@ -55,10 +56,6 @@ public class Packet<T> {
      */
     public T getBody() {
         return body;
-    }
-
-    public void setBody(T body) {
-        this.body = body;
     }
 
     /**

@@ -9,6 +9,7 @@ package com.orientsec.easysocket;
  */
 
 public interface Task<RESPONSE> {
+    int SYNC_TASK_ID = 0;
 
     /**
      * Asynchronously send the request and notify {@code callback} of its response or if an error

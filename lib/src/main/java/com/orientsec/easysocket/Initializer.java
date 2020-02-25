@@ -3,9 +3,7 @@ package com.orientsec.easysocket;
 import com.orientsec.easysocket.exception.Event;
 
 public interface Initializer {
-    interface Callback<T> {
-        <REQUEST, RESPONSE> Task<RESPONSE> buildTask(Request<T, REQUEST, RESPONSE> request);
-
+    interface Callback {
         void onSuccess();
 
         void onFail(Event event);

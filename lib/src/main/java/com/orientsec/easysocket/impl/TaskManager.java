@@ -11,6 +11,7 @@ import com.orientsec.easysocket.exception.Event;
  * coding is art not science
  */
 public interface TaskManager<T, TASK extends Task<?>> extends MessageHandler<T> {
+
     /**
      * 执行任务, 如果connection未启动，执行后开始进行连接
      *

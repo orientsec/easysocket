@@ -41,14 +41,12 @@ public class Client {
             int taskId = byteBuffer.getInt();
             int cmd = byteBuffer.getInt();
             if (cmd == 0) {
-                packet = new Packet<>(PacketType.PULSE);
+                packet = new Packet<>(PacketType.PULSE, taskId, bodyBytes);
             } else if (cmd == 1) {
-                packet = new Packet<>(PacketType.SINGLE);
+                packet = new Packet<>(PacketType.SINGLE, taskId, bodyBytes);
             } else {
-                packet = new Packet<>(PacketType.RESPONSE);
+                packet = new Packet<>(PacketType.RESPONSE, taskId, bodyBytes);
             }
-            packet.setTaskId(taskId);
-            packet.setBody(bodyBytes);
             return packet;
         }
 
