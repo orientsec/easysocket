@@ -12,8 +12,8 @@ import android.os.Bundle;
 import com.orientsec.easysocket.impl.AbstractConnection;
 import com.orientsec.easysocket.utils.NetUtils;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
  * Product: EasySocket
@@ -32,7 +32,7 @@ public class ConnectionManager {
     private boolean isNetworkAvailable;
 
     //fix ConcurrentModificationException when Iterator
-    private List<AbstractConnection> connections = new CopyOnWriteArrayList<>();
+    private Set<AbstractConnection> connections = new CopyOnWriteArraySet<>();
 
     private static class InstanceHolder {
         static ConnectionManager INSTANCE = new ConnectionManager();

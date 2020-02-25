@@ -32,5 +32,5 @@ public interface ConnectEventListener {
      * 登入服务器回调，所有请求在登入成功之后才能发起。
      * 客户端接入服务器后，有可能会被主动断开，需要通过login事件确认是否成功接入。
      */
-    void onReady();
+    void onAvailable();
 }

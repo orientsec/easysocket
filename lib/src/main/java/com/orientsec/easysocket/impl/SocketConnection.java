@@ -1,6 +1,7 @@
 package com.orientsec.easysocket.impl;
 
 import com.orientsec.easysocket.ConnectionInfo;
+import com.orientsec.easysocket.Initializer;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.Request;
@@ -30,16 +31,19 @@ public class SocketConnection<T> extends AbstractConnection<T>
 
     private BlockingReader reader;
 
-    BlockingWriter<T> writer;
+    private BlockingWriter<T> writer;
 
-    private TaskManager<T, RequestTask<T, ?, ?>> taskManager;
+    private RequestManager<T> taskManager;
 
     private Map<String, MessageHandler<T>> messageHandlerMap;
+
+    private Callback initCallback;
 
     public SocketConnection(Options<T> options) {
         super(options);
         taskManager = new RequestManager<>(this);
         pulse = new Pulse<>(this);
+        initCallback = new Callback();
         messageHandlerMap = new HashMap<>();
         messageHandlerMap.put(PacketType.RESPONSE, taskManager);
         messageHandlerMap.put(PacketType.PULSE, pulse);
@@ -53,11 +57,7 @@ public class SocketConnection<T> extends AbstractConnection<T>
 
     @Override
     public boolean isConnect() {
-        Socket socket = this.socket;
-        return state.get() == 2
-                && socket != null
-                && socket.isConnected()
-                && !socket.isClosed();
+        return state == State.CONNECT;
     }
 
     @Override
@@ -65,33 +65,12 @@ public class SocketConnection<T> extends AbstractConnection<T>
         return new RequestTask<>(request, this);
     }
 
+
     Socket socket() throws IOException {
         if (socket != null) {
             return socket;
         }
         throw new IOException("Socket is unavailable");
-    }
-
-    private void release(Event event) {
-        if (socket != null) {
-            try {
-                socket.close();
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-            socket = null;
-        }
-        //停止心跳
-        pulse.stop();
-        if (reader != null) {
-            reader.shutdown();
-            reader = null;
-        }
-        if (writer != null) {
-            writer.shutdown();
-            writer = null;
-        }
-        taskManager.onConnectionClosed(event);
     }
 
     @Override
@@ -131,6 +110,50 @@ public class SocketConnection<T> extends AbstractConnection<T>
         return new DisconnectRunnable(event);
     }
 
+    private void stopWorkers(Event event) {
+        //停止心跳
+        pulse.stop();
+        if (reader != null) {
+            reader.shutdown();
+            reader = null;
+        }
+        if (writer != null) {
+            writer.shutdown();
+            writer = null;
+        }
+        taskManager.clear(event);
+    }
+
+    private synchronized void startWorkers() {
+        //启动心跳及读写线程
+        pulse.start();
+        writer = new BlockingWriter<>(SocketConnection.this, taskManager.taskQueue);
+        reader = new BlockingReader<>(SocketConnection.this);
+        writer.start();
+        reader.start();
+    }
+
+    private Socket openSocket() {
+        try {
+            Socket socket = options.getSocketFactory().createSocket();
+            SocketAddress socketAddress
+                    = new InetSocketAddress(connectionInfo.getHost(), connectionInfo.getPort());
+            socket.connect(socketAddress, options.getConnectTimeOut());
+            return socket;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private void closeSocket(Socket socket) {
+        try {
+            socket.close();
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+    }
+
     private class ConnectRunnable implements Runnable {
 
         @Override
@@ -141,48 +164,31 @@ public class SocketConnection<T> extends AbstractConnection<T>
             }
             Logger.i("begin socket connect, " + connectionInfo);
 
-            if (!connectSocket()) {
-                release(Event.SOCKET_START_ERROR);
-                if (state.compareAndSet(1, 0)) {
+            Socket socket = openSocket();
+            boolean closeSocket = false;
+            synchronized (lock) {
+                if (socket == null) {
+                    if (state == State.STARTING) {
+                        state = State.IDLE;
+                    }
+                    stopWorkers(Event.SOCKET_START_ERROR);
                     onConnectFailed();
-                }
-                return;
-            }
-
-            //再次检查状态
-            if (isShutdown()) {
-                //关闭socket
-                release(Event.SHUT_DOWN);
-            } else {
-                startComponents();
-                if (state.compareAndSet(1, 2)) {
+                } else if (state == State.STARTING) {
+                    state = State.CONNECT;
+                    SocketConnection.this.socket = socket;
+                    startWorkers();
                     onConnect();
+                    options.getInitializer().start(initCallback);
                 } else {
-                    //关闭socket
-                    release(Event.SHUT_DOWN);
+                    //connection is shutdown
+                    stopWorkers(Event.SHUT_DOWN);
+                    closeSocket = true;
                 }
             }
-        }
-
-        private boolean connectSocket() {
-            try {
-                Socket socket = options.getSocketFactory().createSocket();
-                SocketAddress socketAddress = new InetSocketAddress(connectionInfo.getHost(), connectionInfo.getPort());
-                socket.connect(socketAddress, options.getConnectTimeOut());
-            } catch (Exception e) {
-                e.printStackTrace();
-                return false;
+            if (closeSocket) {
+                closeSocket(socket);
             }
-            return true;
-        }
 
-        private void startComponents() {
-            //启动心跳及读写线程
-            pulse.start();
-            writer = new BlockingWriter<>(SocketConnection.this);
-            reader = new BlockingReader<>(SocketConnection.this);
-            writer.start();
-            reader.start();
         }
     }
 
@@ -195,9 +201,43 @@ public class SocketConnection<T> extends AbstractConnection<T>
 
         @Override
         public void run() {
-            release(event);
-            state.compareAndSet(3, 0);
-            onDisconnect(event);
+            Socket socket;
+            synchronized (lock) {
+                if (state == State.STOPPING) {
+                    state = State.IDLE;
+                }
+                stopWorkers(event);
+                socket = SocketConnection.this.socket;
+                SocketConnection.this.socket = null;
+                onDisconnect(event);
+            }
+            if (socket != null) {
+                closeSocket(socket);
+            }
+        }
+    }
+
+    private class Callback implements Initializer.Callback<T> {
+
+        @Override
+        public <REQUEST, RESPONSE> Task<RESPONSE>
+        buildTask(Request<T, REQUEST, RESPONSE> request) {
+            return new RequestTask<>(request, SocketConnection.this, true);
+        }
+
+        @Override
+        public void onSuccess() {
+            synchronized (lock) {
+                if (state == State.CONNECT) {
+                    state = State.AVAILABLE;
+                    onAvailable();
+                }
+            }
+        }
+
+        @Override
+        public void onFail(Event event) {
+            disconnect(event);
         }
     }
 }

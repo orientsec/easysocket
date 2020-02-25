@@ -1,12 +1,15 @@
 package com.orientsec.easysocket.impl;
 
+import android.util.SparseArray;
+
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.TaskType;
 import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.exception.Event;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -17,15 +20,22 @@ import java.util.concurrent.atomic.AtomicInteger;
  * coding is art not science
  */
 public class RequestManager<T> implements TaskManager<T, RequestTask<T, ?, ?>> {
-
+    private final byte[] lock = new byte[0];
     private AtomicInteger taskId = new AtomicInteger();
 
-    private Map<Integer, RequestTask<T, ?, ?>> taskMap = new ConcurrentHashMap<>();
+    private SparseArray<RequestTask<T, ?, ?>> taskArray;
+
+    LinkedBlockingQueue<RequestTask<T, ?, ?>> taskQueue;
+
+    private List<RequestTask<T, ?, ?>> waitingList;
 
     private SocketConnection<T> connection;
 
     RequestManager(SocketConnection<T> connection) {
         this.connection = connection;
+        taskQueue = new LinkedBlockingQueue<>();
+        taskArray = new SparseArray<>();
+        waitingList = new ArrayList<>();
     }
 
     @Override
@@ -34,18 +44,32 @@ public class RequestManager<T> implements TaskManager<T, RequestTask<T, ?, ?>> {
     }
 
     @Override
-    public boolean addTask(RequestTask<T, ?, ?> task) {
-        taskMap.put(task.getTaskId(), task);
-        if (!connection.writer.addTask(task)) {
-            taskMap.remove(task.getTaskId());
-            return false;
+    public boolean add(RequestTask<T, ?, ?> task) {
+        synchronized (lock) {
+            taskArray.put(task.getTaskId(), task);
+            if (connection.isAvailable() || task.isInitTask()) {
+                if (!taskQueue.offer(task)) {
+                    taskArray.remove(task.getTaskId());
+                    return false;
+                }
+            } else {
+                waitingList.add(task);
+            }
+            return true;
         }
-        return true;
     }
 
     @Override
     public void handleMessage(Packet<T> packet) {
-        RequestTask<T, ?, ?> requestTask = taskMap.remove(packet.getTaskId());
+        int taskId = packet.getTaskId();
+        RequestTask<T, ?, ?> requestTask = null;
+        synchronized (lock) {
+            int index = taskArray.indexOfKey(taskId);
+            if (index >= 0) {
+                requestTask = taskArray.valueAt(taskId);
+                taskArray.removeAt(index);
+            }
+        }
         if (requestTask != null) {
             requestTask.onSuccess(packet.getBody());
         }
@@ -55,26 +79,47 @@ public class RequestManager<T> implements TaskManager<T, RequestTask<T, ?, ?>> {
     public void onSend(RequestTask<T, ?, ?> task) {
         //Release data after send success.
         if (task.getTaskType() == TaskType.SEND_ONLY) {
+            synchronized (lock) {
+                taskArray.remove(task.getTaskId());
+            }
             task.onSuccess();
-            taskMap.remove(task.getTaskId());
         } else {
             task.onStart();
         }
     }
 
     @Override
-    public void removeTask(RequestTask<T, ?, ?> task) {
-        if (taskMap.remove(task.getTaskId()) != null) {
-            connection.writer.removeTask(task);
+    public void remove(RequestTask<T, ?, ?> task) {
+        synchronized (lock) {
+            int taskId = task.getTaskId();
+            int index = taskArray.indexOfKey(taskId);
+            if (index >= 0) {
+                taskArray.removeAt(index);
+                taskQueue.remove(task);
+                waitingList.remove(task);
+            }
         }
     }
 
-    public void onConnectionClosed(Event event) {
-        EasyException exception = new EasyException(event, "Connection closed.");
-        for (RequestTask<T, ?, ?> task : taskMap.values()) {
-            task.onError(exception);
+    @Override
+    public void clear(Event event) {
+        synchronized (lock) {
+            EasyException exception = new EasyException(event, "Connection closed.");
+            for (int i = 0; i < taskArray.size(); i++) {
+                RequestTask<T, ?, ?> task = taskArray.valueAt(i);
+                task.onError(exception);
+            }
+            taskArray.clear();
+            taskQueue.clear();
+            waitingList.clear();
         }
-        taskMap.clear();
     }
 
+    @Override
+    public void onReady() {
+        synchronized (lock) {
+            taskQueue.addAll(waitingList);
+            waitingList.clear();
+        }
+    }
 }

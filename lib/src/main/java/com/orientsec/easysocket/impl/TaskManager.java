@@ -16,7 +16,18 @@ public interface TaskManager<T, TASK extends Task<?>> extends MessageHandler<T> 
      *
      * @param task 任务
      */
-    boolean addTask(TASK task);
+    boolean add(TASK task);
+
+    /**
+     * 移除任务
+     * 如果任务未开始执行，取消任务执行；如果已经开始执行，但未结束，{@link com.orientsec.easysocket.Callback}不会再收到
+     * 回调；如果任务已经完成，无效果
+     *
+     * @param task 任务
+     */
+    void remove(TASK task);
+
+    void clear(Event event);
 
     /**
      * 开始发送消息
@@ -26,15 +37,9 @@ public interface TaskManager<T, TASK extends Task<?>> extends MessageHandler<T> 
     void onSend(RequestTask<T, ?, ?> task);
 
     /**
-     * 移除任务
-     * 如果任务未开始执行，取消任务执行；如果已经开始执行，但未结束，{@link com.orientsec.easysocket.Callback}不会再收到
-     * 回调；如果任务已经完成，无效果
-     *
-     * @param task 任务
+     * 连接准备就绪。在完成资源初始化、登录之后，连接进入可用状态
      */
-    void removeTask(TASK task);
-
-    void onConnectionClosed(Event event);
+    void onReady();
 
     int generateTaskId();
 }

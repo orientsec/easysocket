@@ -2,6 +2,7 @@ package com.orientsec.easysocket.impl;
 
 import com.orientsec.easysocket.ConnectEventListener;
 import com.orientsec.easysocket.ConnectionInfo;
+import com.orientsec.easysocket.ConnectionManager;
 import com.orientsec.easysocket.LivePolicy;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.exception.Event;
@@ -24,7 +25,7 @@ public class ReConnector<T> implements ConnectEventListener {
     /**
      * 连接失败次数,不包括断开异常
      */
-    private int connectionFailedTimes = 0;
+    private int failedTimes = 0;
     /**
      * 备用站点下标
      */
@@ -34,16 +35,10 @@ public class ReConnector<T> implements ConnectEventListener {
 
     private Future<?> disconnectTask;
 
-    private boolean connectFailed;
-
     ReConnector(AbstractConnection<T> connection) {
         this.connection = connection;
         options = connection.options;
         executorService = connection.options.getScheduledExecutor();
-    }
-
-    boolean isConnectFailed() {
-        return connectFailed;
     }
 
     @Override
@@ -53,28 +48,23 @@ public class ReConnector<T> implements ConnectEventListener {
 
     @Override
     public void onDisconnect(Event event) {
-        connectFailed = true;
-        if (event.getCode() < 0 || ++connectionFailedTimes >= options.getRetryTimes()) {
+        if (ConnectionManager.getInstance().isNetworkAvailable()) {
             switchServer();
+            reconnectDelay();
         }
-        reconnectDelay();
     }
 
     @Override
     public void onConnectFailed() {
-        connectFailed = true;
-        //连接失败达到阈值,需要切换备用线路
-        if (++connectionFailedTimes >= options.getRetryTimes()) {
+        if (ConnectionManager.getInstance().isNetworkAvailable()) {
             switchServer();
+            reconnectDelay();
         }
-        reconnectDelay();
-        //reconnectTimeDelay = reconnectTimeDelay * 2;//x+2x+4x
     }
 
     @Override
-    public void onReady() {
-        connectFailed = false;
-        reset();
+    public void onAvailable() {
+        failedTimes = 0;
         if (connection.isSleep()) {
             disconnectDelay();
         }
@@ -84,16 +74,20 @@ public class ReConnector<T> implements ConnectEventListener {
      * 切换服务器
      */
     private void switchServer() {
-        reset();
-        List<ConnectionInfo> connectionInfoList = options.getBackupConnectionInfoList();
-        if (connectionInfoList != null && connectionInfoList.size() > 0) {
-            if (++backUpIndex >= connectionInfoList.size()) {
-                Logger.i("switch to main server");
-                backUpIndex = -1;
-                connection.connectionInfo = options.getConnectionInfo();
-            } else {
-                Logger.i("switch to backup server");
-                connection.connectionInfo = connectionInfoList.get(backUpIndex);
+        //连接失败达到阈值,需要切换备用线路
+        if (++failedTimes >= options.getRetryTimes()) {
+            failedTimes = 0;
+
+            List<ConnectionInfo> connectionInfoList = options.getBackupConnectionInfoList();
+            if (connectionInfoList != null && connectionInfoList.size() > 0) {
+                if (++backUpIndex >= connectionInfoList.size()) {
+                    Logger.i("switch to main server");
+                    backUpIndex = -1;
+                    connection.connectionInfo = options.getConnectionInfo();
+                } else {
+                    Logger.i("switch to backup server");
+                    connection.connectionInfo = connectionInfoList.get(backUpIndex);
+                }
             }
         }
     }
@@ -122,13 +116,10 @@ public class ReConnector<T> implements ConnectEventListener {
         }
     }
 
-    void reset() {
-        connectionFailedTimes = 0;
-    }
-
     void reconnectDelay() {
         synchronized (lock) {
-            if (connection.state.get() != 0 || connection.isSleep()) {
+            if (connection.state != AbstractConnection.State.IDLE
+                    || connection.isSleep()) {
                 return;
             }
             stopReconnect();

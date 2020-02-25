@@ -10,11 +10,9 @@ import com.orientsec.easysocket.Task;
 import com.orientsec.easysocket.exception.Event;
 import com.orientsec.easysocket.utils.Logger;
 
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import io.reactivex.annotations.NonNull;
 
@@ -27,23 +25,29 @@ import io.reactivex.annotations.NonNull;
  */
 public abstract class AbstractConnection<T> implements Connection<T>,
         ConnectionManager.OnNetworkStateChangedListener, ConnectEventListener {
+    final byte[] lock = new byte[0];
+
+    enum State {
+        IDLE, STARTING, CONNECT, AVAILABLE, STOPPING, SHUTDOWN
+    }
+
     /**
      * 0 空闲状态 0 -> 1
      * 1 连接中 1 -> 0; 1 -> 2
      * 2 连接成功 2 -> 3
+     * 3
      * 3 连接断开中 3 -> 0
      * 4 关闭 0 -> 4; 1 -> 4; 2 -> 4; 3 -> 4
      * <p>
      * 连接状态
      */
-    AtomicInteger state = new AtomicInteger();
+    State state = State.IDLE;
 
     private volatile long timestamp;
 
     volatile long connectTimestamp;
 
-    private Set<ConnectEventListener> connectEventListeners
-            = Collections.synchronizedSet(new HashSet<>());
+    private Set<ConnectEventListener> connectEventListeners = new CopyOnWriteArraySet<>();
 
     private ReConnector reConnector;
 
@@ -71,64 +75,61 @@ public abstract class AbstractConnection<T> implements Connection<T>,
 
     @Override
     public boolean isShutdown() {
-        return state.get() == 4;
+        return state == State.SHUTDOWN;
     }
 
     @Override
     public void start() {
-        if (state.compareAndSet(0, 1)) {
-            connectTimestamp = System.currentTimeMillis();
-            managerExecutor.execute(connectRunnable());
+        synchronized (lock) {
+            if (state == State.IDLE
+                    && ConnectionManager.getInstance().isNetworkAvailable()) {
+                state = State.STARTING;
+                connectTimestamp = System.currentTimeMillis();
+                managerExecutor.execute(connectRunnable());
+            }
         }
     }
-
-    @Override
-    public void addConnectEventListener(@NonNull ConnectEventListener listener) {
-        connectEventListeners.add(listener);
-    }
-
-    @Override
-    public void removeConnectEventListener(@NonNull ConnectEventListener listener) {
-        connectEventListeners.remove(listener);
-    }
-
 
     @Override
     public void shutdown() {
-        int currentState = state.getAndSet(4);
-        if (currentState != 4) {
-            reConnector.stopDisconnect();
-            reConnector.stopReconnect();
-            ConnectionManager.getInstance().removeConnection(this);
-        }
-        if (currentState == 2) {
-            managerExecutor.execute(disconnectRunnable(Event.SHUT_DOWN));
+        if (state == State.SHUTDOWN) return;
+        synchronized (lock) {
+            if (state != State.SHUTDOWN) {
+                reConnector.stopDisconnect();
+                reConnector.stopReconnect();
+                ConnectionManager.getInstance().removeConnection(this);
+            }
+            if (state == State.CONNECT || state == State.AVAILABLE) {
+                managerExecutor.execute(disconnectRunnable(Event.SHUT_DOWN));
+            }
+            state = State.SHUTDOWN;
         }
     }
 
     void disconnect(Event event) {
-        if (state.compareAndSet(2, 3)) {
-            managerExecutor.execute(disconnectRunnable(event));
-        }
-    }
-
-    public void onReady() {
-        if (state.get() == 2) {
-            Logger.i("Connection is ready," + connectionInfo);
-            reConnector.onReady();
-            if (connectEventListeners.size() > 0) {
-                callbackExecutor.execute(() -> {
-                    for (ConnectEventListener listener : connectEventListeners) {
-                        listener.onReady();
-                    }
-                });
+        synchronized (lock) {
+            if (state == State.CONNECT || state == State.AVAILABLE) {
+                managerExecutor.execute(disconnectRunnable(event));
+                state = State.STOPPING;
             }
         }
     }
 
     @Override
     public boolean isAvailable() {
-        return !reConnector.isConnectFailed();
+        return state == State.AVAILABLE;
+    }
+
+    public void onAvailable() {
+        Logger.i("Connection is available," + connectionInfo);
+        reConnector.onAvailable();
+        if (connectEventListeners.size() > 0) {
+            callbackExecutor.execute(() -> {
+                for (ConnectEventListener listener : connectEventListeners) {
+                    listener.onAvailable();
+                }
+            });
+        }
     }
 
     public void onConnect() {
@@ -145,10 +146,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
 
     public void onDisconnect(Event event) {
         Logger.i("Connection is disconnected, " + connectionInfo);
-        boolean isNetworkAvailable = ConnectionManager.getInstance().isNetworkAvailable();
-        if (isNetworkAvailable) {
-            reConnector.onDisconnect(event);
-        }
+        reConnector.onDisconnect(event);
 
         if (connectEventListeners.size() > 0) {
             callbackExecutor.execute(() -> {
@@ -161,9 +159,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
 
     public void onConnectFailed() {
         Logger.i("Fail to establish connection, " + connectionInfo);
-        if (ConnectionManager.getInstance().isNetworkAvailable()) {
-            reConnector.onConnectFailed();
-        }
+        reConnector.onConnectFailed();
         if (connectEventListeners.size() > 0) {
             callbackExecutor.execute(() -> {
                 for (ConnectEventListener listener : connectEventListeners) {
@@ -176,7 +172,6 @@ public abstract class AbstractConnection<T> implements Connection<T>,
     @Override
     public void onNetworkStateChanged(boolean available) {
         if (available) {
-            reConnector.reset();
             reConnector.reconnectDelay();
         } else {
             disconnect(Event.NETWORK_NOT_AVAILABLE);
@@ -196,9 +191,20 @@ public abstract class AbstractConnection<T> implements Connection<T>,
     }
 
     boolean isSleep() {
-        return timestamp != 0
-                && System.currentTimeMillis() - timestamp > options.getBackgroundLiveTime() * 1000;
+        return System.currentTimeMillis() - timestamp > options.getBackgroundLiveTime() * 1000
+                && timestamp != 0;
     }
+
+    @Override
+    public void addConnectEventListener(@NonNull ConnectEventListener listener) {
+        connectEventListeners.add(listener);
+    }
+
+    @Override
+    public void removeConnectEventListener(@NonNull ConnectEventListener listener) {
+        connectEventListeners.remove(listener);
+    }
+
 
     public abstract TaskManager<T, ? extends Task<?>> taskManager();
 

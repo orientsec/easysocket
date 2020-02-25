@@ -6,7 +6,7 @@ import com.orientsec.easysocket.utils.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 /**
  * Product: EasySocket
@@ -18,19 +18,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class BlockingWriter<T> extends Looper implements Writer {
     private OutputStream mOutputStream;
     private SocketConnection<T> connection;
-    private LinkedBlockingQueue<RequestTask<T, ?, ?>> packetQueue;
+    private BlockingQueue<RequestTask<T, ?, ?>> taskQueue;
 
-    BlockingWriter(AbstractConnection<T> context) {
+    BlockingWriter(AbstractConnection<T> context,
+                   BlockingQueue<RequestTask<T, ?, ?>> taskQueue) {
         this.connection = (SocketConnection<T>) context;
-        packetQueue = new LinkedBlockingQueue<>();
-    }
-
-    boolean addTask(RequestTask<T, ?, ?> task) {
-        return packetQueue.offer(task);
-    }
-
-    void removeTask(RequestTask<T, ?, ?> task) {
-        packetQueue.remove(task);
+        this.taskQueue = taskQueue;
     }
 
     private void write(RequestTask<T, ?, ?> task) throws IOException {
@@ -43,7 +36,7 @@ public class BlockingWriter<T> extends Looper implements Writer {
     @Override
     public void write() throws IOException {
         try {
-            RequestTask<T, ?, ?> task = packetQueue.take();
+            RequestTask<T, ?, ?> task = taskQueue.take();
             write(task);
         } catch (InterruptedException e) {
             //ignore;
@@ -53,8 +46,6 @@ public class BlockingWriter<T> extends Looper implements Writer {
     @Override
     protected void beforeLoop() throws IOException {
         mOutputStream = connection.socket().getOutputStream();
-
-        connection.onReady();
     }
 
     @Override
@@ -67,7 +58,8 @@ public class BlockingWriter<T> extends Looper implements Writer {
         Event event = Event.EMPTY;
         if (e != null) {
             //e.printStackTrace();
-            Logger.e("Blocking write error, thread is dead with exception: " + e.getMessage());
+            Logger.e("Blocking write error, " +
+                    "thread is dead with exception: " + e.getMessage());
             if (e instanceof IOException) {
                 event = Event.WRITE_IO_ERROR;
             } else if (e instanceof EasyException) {

@@ -47,12 +47,19 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callba
      */
     private int taskId;
     private byte[] data;
+    private boolean initTask;
 
     RequestTask(Request<T, REQUEST, RESPONSE> request,
                 SocketConnection<T> connection) {
+        this(request, connection, false);
+    }
+
+    RequestTask(Request<T, REQUEST, RESPONSE> request,
+                SocketConnection<T> connection, boolean initTask) {
         this.request = request;
         this.connection = connection;
         this.options = connection.options;
+        this.initTask = initTask;
         callbackExecutor = options.getCallbackExecutor();
         codecExecutor = options.getCodecExecutor();
         taskManager = connection.taskManager();
@@ -71,6 +78,10 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callba
 
     byte[] getData() {
         return data;
+    }
+
+    boolean isInitTask() {
+        return initTask;
     }
 
     /**
@@ -97,7 +108,7 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callba
                 try {
                     taskId = taskManager.generateTaskId();
                     data = getRequest().encode(taskId);
-                    if (!taskManager.addTask(this)) {
+                    if (!taskManager.add(this)) {
                         onError(new EasyException(Event.TASK_REFUSED,
                                 "Refuse to execute task!"));
                     }
@@ -124,7 +135,7 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callba
     @Override
     public void cancel() {
         if (compareAndSet(state, 4, 1, 2)) {
-            taskManager.removeTask(this);
+            taskManager.remove(this);
             cancelTimer();
             onCancel();
         }
@@ -188,7 +199,7 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callba
     private void startTimer() {
         timeoutFuture = options.getScheduledExecutor()
                 .schedule(() -> {
-                            taskManager.removeTask(this);
+                            taskManager.remove(this);
                             onError(new EasyException(Event.RESPONSE_TIME_OUT, "Response time out."));
                         }
                         , options.getRequestTimeOut()
