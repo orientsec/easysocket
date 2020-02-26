@@ -1,6 +1,8 @@
 package com.orientsec.easysocket.impl;
 
 import com.orientsec.easysocket.Task;
+import com.orientsec.easysocket.Callback;
+import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.exception.Event;
 
 /**
@@ -17,11 +19,11 @@ public interface TaskManager<T, TASK extends Task<?>> extends MessageHandler<T> 
      *
      * @param task 任务
      */
-    boolean add(TASK task);
+    void add(TASK task);
 
     /**
      * 移除任务
-     * 如果任务未开始执行，取消任务执行；如果已经开始执行，但未结束，{@link com.orientsec.easysocket.Callback}不会再收到
+     * 如果任务未开始执行，取消任务执行；如果已经开始执行，但未结束，{@link Callback}不会再收到
      * 回调；如果任务已经完成，无效果
      *
      * @param task 任务

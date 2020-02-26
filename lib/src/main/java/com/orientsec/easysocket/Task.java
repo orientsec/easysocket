@@ -12,8 +12,8 @@ public interface Task<RESPONSE> {
     int SYNC_TASK_ID = 0;
 
     /**
-     * Asynchronously send the request and notify {@code callback} of its response or if an error
-     * occurred talking to the server, creating the request, or processing the response.
+     * Asynchronously send the IN and notify {@code callback} of its OUT or if an error
+     * occurred talking to the server, creating the IN, or processing the OUT.
      */
     void execute(Callback<RESPONSE> callback);
 

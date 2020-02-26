@@ -11,50 +11,48 @@ import com.orientsec.easysocket.exception.EasyException;
  * <p>
  * Request send to server
  *
- * @param <REQUEST>  request param type
- * @param <RESPONSE> response param type
+ * @param <IN>  IN param type
+ * @param <OUT> OUT param type
  */
-public abstract class Request<T, REQUEST, RESPONSE> {
+public abstract class Request<T, IN, OUT> {
     /**
-     * this request is only send, there is no response from server
+     * this IN is only send, there is no OUT from server
      */
     private boolean sendOnly;
-    protected REQUEST request;
-    protected RESPONSE response;
+    protected OUT out;
+    protected IN in;
 
     public boolean isSendOnly() {
         return sendOnly;
     }
 
-    public REQUEST getRequest() {
-        return request;
+    public IN getIn() {
+        return in;
     }
 
-    public RESPONSE getResponse() {
-        return response;
+    public OUT getOut() {
+        return out;
     }
 
     protected Request() {
     }
 
-    public Request(REQUEST request) {
-        this.request = request;
+    public Request(OUT out) {
+        this.out = out;
     }
 
-
-    public Request(REQUEST request, boolean sendOnly) {
+    public Request(OUT out, boolean sendOnly) {
         this.sendOnly = sendOnly;
-        this.request = request;
+        this.out = out;
     }
 
-    public Request(REQUEST request, RESPONSE response) {
-        this.request = request;
-        this.response = response;
+    public Request(OUT out, IN in) {
+        this.out = out;
+        this.in = in;
     }
-
 
     /**
-     * handle request data here.
+     * handle IN data here.
      * 对入参进行处理，可以进行统一的业务数据填充、校验，数据编码等
      *
      * @return 处理后的发送数据 类型和{@link Packet#getBody()}一致
@@ -71,5 +69,5 @@ public abstract class Request<T, REQUEST, RESPONSE> {
      * @return 返回结果
      * @throws EasyException 异常
      */
-    public abstract RESPONSE decode(T data) throws EasyException;
+    public abstract OUT decode(T data) throws EasyException;
 }

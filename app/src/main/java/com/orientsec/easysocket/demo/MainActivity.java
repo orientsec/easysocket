@@ -1,8 +1,10 @@
-package com.orientsec.easysocket;
+package com.orientsec.easysocket.demo;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
+
+import com.orientsec.easysocket.demo.client.Client;
 
 public class MainActivity extends AppCompatActivity {
     private TextView textView;
@@ -14,12 +16,11 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         textView = findViewById(R.id.text);
         findViewById(R.id.button).setOnClickListener(v -> Client.getInstance().request("hello")
-                .subscribe(s -> {
-                    ConnectionInfo info = Client.getInstance().connection.getConnectionInfo();
-                    textView.setText("from host:" + info.getHost() + " port:" + info.getPort() + "\n" + s);
-                }, e -> {
-                    errorTimes++;
-                    textView.setText("error:" + errorTimes);
-                }));
+                .subscribe(s -> textView.setText(s),
+                        e -> {
+                            e.printStackTrace();
+                            errorTimes++;
+                            textView.setText("error:" + errorTimes);
+                        }));
     }
 }

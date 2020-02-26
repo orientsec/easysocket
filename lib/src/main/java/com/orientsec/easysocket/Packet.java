@@ -1,7 +1,8 @@
 package com.orientsec.easysocket;
 
 
-import org.jetbrains.annotations.NotNull;
+import com.orientsec.easysocket.impl.PacketType;
+
 
 /**
  * Product: EasySocket
@@ -13,11 +14,11 @@ import org.jetbrains.annotations.NotNull;
 
 public class Packet<T> {
 
-    public Packet(@NotNull String packetType, T body) {
+    public Packet(PacketType packetType, T body) {
         this(packetType, Task.SYNC_TASK_ID, body);
     }
 
-    public Packet(@NotNull String packetType, int taskId, T body) {
+    public Packet(PacketType packetType, int taskId, T body) {
         this.taskId = taskId;
         this.packetType = packetType;
         this.body = body;
@@ -35,8 +36,7 @@ public class Packet<T> {
     /**
      * 消息类型
      */
-    @NotNull
-    private String packetType;
+    private PacketType packetType;
 
     /**
      * 获取任务id
@@ -63,8 +63,7 @@ public class Packet<T> {
      *
      * @return 消息类型
      */
-    @NotNull
-    public String getPacketType() {
+    public PacketType getPacketType() {
         return packetType;
     }
 

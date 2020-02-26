@@ -1,7 +1,6 @@
 package com.orientsec.easysocket.impl;
 
 import com.orientsec.easysocket.Callback;
-import com.orientsec.easysocket.ConnectionManager;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.Task;
@@ -27,9 +26,9 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callba
     /**
      * Task状态，总共有4种状态
      * 0 初始状态
-     * 1 等待执行
-     * 2 执行中
-     * 3 完成
+     * 1 等待编码，等待发送
+     * 2 请求发送完成，等待响应
+     * 3 收到响应
      * 4 取消
      */
     private AtomicInteger state = new AtomicInteger();
@@ -48,7 +47,7 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callba
     private int taskId;
     private byte[] data;
     private boolean initTask;
-    private boolean sync;
+    private boolean syncTask;
 
     RequestTask(Request<T, REQUEST, RESPONSE> request,
                 SocketConnection<T> connection) {
@@ -56,16 +55,21 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callba
     }
 
     RequestTask(Request<T, REQUEST, RESPONSE> request,
-                SocketConnection<T> connection, boolean initTask, boolean sync) {
+                SocketConnection<T> connection, boolean initTask, boolean syncTask) {
         this.request = request;
         this.connection = connection;
         this.options = connection.options;
         this.initTask = initTask;
-        this.sync = sync;
+        this.syncTask = syncTask;
         callbackExecutor = options.getCallbackExecutor();
         codecExecutor = options.getCodecExecutor();
         taskManager = connection.taskManager();
         taskType = request.isSendOnly() ? TaskType.SEND_ONLY : TaskType.NORMAL;
+        if (syncTask) {
+            taskId = SYNC_TASK_ID;
+        } else {
+            taskId = taskManager.generateTaskId();
+        }
     }
 
     /**
@@ -86,6 +90,10 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callba
         return initTask;
     }
 
+    boolean isSyncTask() {
+        return syncTask;
+    }
+
     /**
      * 获取任务类型
      *
@@ -104,28 +112,18 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callba
         if (connection.isShutdown()) {
             throw new IllegalStateException("Connection is show down!");
         }
-        connection.start();
-        if (ConnectionManager.getInstance().isNetworkAvailable()) {
-            codecExecutor.execute(() -> {
-                try {
-                    if (!sync) {
-                        taskId = taskManager.generateTaskId();
-                    } else {
-                        taskId = SYNC_TASK_ID;
-                    }
-                    data = getRequest().encode(taskId);
-                    if (!taskManager.add(this)) {
-                        onError(new EasyException(Event.TASK_REFUSED,
-                                "Refuse to execute task!"));
-                    }
-                } catch (EasyException e) {
-                    onError(e);
-                }
-            });
-        } else {
-            onError(new EasyException(Event.NETWORK_NOT_AVAILABLE,
-                    "network is unavailable!"));
-        }
+        taskManager.add(this);
+    }
+
+    /**
+     * 对请求消息进行编码, 获取最终写入的字节数组。
+     *
+     * @return 是否需要将task加入写队列。如果task已经取消，不需要继续写入。
+     * @throws EasyException 编码错误
+     */
+    boolean encode() throws EasyException {
+        data = getRequest().encode(taskId);
+        return state.get() == 1;
     }
 
     @Override

@@ -39,20 +39,4 @@ public interface HeadParser<T> {
      */
     Packet<T> decodePacket(Head head, byte[] bodyBytes) throws EasyException;
 
-
-    /**
-     * 授权检验过程, 可以通过解析{@param data}获取、校验授权数据
-     *
-     * @param data 从{@link Packet#getBody()}获取的授权消息体
-     * @return 授权结果。如果true，保持连接；如果为false，连接立即断开
-     */
-    boolean authorize(T data);
-
-    /**
-     * 是否需要授权
-     *
-     * @return 是否需要授权
-     */
-    boolean needAuthorize();
-
 }

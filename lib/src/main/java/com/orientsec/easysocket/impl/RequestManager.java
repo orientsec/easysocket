@@ -2,6 +2,7 @@ package com.orientsec.easysocket.impl;
 
 import android.util.SparseArray;
 
+import com.orientsec.easysocket.ConnectionManager;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.TaskType;
 import com.orientsec.easysocket.exception.EasyException;
@@ -9,6 +10,7 @@ import com.orientsec.easysocket.exception.Event;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -31,8 +33,11 @@ public class RequestManager<T> implements TaskManager<T, RequestTask<T, ?, ?>> {
 
     private SocketConnection<T> connection;
 
+    private Executor codecExecutor;
+
     RequestManager(SocketConnection<T> connection) {
         this.connection = connection;
+        codecExecutor = connection.options.getCodecExecutor();
         taskQueue = new LinkedBlockingQueue<>();
         taskArray = new SparseArray<>();
         waitingList = new ArrayList<>();
@@ -44,19 +49,46 @@ public class RequestManager<T> implements TaskManager<T, RequestTask<T, ?, ?>> {
     }
 
     @Override
-    public boolean add(RequestTask<T, ?, ?> task) {
-        synchronized (lock) {
-            taskArray.put(task.getTaskId(), task);
-            if (connection.isAvailable() || task.isInitTask()) {
-                if (!taskQueue.offer(task)) {
-                    taskArray.remove(task.getTaskId());
-                    return false;
+    public void add(RequestTask<T, ?, ?> task) {
+        if (ConnectionManager.getInstance().isNetworkAvailable()) {
+            connection.start();
+            synchronized (lock) {
+                int taskId = task.getTaskId();
+                if (task.isSyncTask()) {
+                    if (taskArray.indexOfKey(taskId) > 0) {
+                        task.onError(new EasyException(Event.TASK_REFUSED,
+                                "A sync task is already running!"));
+                    }
                 }
-            } else {
-                waitingList.add(task);
+                taskArray.put(taskId, task);
+
+                if (connection.isAvailable() || task.isInitTask()) {
+                    executeEncodeTask(task);
+                } else {
+                    waitingList.add(task);
+                }
             }
-            return true;
+        } else {
+            task.onError(new EasyException(Event.NETWORK_NOT_AVAILABLE,
+                    "Network is unavailable!"));
         }
+    }
+
+    private void executeEncodeTask(RequestTask<T, ?, ?> task) {
+        codecExecutor.execute(() -> {
+            try {
+                if (!task.encode()) return;
+                if (!taskQueue.offer(task)) {
+                    throw new EasyException(Event.TASK_REFUSED,
+                            "Task queue refuse to accept task!");
+                }
+            } catch (EasyException e) {
+                synchronized (lock) {
+                    taskArray.remove(task.getTaskId());
+                }
+                task.onError(e);
+            }
+        });
     }
 
     @Override
@@ -66,7 +98,7 @@ public class RequestManager<T> implements TaskManager<T, RequestTask<T, ?, ?>> {
         synchronized (lock) {
             int index = taskArray.indexOfKey(taskId);
             if (index >= 0) {
-                requestTask = taskArray.valueAt(taskId);
+                requestTask = taskArray.valueAt(index);
                 taskArray.removeAt(index);
             }
         }
@@ -91,8 +123,7 @@ public class RequestManager<T> implements TaskManager<T, RequestTask<T, ?, ?>> {
     @Override
     public void remove(RequestTask<T, ?, ?> task) {
         synchronized (lock) {
-            int taskId = task.getTaskId();
-            int index = taskArray.indexOfKey(taskId);
+            int index = taskArray.indexOfKey(task.getTaskId());
             if (index >= 0) {
                 taskArray.removeAt(index);
                 taskQueue.remove(task);
@@ -118,7 +149,9 @@ public class RequestManager<T> implements TaskManager<T, RequestTask<T, ?, ?>> {
     @Override
     public void onReady() {
         synchronized (lock) {
-            taskQueue.addAll(waitingList);
+            for (RequestTask<T, ?, ?> task : waitingList) {
+                executeEncodeTask(task);
+            }
             waitingList.clear();
         }
     }

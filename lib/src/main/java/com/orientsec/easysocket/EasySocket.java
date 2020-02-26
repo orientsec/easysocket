@@ -61,14 +61,12 @@ public class EasySocket {
         static ExecutorService managerExecutor
                 = new ThreadPoolExecutor(0, 4,
                 30L, TimeUnit.SECONDS,
-                new SynchronousQueue<>(),
-                r -> new Thread("Easy socket manager executor."));
+                new SynchronousQueue<>());
 
         static ExecutorService codecExecutor
-                = new ThreadPoolExecutor(2, 4,
-                30L, TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<>(),
-                r -> new Thread("Easy socket codec executor."));
+                = new ThreadPoolExecutor(0, 4,
+                60L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>());
     }
 
     static class DefaultPushHandler<T> implements PushHandler<T> {

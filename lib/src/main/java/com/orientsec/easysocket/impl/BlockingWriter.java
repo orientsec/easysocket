@@ -26,18 +26,14 @@ public class BlockingWriter<T> extends Looper implements Writer {
         this.taskQueue = taskQueue;
     }
 
-    private void write(RequestTask<T, ?, ?> task) throws IOException {
-        TaskManager<T, ?> taskManager = connection.taskManager();
-        mOutputStream.write(task.getData());
-        mOutputStream.flush();
-        taskManager.onSend(task);
-    }
-
     @Override
     public void write() throws IOException {
         try {
             RequestTask<T, ?, ?> task = taskQueue.take();
-            write(task);
+            TaskManager<T, ?> taskManager = connection.taskManager();
+            mOutputStream.write(task.getData());
+            mOutputStream.flush();
+            taskManager.onSend(task);
         } catch (InterruptedException e) {
             //ignore;
         }
@@ -64,6 +60,8 @@ public class BlockingWriter<T> extends Looper implements Writer {
                 event = Event.WRITE_IO_ERROR;
             } else if (e instanceof EasyException) {
                 event = ((EasyException) e).getEvent();
+            } else {
+                event = Event.unknown(e.getMessage());
             }
         }
         mOutputStream = null;

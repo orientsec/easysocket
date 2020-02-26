@@ -87,6 +87,8 @@ public class BlockingReader<T> extends Looper implements Reader {
                 event = Event.READ_IO_ERROR;
             } else if (e instanceof EasyException) {
                 event = ((EasyException) e).getEvent();
+            } else {
+                event = Event.unknown(e.getMessage());
             }
         }
         inputStream = null;

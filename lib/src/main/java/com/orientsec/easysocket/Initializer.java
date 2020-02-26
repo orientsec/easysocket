@@ -2,19 +2,19 @@ package com.orientsec.easysocket;
 
 import com.orientsec.easysocket.exception.Event;
 
-public interface Initializer {
-    interface Callback {
-        void onSuccess();
+public interface Initializer<T> {
+    interface Emitter {
+        void success();
 
-        void onFail(Event event);
+        void fail(Event event);
     }
 
-    void start(Callback callback);
+    void start(Connection<T> connection, Emitter emitter);
 
-    final class EmptyInitializer implements Initializer {
+    final class EmptyInitializer<T> implements Initializer<T> {
         @Override
-        public void start(Callback callback) {
-            callback.onSuccess();
+        public void start(Connection<T> connection, Emitter emitter) {
+            emitter.success();
         }
     }
 }

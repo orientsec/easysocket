@@ -8,17 +8,29 @@ package com.orientsec.easysocket.impl;
  * coding is art not science
  */
 
-public class PacketType {
+public enum PacketType {
     /**
      * 请求消息
      */
-    public static final String RESPONSE = "response";
+    RESPONSE("OUT"),
+
     /**
      * 推送消息
      */
-    public static final String PUSH = "push";
+    PUSH("push"),
+
     /**
      * 心跳
      */
-    public static final String PULSE = "pulse";
+    PULSE("pulse");
+
+    private String value;
+
+    PacketType(String value) {
+        this.value = value;
+    }
+
+    public String getValue() {
+        return value;
+    }
 }

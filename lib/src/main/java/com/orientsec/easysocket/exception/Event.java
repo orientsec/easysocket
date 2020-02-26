@@ -11,7 +11,6 @@ public class Event {
 
     public static final Event NETWORK_NOT_AVAILABLE = new Event(3, "Network is not available.");
 
-
     public static final Event READ_IO_ERROR = new Event(101, "IO error in read looper.");
 
     public static final Event WRITE_IO_ERROR = new Event(102, "IO error in write looper.");
@@ -25,6 +24,11 @@ public class Event {
     public static final Event TASK_REFUSED = new Event(1001, "Refuse to execute task.");
 
     public static final Event RESPONSE_TIME_OUT = new Event(1002, "Response time out.");
+
+    public static Event unknown(String message) {
+        if (message == null) message = "Unknown error!";
+        return new Event(-1, message);
+    }
 
     private int code;
     private String message;

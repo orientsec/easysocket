@@ -1,4 +1,4 @@
-package com.orientsec.easysocket;
+package com.orientsec.easysocket.demo;
 
 import org.junit.Test;
 

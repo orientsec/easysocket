@@ -1,6 +1,8 @@
-package com.orientsec.easysocket;
+package com.orientsec.easysocket.demo;
 
 import android.app.Application;
+
+import com.orientsec.easysocket.EasySocket;
 
 /**
  * Product: EasySocket

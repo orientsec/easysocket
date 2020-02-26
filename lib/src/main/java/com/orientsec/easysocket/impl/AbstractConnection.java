@@ -27,18 +27,33 @@ public abstract class AbstractConnection<T> implements Connection<T>,
         ConnectionManager.OnNetworkStateChangedListener, ConnectEventListener {
     final byte[] lock = new byte[0];
 
+    /**
+     * 连接状态
+     * <p>
+     * IDLE
+     * 空闲状态 IDLE -> STARTING
+     * <p>
+     * STARTING 启动中
+     * 1.STARTING -> IDLE (建连失败)
+     * 2.STARTING -> CONNECT (建连成功)
+     * <p>
+     * CONNECT 连接成功
+     * 1.CONNECT -> AVAILABLE (初始化成功)
+     * 2.CONNECT -> IDLE (初始化失败)
+     * <p>
+     * AVAILABLE 连接可用
+     * AVAILABLE -> IDLE (连接断开)
+     * <p>
+     * STOPPING 连接断开中
+     * STOPPING -> IDLE  (连接断开)
+     * <p>
+     * SHUTDOWN 关闭，关闭之后连接不再可用。
+     */
     enum State {
         IDLE, STARTING, CONNECT, AVAILABLE, STOPPING, SHUTDOWN
     }
 
     /**
-     * 0 空闲状态 0 -> 1
-     * 1 连接中 1 -> 0; 1 -> 2
-     * 2 连接成功 2 -> 3
-     * 3
-     * 3 连接断开中 3 -> 0
-     * 4 关闭 0 -> 4; 1 -> 4; 2 -> 4; 3 -> 4
-     * <p>
      * 连接状态
      */
     State state = State.IDLE;
@@ -85,7 +100,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
                     && ConnectionManager.getInstance().isNetworkAvailable()) {
                 state = State.STARTING;
                 connectTimestamp = System.currentTimeMillis();
-                managerExecutor.execute(connectRunnable());
+                managerExecutor.execute(this::connectRunnable);
             }
         }
     }
@@ -100,7 +115,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
                 ConnectionManager.getInstance().removeConnection(this);
             }
             if (state == State.CONNECT || state == State.AVAILABLE) {
-                managerExecutor.execute(disconnectRunnable(Event.SHUT_DOWN));
+                managerExecutor.execute(() -> disconnectRunnable(Event.SHUT_DOWN));
             }
             state = State.SHUTDOWN;
         }
@@ -109,7 +124,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
     void disconnect(Event event) {
         synchronized (lock) {
             if (state == State.CONNECT || state == State.AVAILABLE) {
-                managerExecutor.execute(disconnectRunnable(event));
+                managerExecutor.execute(() -> disconnectRunnable(event));
                 state = State.STOPPING;
             }
         }
@@ -208,7 +223,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
 
     public abstract TaskManager<T, ? extends Task<?>> taskManager();
 
-    abstract Runnable connectRunnable();
+    abstract void connectRunnable();
 
-    protected abstract Runnable disconnectRunnable(Event event);
+    abstract void disconnectRunnable(Event event);
 }

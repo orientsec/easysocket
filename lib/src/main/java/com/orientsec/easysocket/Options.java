@@ -45,7 +45,7 @@ public class Options<T> {
     /**
      * 连接初始化
      */
-    private Initializer initializer;
+    private Initializer<T> initializer;
     /**
      * 消息分发执行器
      * 连接状态监听回调，请求回调，都执行在Executor所在线程
@@ -143,7 +143,7 @@ public class Options<T> {
         return pulseHandler;
     }
 
-    public Initializer getInitializer() {
+    public Initializer<T> getInitializer() {
         return initializer;
     }
 
@@ -226,7 +226,7 @@ public class Options<T> {
         private SocketFactory socketFactory;
         private HeadParser<T> headParser;
         private PushHandler<T> pushHandler;
-        private Initializer initializer;
+        private Initializer<T> initializer;
         private Executor callbackExecutor;
         private Executor managerExecutor;
         private Executor codecExecutor;
@@ -269,7 +269,7 @@ public class Options<T> {
             return this;
         }
 
-        public Builder<T> initializer(Initializer val) {
+        public Builder<T> initializer(Initializer<T> val) {
             initializer = val;
             return this;
         }
@@ -385,11 +385,14 @@ public class Options<T> {
             if (socketFactory == null) {
                 socketFactory = new DefaultSocketFactory();
             }
+            if (pulseHandler == null) {
+                pulseHandler = new PulseHandler.EmptyPulseHandler<>();
+            }
             if (pushHandler == null) {
                 pushHandler = new EasySocket.DefaultPushHandler<>();
             }
             if (initializer == null) {
-                initializer = new Initializer.EmptyInitializer();
+                initializer = new Initializer.EmptyInitializer<>();
             }
             if (callbackExecutor == null) {
                 callbackExecutor = new EasySocket.MainThreadExecutor();
