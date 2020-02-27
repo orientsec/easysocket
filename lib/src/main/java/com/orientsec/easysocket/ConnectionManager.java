@@ -86,7 +86,7 @@ public class ConnectionManager {
         }
 
         @Override
-        public synchronized void onActivityStarted(Activity activity) {
+        public void onActivityStarted(Activity activity) {
             if (count == 0) {
                 for (AbstractConnection connection : connections) {
                     connection.setForeground();
@@ -106,7 +106,7 @@ public class ConnectionManager {
         }
 
         @Override
-        public synchronized void onActivityStopped(Activity activity) {
+        public void onActivityStopped(Activity activity) {
             count--;
             if (count == 0) {
                 for (AbstractConnection connection : connections) {

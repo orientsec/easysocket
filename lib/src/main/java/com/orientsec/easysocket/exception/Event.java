@@ -19,11 +19,13 @@ public class Event {
 
     public static final Event PULSE_OVER_TIME = new Event(104, "Pulse over time.");
 
-    public static final Event SOCKET_START_ERROR = new Event(104, "Fail to start a socket connect.");
+    public static final Event SOCKET_START_ERROR = new Event(105, "Fail to start a socket connect.");
 
     public static final Event TASK_REFUSED = new Event(1001, "Refuse to execute task.");
 
     public static final Event RESPONSE_TIME_OUT = new Event(1002, "Response time out.");
+
+    public static final Event TASK_CANCELED = new Event(1003, "Task canceled.");
 
     public static Event unknown(String message) {
         if (message == null) message = "Unknown error!";
@@ -62,10 +64,7 @@ public class Event {
 
     @Override
     public String toString() {
-        return "Event{" +
-                "code=" + code +
-                ", message='" + message + '\'' +
-                '}';
+        return "Event{code=" + code + ", message='" + message + '}';
     }
 
 

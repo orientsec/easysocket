@@ -20,9 +20,16 @@ public class SimpleRequest extends Request<byte[], String, String> {
         this.session = session;
     }
 
+    public SimpleRequest(String out, int cmd, boolean init, Session session) {
+        super(out);
+        this.cmd = cmd;
+        this.init = init;
+        this.session = session;
+    }
+
     @Override
     public byte[] encode(int sequenceId) {
-        byte[] body = out.getBytes();
+        byte[] body = request.getBytes();
         ByteBuffer byteBuffer = ByteBuffer.allocate(16);
         byteBuffer.putInt(body.length);
         byteBuffer.putInt(sequenceId);

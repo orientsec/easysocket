@@ -12,22 +12,20 @@ public interface Task<RESPONSE> {
     int SYNC_TASK_ID = 0;
 
     /**
-     * Asynchronously send the IN and notify {@code callback} of its OUT or if an error
-     * occurred talking to the server, creating the IN, or processing the OUT.
+     * Asynchronously send the OUT and notify {@code callback} of its IN or if an error
+     * occurred talking to the server, creating the OUT, or processing the IN.
      */
-    void execute(Callback<RESPONSE> callback);
-
     void execute();
 
     /**
-     * Returns true if this call has been {@linkplain #execute(Callback callback) executed}.
+     * Returns true if this call has been {@linkplain #execute() executed}.
      * It is an error to execute or enqueue a call more than once.
      */
     boolean isExecuted();
 
     /**
-     * Cancel this call. An attempt will be made to cancel in-flight calls, and if the call has not
-     * yet been executed it never will be.
+     * Cancel this call. An attempt will be made to cancel in-flight calls, and
+     * if the call has not yet been executed it never will be.
      */
     void cancel();
 
@@ -36,5 +34,17 @@ public interface Task<RESPONSE> {
      */
     boolean isCanceled();
 
+    /**
+     * True if lifecycle is end.
+     *
+     * @return If task is finished.
+     */
+    boolean isFinished();
+
+    /**
+     * Obtain request of this task.
+     *
+     * @return request
+     */
     Request<?, ?, RESPONSE> getRequest();
 }

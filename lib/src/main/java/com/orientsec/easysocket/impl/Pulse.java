@@ -3,6 +3,7 @@ package com.orientsec.easysocket.impl;
 import com.orientsec.easysocket.Callback;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
+import com.orientsec.easysocket.PacketHandler;
 import com.orientsec.easysocket.PulseHandler;
 import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.exception.Event;
@@ -21,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * 心跳管理器
  */
-public class Pulse<T> implements MessageHandler<T>, Runnable {
+public class Pulse<T> implements PacketHandler<T>, Runnable {
     private SocketConnection<T> connection;
 
     private Options<T> options;
@@ -89,18 +90,19 @@ public class Pulse<T> implements MessageHandler<T>, Runnable {
             connection.disconnect(Event.PULSE_OVER_TIME);
         } else {
             //发送心跳消息
-            connection.buildTask(new PulseRequest<>(pulseHandler))
-                    .execute(new Callback.EmptyCallback<Boolean>() {
-                        @Override
-                        public void onSuccess(Boolean res) {
-                            feed(res);
-                        }
-                    });
+            Callback<Boolean> callback = new Callback.EmptyCallback<Boolean>() {
+                @Override
+                public void onSuccess(Boolean res) {
+                    feed(res);
+                }
+            };
+            connection.buildTask(new PulseRequest<>(pulseHandler), callback)
+                    .execute();
         }
     }
 
     @Override
-    public void handleMessage(Packet<T> packet) {
+    public void handlePacket(Packet<T> packet) {
         feed(pulseHandler.onPulse(packet.getBody()));
     }
 

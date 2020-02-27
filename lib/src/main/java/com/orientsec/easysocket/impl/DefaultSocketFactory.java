@@ -1,4 +1,6 @@
-package com.orientsec.easysocket;
+package com.orientsec.easysocket.impl;
+
+import com.orientsec.easysocket.SocketFactory;
 
 import java.net.Socket;
 import java.net.SocketException;

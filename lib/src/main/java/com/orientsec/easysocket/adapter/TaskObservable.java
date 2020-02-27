@@ -17,62 +17,24 @@ import io.reactivex.plugins.RxJavaPlugins;
  * Author: Fredric
  * coding is art not science
  */
-class TaskObservable<T> extends Observable<T> {
+class TaskObservable<T> extends Observable<T> implements Callback<T> {
     private Task<T> task;
     private Observer<? super T> observer;
 
-    TaskObservable(Task<T> task) {
+    public void setTask(Task<T> task) {
         this.task = task;
     }
 
-    class AdapterCallback implements Callback<T> {
+    @Override
+    public void onStart() {
 
-        @Override
-        public void onStart() {
+    }
 
-        }
-
-        @Override
-        public void onSuccess(T res) {
-            if (!task.isCanceled()) {
-                try {
-                    observer.onNext(res);
-                    observer.onComplete();
-                } catch (Throwable inner) {
-                    Exceptions.throwIfFatal(inner);
-                    RxJavaPlugins.onError(inner);
-                }
-            }
-        }
-
-        @Override
-        public void onSuccess() {
-            if (!task.isCanceled()) {
-                try {
-                    observer.onNext(null);
-                    observer.onComplete();
-                } catch (Throwable inner) {
-                    Exceptions.throwIfFatal(inner);
-                    RxJavaPlugins.onError(inner);
-                }
-            }
-        }
-
-        @Override
-        public void onError(Exception e) {
-            if (!task.isCanceled()) {
-                try {
-                    observer.onError(e);
-                } catch (Throwable inner) {
-                    Exceptions.throwIfFatal(inner);
-                    RxJavaPlugins.onError(new CompositeException(e, inner));
-                }
-            }
-        }
-
-        @Override
-        public void onCancel() {
+    @Override
+    public void onSuccess(T res) {
+        if (!task.isCanceled()) {
             try {
+                observer.onNext(res);
                 observer.onComplete();
             } catch (Throwable inner) {
                 Exceptions.throwIfFatal(inner);
@@ -81,12 +43,34 @@ class TaskObservable<T> extends Observable<T> {
         }
     }
 
+    @Override
+    public void onError(Exception e) {
+        if (!task.isCanceled()) {
+            try {
+                observer.onError(e);
+            } catch (Throwable inner) {
+                Exceptions.throwIfFatal(inner);
+                RxJavaPlugins.onError(new CompositeException(e, inner));
+            }
+        }
+    }
+
+    @Override
+    public void onCancel() {
+        try {
+            observer.onComplete();
+        } catch (Throwable inner) {
+            Exceptions.throwIfFatal(inner);
+            RxJavaPlugins.onError(inner);
+        }
+    }
+
 
     @Override
     protected void subscribeActual(Observer<? super T> observer) {
         this.observer = observer;
         observer.onSubscribe(new TaskDisposable(task));
-        task.execute(new AdapterCallback());
+        task.execute();
     }
 
     static final class TaskDisposable implements Disposable {

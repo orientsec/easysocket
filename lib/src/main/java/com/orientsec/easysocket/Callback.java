@@ -18,17 +18,10 @@ public interface Callback<RESPONSE> {
 
     /**
      * 成功回调
-     * Task类型为{@linkplain TaskType#NORMAL}
      *
-     * @param res 响应消息
+     * @param res 响应
      */
     void onSuccess(RESPONSE res);
-
-    /**
-     * 成功回调
-     * Task类型为{@linkplain TaskType#SEND_ONLY}
-     */
-    void onSuccess();
 
     /**
      * 失败回调
@@ -51,11 +44,6 @@ public interface Callback<RESPONSE> {
 
         @Override
         public void onSuccess(R res) {
-
-        }
-
-        @Override
-        public void onSuccess() {
 
         }
 

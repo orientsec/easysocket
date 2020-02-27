@@ -40,38 +40,14 @@ public interface Connection<T> {
     boolean isAvailable();
 
     /**
-     * 创建一个请求任务
+     * 创建一个请求任务。
      *
-     * @param request 发往服务端的请求
-     * @return 可执行任务
+     * @param request  发往服务端的请求。
+     * @param callback 结果回调。
+     * @return 可执行任务。
      */
-    <REQUEST, RESPONSE> Task<RESPONSE> buildTask(Request<T, REQUEST, RESPONSE> request);
-
-    /**
-     * 创建一个请求任务
-     *
-     * @param request    请求
-     * @param sync       是否同步请求。同步请求即半双工模式，一条请求，一条应答。
-     * @param <REQUEST>  请求类型
-     * @param <RESPONSE> 响应类型
-     * @return 请求任务
-     */
-    <REQUEST, RESPONSE> Task<RESPONSE>
-    buildTask(Request<T, REQUEST, RESPONSE> request, boolean sync);
-
-    /**
-     * 创建一个请求任务
-     *
-     * @param request    请求
-     * @param init       是否是初始化请求，只有初始化请求在连接成功之后的初始化过程中
-     *                   可以发送。其余请求在等待队列中，初始化成功之后，统一发出。
-     * @param sync       是否同步请求，同步请求即半双工模式，一条请求，一条应答。
-     * @param <REQUEST>  请求类型
-     * @param <RESPONSE> 响应类型
-     * @return 请求任务
-     */
-    <REQUEST, RESPONSE> Task<RESPONSE>
-    buildTask(Request<T, REQUEST, RESPONSE> request, boolean init, boolean sync);
+    <REQUEST, RESPONSE> Task<RESPONSE> buildTask(Request<T, REQUEST, RESPONSE> request,
+                                                 Callback<RESPONSE> callback);
 
     /**
      * 添加连接事件监听器

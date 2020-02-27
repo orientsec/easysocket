@@ -4,7 +4,6 @@ import com.orientsec.easysocket.Connection;
 import com.orientsec.easysocket.ConnectionInfo;
 import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Options;
-import com.orientsec.easysocket.Task;
 import com.orientsec.easysocket.adapter.TaskAdapter;
 
 import io.reactivex.Observable;
@@ -32,20 +31,19 @@ public class Client {
         Options.debug = true;
         session = new Session();
         Options<byte[]> options = new Options.Builder<byte[]>()
-                .connectionInfo(new ConnectionInfo("192.168.0.100", 10010))
+                .connectionInfo(new ConnectionInfo("192.168.0.104", 10010))
                 .protocol(new MyHeadParser())
                 .initializer(new MyInitializer(session))
                 .requestTimeOut(60)
                 .pulseRate(30)
+                .connectInterval(3000)
                 .backgroundLiveTime(60)
                 .build();
         connection = EasySocket.open(options);
     }
 
     public Observable<String> request(String param) {
-        Task<String> task = connection.buildTask(new SimpleRequest(param, session));
-        return TaskAdapter.toObservable(task);
+        return TaskAdapter.buildObservable(connection, new SimpleRequest(param, session));
     }
-
 
 }

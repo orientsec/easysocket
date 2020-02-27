@@ -49,8 +49,9 @@ public class Packet<T> {
     }
 
     /**
-     * 获取包体内容，类型可以自定义。一般建议使用{@code byte[]}，在业务层{@link Request#decode(Object)}
-     * 出进行解码、反序列化。也可以根据自定义协议，返回其他类型的结构。
+     * 获取包体内容，类型可以自定义。
+     * 在业务层{@link Request#decode(Object)}进行解码、反序列化。
+     * 可以根据自定义协议，返回任意类型的结构。
      *
      * @return 协议消息体
      */
@@ -67,4 +68,12 @@ public class Packet<T> {
         return packetType;
     }
 
+    @Override
+    public String toString() {
+        return "Packet{" +
+                "taskId=" + taskId +
+                ", body=" + body +
+                ", packetType=" + packetType +
+                '}';
+    }
 }

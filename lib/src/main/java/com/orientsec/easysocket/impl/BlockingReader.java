@@ -47,7 +47,7 @@ public class BlockingReader<T> extends Looper implements Reader {
             byte[] data = new byte[bodyLength];
             readInputStream(inputStream, data);
             Packet<T> packet = headParser.decodePacket(head, data);
-            connection.handleMessage(packet);
+            connection.handlePacket(packet);
         } else {
             throw new EasyException(Event.STREAM_SIZE_ERROR,
                     "Wrong body length " + bodyLength);

@@ -1,9 +1,11 @@
 package com.orientsec.easysocket.impl;
 
+import com.orientsec.easysocket.Callback;
 import com.orientsec.easysocket.ConnectionInfo;
 import com.orientsec.easysocket.Initializer;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
+import com.orientsec.easysocket.PacketHandler;
 import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.Task;
 import com.orientsec.easysocket.exception.Event;
@@ -25,7 +27,7 @@ import java.util.Map;
  * coding is art not science
  */
 public class SocketConnection<T> extends AbstractConnection<T>
-        implements MessageHandler<T> {
+        implements PacketHandler<T> {
 
     private Socket socket;
 
@@ -33,14 +35,14 @@ public class SocketConnection<T> extends AbstractConnection<T>
 
     private BlockingWriter<T> writer;
 
-    private RequestManager<T> taskManager;
+    private RequestTaskManager<T> taskManager;
 
-    private Map<String, MessageHandler<T>> messageHandlerMap;
+    private Map<String, PacketHandler<T>> messageHandlerMap;
 
     private Initializer.Emitter emitter = new Initializer.Emitter() {
         @Override
         public void success() {
-            synchronized (lock) {
+            synchronized (SocketConnection.this) {
                 if (state == State.CONNECT) {
                     state = State.AVAILABLE;
                     taskManager.onReady();
@@ -58,7 +60,7 @@ public class SocketConnection<T> extends AbstractConnection<T>
 
     public SocketConnection(Options<T> options) {
         super(options);
-        taskManager = new RequestManager<>(this);
+        taskManager = new RequestTaskManager<>(this);
         pulse = new Pulse<>(this);
         messageHandlerMap = new HashMap<>();
         messageHandlerMap.put(PacketType.RESPONSE.getValue(), taskManager);
@@ -78,20 +80,8 @@ public class SocketConnection<T> extends AbstractConnection<T>
 
     @Override
     public <REQUEST, RESPONSE> Task<RESPONSE>
-    buildTask(Request<T, REQUEST, RESPONSE> request) {
-        return new RequestTask<>(request, this);
-    }
-
-    @Override
-    public <REQUEST, RESPONSE> Task<RESPONSE>
-    buildTask(Request<T, REQUEST, RESPONSE> request, boolean sync) {
-        return new RequestTask<>(request, this, false, sync);
-    }
-
-    @Override
-    public <REQUEST, RESPONSE> Task<RESPONSE>
-    buildTask(Request<T, REQUEST, RESPONSE> request, boolean init, boolean sync) {
-        return new RequestTask<>(request, this, init, sync);
+    buildTask(Request<T, REQUEST, RESPONSE> request, Callback<RESPONSE> callback) {
+        return new RequestTask<>(request, callback, this);
     }
 
     Socket socket() throws IOException {
@@ -102,13 +92,13 @@ public class SocketConnection<T> extends AbstractConnection<T>
     }
 
     @Override
-    public void handleMessage(Packet<T> packet) {
-        MessageHandler<T> messageHandler
+    public void handlePacket(Packet<T> packet) {
+        PacketHandler<T> packetHandler
                 = messageHandlerMap.get(packet.getPacketType().getValue());
-        if (messageHandler == null) {
+        if (packetHandler == null) {
             Logger.e("No packet handler for type: " + packet.getPacketType());
         } else {
-            messageHandler.handleMessage(packet);
+            packetHandler.handlePacket(packet);
         }
     }
 
@@ -143,7 +133,7 @@ public class SocketConnection<T> extends AbstractConnection<T>
 
         Socket socket = openSocket();
         boolean closeSocket = false;
-        synchronized (lock) {
+        synchronized (SocketConnection.this) {
             if (socket == null) {
                 if (state == State.STARTING) {
                     state = State.IDLE;
@@ -170,7 +160,7 @@ public class SocketConnection<T> extends AbstractConnection<T>
     @Override
     protected void disconnectRunnable(Event event) {
         Socket socket;
-        synchronized (lock) {
+        synchronized (SocketConnection.this) {
             if (state == State.STOPPING) {
                 state = State.IDLE;
             }

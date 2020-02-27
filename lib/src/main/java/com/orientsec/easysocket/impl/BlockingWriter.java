@@ -65,7 +65,6 @@ public class BlockingWriter<T> extends Looper implements Writer {
             }
         }
         mOutputStream = null;
-
         connection.disconnect(event);
     }
 }

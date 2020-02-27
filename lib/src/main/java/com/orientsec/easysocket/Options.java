@@ -1,5 +1,7 @@
 package com.orientsec.easysocket;
 
+import com.orientsec.easysocket.impl.DefaultSocketFactory;
+
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
@@ -41,7 +43,7 @@ public class Options<T> {
     /**
      * 推送消息处理器
      */
-    private PushHandler<T> pushHandler;
+    private PacketHandler<T> pushHandler;
     /**
      * 连接初始化
      */
@@ -191,7 +193,7 @@ public class Options<T> {
         return livePolicy;
     }
 
-    public PushHandler<T> getPushHandler() {
+    public PacketHandler<T> getPushHandler() {
         return pushHandler;
     }
 
@@ -225,7 +227,7 @@ public class Options<T> {
         private List<ConnectionInfo> backupConnectionInfoList;
         private SocketFactory socketFactory;
         private HeadParser<T> headParser;
-        private PushHandler<T> pushHandler;
+        private PacketHandler<T> pushHandler;
         private Initializer<T> initializer;
         private Executor callbackExecutor;
         private Executor managerExecutor;
@@ -264,7 +266,7 @@ public class Options<T> {
             return this;
         }
 
-        public Builder<T> pushHandler(PushHandler<T> val) {
+        public Builder<T> pushHandler(PacketHandler<T> val) {
             pushHandler = val;
             return this;
         }
@@ -389,22 +391,22 @@ public class Options<T> {
                 pulseHandler = new PulseHandler.EmptyPulseHandler<>();
             }
             if (pushHandler == null) {
-                pushHandler = new EasySocket.DefaultPushHandler<>();
+                pushHandler = new PacketHandler.EmptyPacketHandler<>();
             }
             if (initializer == null) {
                 initializer = new Initializer.EmptyInitializer<>();
             }
             if (callbackExecutor == null) {
-                callbackExecutor = new EasySocket.MainThreadExecutor();
+                callbackExecutor = Executors.mainThreadExecutor;
             }
             if (managerExecutor == null) {
-                managerExecutor = EasySocket.Executor.managerExecutor;
+                managerExecutor = Executors.managerExecutor;
             }
             if (codecExecutor == null) {
-                codecExecutor = EasySocket.Executor.codecExecutor;
+                codecExecutor = Executors.codecExecutor;
             }
             if (scheduledExecutor == null) {
-                scheduledExecutor = EasySocket.Executor.scheduledExecutor;
+                scheduledExecutor = Executors.scheduledExecutor;
             }
 
             return true;

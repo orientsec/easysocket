@@ -16,9 +16,8 @@ public class MyInitializer implements Initializer<byte[]> {
 
     @Override
     public void start(Connection<byte[]> connection, Emitter emitter) {
-        SimpleRequest authRequest = new SimpleRequest("test", 1, session);
-        Task<String> task = connection.buildTask(authRequest, true, false);
-        task.execute(new Callback.EmptyCallback<String>() {
+        SimpleRequest authRequest = new SimpleRequest("test", 1, true, session);
+        Callback<String> callback = new Callback.EmptyCallback<String>() {
             @Override
             public void onSuccess(String res) {
                 session.setSessionId(Integer.parseInt(res));
@@ -33,6 +32,8 @@ public class MyInitializer implements Initializer<byte[]> {
                     emitter.fail(Event.unknown(e.getMessage()));
                 }
             }
-        });
+        };
+        Task<String> task = connection.buildTask(authRequest, callback);
+        task.execute();
     }
 }

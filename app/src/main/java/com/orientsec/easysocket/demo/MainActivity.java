@@ -2,6 +2,7 @@ package com.orientsec.easysocket.demo;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.widget.Button;
 import android.widget.TextView;
 
 import com.orientsec.easysocket.demo.client.Client;
@@ -15,7 +16,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         textView = findViewById(R.id.text);
-        findViewById(R.id.button).setOnClickListener(v -> Client.getInstance().request("hello")
+        Button button = findViewById(R.id.button);
+        button.setText("点我");
+        button.setOnClickListener(v -> Client.getInstance().request("hello")
                 .subscribe(s -> textView.setText(s),
                         e -> {
                             e.printStackTrace();

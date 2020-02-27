@@ -25,8 +25,6 @@ import io.reactivex.annotations.NonNull;
  */
 public abstract class AbstractConnection<T> implements Connection<T>,
         ConnectionManager.OnNetworkStateChangedListener, ConnectEventListener {
-    final byte[] lock = new byte[0];
-
     /**
      * 连接状态
      * <p>
@@ -56,11 +54,9 @@ public abstract class AbstractConnection<T> implements Connection<T>,
     /**
      * 连接状态
      */
-    State state = State.IDLE;
+    volatile State state = State.IDLE;
 
     private volatile long timestamp;
-
-    volatile long connectTimestamp;
 
     private Set<ConnectEventListener> connectEventListeners = new CopyOnWriteArraySet<>();
 
@@ -94,39 +90,32 @@ public abstract class AbstractConnection<T> implements Connection<T>,
     }
 
     @Override
-    public void start() {
-        synchronized (lock) {
-            if (state == State.IDLE
-                    && ConnectionManager.getInstance().isNetworkAvailable()) {
-                state = State.STARTING;
-                connectTimestamp = System.currentTimeMillis();
-                managerExecutor.execute(this::connectRunnable);
-            }
+    public synchronized void start() {
+        if (state == State.IDLE
+                && ConnectionManager.getInstance().isNetworkAvailable()) {
+            state = State.STARTING;
+            managerExecutor.execute(this::connectRunnable);
         }
     }
 
     @Override
-    public void shutdown() {
+    public synchronized void shutdown() {
         if (state == State.SHUTDOWN) return;
-        synchronized (lock) {
-            if (state != State.SHUTDOWN) {
-                reConnector.stopDisconnect();
-                reConnector.stopReconnect();
-                ConnectionManager.getInstance().removeConnection(this);
-            }
-            if (state == State.CONNECT || state == State.AVAILABLE) {
-                managerExecutor.execute(() -> disconnectRunnable(Event.SHUT_DOWN));
-            }
-            state = State.SHUTDOWN;
+        if (state != State.SHUTDOWN) {
+            reConnector.stopDisconnect();
+            reConnector.stopReconnect();
+            ConnectionManager.getInstance().removeConnection(this);
         }
+        if (state == State.CONNECT || state == State.AVAILABLE) {
+            managerExecutor.execute(() -> disconnectRunnable(Event.SHUT_DOWN));
+        }
+        state = State.SHUTDOWN;
     }
 
-    void disconnect(Event event) {
-        synchronized (lock) {
-            if (state == State.CONNECT || state == State.AVAILABLE) {
-                managerExecutor.execute(() -> disconnectRunnable(event));
-                state = State.STOPPING;
-            }
+    synchronized void disconnect(Event event) {
+        if (state == State.CONNECT || state == State.AVAILABLE) {
+            managerExecutor.execute(() -> disconnectRunnable(event));
+            state = State.STOPPING;
         }
     }
 
@@ -185,7 +174,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
     }
 
     @Override
-    public void onNetworkStateChanged(boolean available) {
+    public synchronized void onNetworkStateChanged(boolean available) {
         if (available) {
             reConnector.reconnectDelay();
         } else {
@@ -193,13 +182,13 @@ public abstract class AbstractConnection<T> implements Connection<T>,
         }
     }
 
-    public void setBackground() {
+    public synchronized void setBackground() {
         timestamp = System.currentTimeMillis();
         reConnector.disconnectDelay();
     }
 
 
-    public void setForeground() {
+    public synchronized void setForeground() {
         timestamp = 0;
         pulse.pulseOnce();
         reConnector.stopDisconnect();

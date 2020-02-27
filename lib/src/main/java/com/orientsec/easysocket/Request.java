@@ -11,51 +11,69 @@ import com.orientsec.easysocket.exception.EasyException;
  * <p>
  * Request send to server
  *
- * @param <IN>  IN param type
- * @param <OUT> OUT param type
+ * @param <REQ> input param type
+ * @param <RES> output param type
  */
-public abstract class Request<T, IN, OUT> {
+public abstract class Request<T, REQ, RES> {
     /**
      * this IN is only send, there is no OUT from server
      */
     private boolean sendOnly;
-    protected OUT out;
-    protected IN in;
+    /**
+     * 初始化任务。
+     * 在连接可用之前，非初始化请求会进入等待状态，直到连接可用之后，
+     * 进行编码、发送。初始化请求在连接成功之后可以直接执行。
+     * <p>
+     * {@link com.orientsec.easysocket.impl.AbstractConnection.State#AVAILABLE}
+     */
+    protected boolean init;
+
+    /**
+     * 同步请求。和半双工模式的socket类似，请求发送之后等待响应，
+     * 同一时间只能有一个同步请求，在一个请求收到响应之后，才可以
+     * 发送下一条请求。
+     */
+    protected boolean sync;
+    protected REQ request;
+    protected RES response;
 
     public boolean isSendOnly() {
         return sendOnly;
     }
 
-    public IN getIn() {
-        return in;
+    public boolean isInit() {
+        return init;
     }
 
-    public OUT getOut() {
-        return out;
+    public boolean isSync() {
+        return sync;
+    }
+
+    public REQ getRequest() {
+        return request;
+    }
+
+    public RES getResponse() {
+        return response;
     }
 
     protected Request() {
     }
 
-    public Request(OUT out) {
-        this.out = out;
+    public Request(REQ request) {
+        this.request = request;
     }
 
-    public Request(OUT out, boolean sendOnly) {
-        this.sendOnly = sendOnly;
-        this.out = out;
-    }
-
-    public Request(OUT out, IN in) {
-        this.out = out;
-        this.in = in;
+    public Request(REQ request, RES response) {
+        this.request = request;
+        this.response = response;
     }
 
     /**
-     * handle IN data here.
-     * 对入参进行处理，可以进行统一的业务数据填充、校验，数据编码等
+     * handle output data here.
+     * 对请求数据进行处理，可以进行统一的业务数据填充、校验，数据编码等。
      *
-     * @return 处理后的发送数据 类型和{@link Packet#getBody()}一致
+     * @return 发送的字节数组
      * @throws EasyException 数据处理中的异常
      */
     public abstract byte[] encode(int sequenceId) throws EasyException;
@@ -66,8 +84,8 @@ public abstract class Request<T, IN, OUT> {
      * 并且可以进行统一的异常封装及其他的一些业务处理。
      *
      * @param data 消息数据
-     * @return 返回结果
+     * @return 接码后的响应结果
      * @throws EasyException 异常
      */
-    public abstract OUT decode(T data) throws EasyException;
+    public abstract RES decode(T data) throws EasyException;
 }

@@ -4,14 +4,12 @@ import com.orientsec.easysocket.Callback;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.Task;
-import com.orientsec.easysocket.TaskType;
 import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.exception.Event;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Product: EasySocket
@@ -21,21 +19,25 @@ import java.util.concurrent.atomic.AtomicInteger;
  * coding is art not science
  */
 
-public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callback<T> {
+public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
+    enum State {
+        //初始状态
+        IDLE,
+        //准备
+        PREPARING,
+        //等待响应
+        WAITING,
+        //收到响应
+        SUCCESS,
+        //出错
+        ERROR,
+        //取消
+        CANCELED,
+    }
 
-    /**
-     * Task状态，总共有4种状态
-     * 0 初始状态
-     * 1 等待编码，等待发送
-     * 2 请求发送完成，等待响应
-     * 3 收到响应
-     * 4 取消
-     */
-    private AtomicInteger state = new AtomicInteger();
+    private volatile State state = State.IDLE;
     private Request<T, REQUEST, RESPONSE> request;
     private Callback<RESPONSE> callback;
-    private TaskType taskType;
-    private SocketConnection<T> connection;
     private Options<T> options;
     private Executor callbackExecutor;
     private Executor codecExecutor;
@@ -45,27 +47,23 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callba
      * 消息id
      */
     private int taskId;
+    /**
+     * 编码后的请求数据
+     *
+     * @see Request#encode(int)
+     */
     private byte[] data;
-    private boolean initTask;
-    private boolean syncTask;
 
     RequestTask(Request<T, REQUEST, RESPONSE> request,
+                Callback<RESPONSE> callback,
                 SocketConnection<T> connection) {
-        this(request, connection, false, false);
-    }
-
-    RequestTask(Request<T, REQUEST, RESPONSE> request,
-                SocketConnection<T> connection, boolean initTask, boolean syncTask) {
         this.request = request;
-        this.connection = connection;
         this.options = connection.options;
-        this.initTask = initTask;
-        this.syncTask = syncTask;
+        this.callback = callback;
         callbackExecutor = options.getCallbackExecutor();
         codecExecutor = options.getCodecExecutor();
         taskManager = connection.taskManager();
-        taskType = request.isSendOnly() ? TaskType.SEND_ONLY : TaskType.NORMAL;
-        if (syncTask) {
+        if (request.isSync()) {
             taskId = SYNC_TASK_ID;
         } else {
             taskId = taskManager.generateTaskId();
@@ -82,153 +80,130 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE>, Callba
         return taskId;
     }
 
+    /**
+     * 获取请求的编码数据。
+     * 在加入请求队列之前，{@link RequestTaskManager}会调用{@link #encode()}
+     * 进行编码，编码成功之后data才会有数据。
+     *
+     * @return 请求的编码数据
+     */
     byte[] getData() {
         return data;
     }
 
-    boolean isInitTask() {
-        return initTask;
+    boolean isInit() {
+        return request.isInit();
     }
 
-    boolean isSyncTask() {
-        return syncTask;
+    boolean isSync() {
+        return request.isSync();
     }
 
     /**
-     * 获取任务类型
+     * 是否只发送请求，不接收响应。
      *
-     * @return 任务类型
+     * @return sendOnly
      */
-    TaskType getTaskType() {
-        return taskType;
+    boolean isSendOnly() {
+        return request.isSendOnly();
     }
 
     @Override
-    public void execute(Callback<RESPONSE> callback) {
-        if (!state.compareAndSet(0, 1)) {
-            throw new IllegalStateException("Task has already executed!");
-        }
-        this.callback = callback;
-        if (connection.isShutdown()) {
-            throw new IllegalStateException("Connection is show down!");
-        }
+    public void execute() {
         taskManager.add(this);
+    }
+
+    /**
+     * 任务是否执行结束
+     *
+     * @return 是否执行结束
+     */
+    @Override
+    public boolean isFinished() {
+        return state == State.SUCCESS
+                || state == State.CANCELED
+                || state == State.ERROR;
+    }
+
+    @Override
+    public boolean isExecuted() {
+        return state != State.IDLE;
+    }
+
+    boolean onPrepare() {
+        if (state != State.IDLE) {
+            return false;
+        }
+        state = State.PREPARING;
+        return true;
+    }
+
+    boolean isPreparing() {
+        return state == State.PREPARING;
     }
 
     /**
      * 对请求消息进行编码, 获取最终写入的字节数组。
      *
-     * @return 是否需要将task加入写队列。如果task已经取消，不需要继续写入。
      * @throws EasyException 编码错误
      */
-    boolean encode() throws EasyException {
+    void encode() throws EasyException {
         data = getRequest().encode(taskId);
-        return state.get() == 1;
-    }
-
-    @Override
-    public void execute() {
-        execute(new EmptyCallback<>());
-    }
-
-    @Override
-    public boolean isExecuted() {
-        return state.get() > 0;
+        if (data == null) throw new IllegalStateException("Request data is null.");
     }
 
     @Override
     public void cancel() {
-        if (compareAndSet(state, 4, 1, 2)) {
-            taskManager.remove(this);
-            cancelTimer();
-            onCancel();
-        }
+        taskManager.remove(this, Event.TASK_CANCELED);
     }
 
     @Override
     public boolean isCanceled() {
-        return state.get() == 4;
+        return state == State.CANCELED;
     }
 
-    @Override
-    public void onStart() {
-        if (state.compareAndSet(1, 2)) {
-            startTimer();
-            callbackExecutor.execute(() -> callback.onStart());
-        }
+    void onSend() {
+        state = State.WAITING;
+        startTimer();
+        callbackExecutor.execute(() -> callback.onStart());
     }
 
-    @Override
-    public void onSuccess(T data) {
-        if (state.compareAndSet(2, 3)) {
-            cancelTimer();
-            codecExecutor.execute(() -> {
-                try {
-                    RESPONSE response = request.decode(data);
-                    callbackExecutor.execute(() -> callback.onSuccess(response));
-                } catch (EasyException e) {
-                    callbackExecutor.execute(() -> callback.onError(e));
-                }
-            });
-        }
+    void onReceive(T data) {
+        state = State.SUCCESS;
+        cancelTimer();
+        codecExecutor.execute(() -> {
+            try {
+                RESPONSE response = request.decode(data);
+                callbackExecutor.execute(() -> callback.onSuccess(response));
+            } catch (EasyException e) {
+                callbackExecutor.execute(() -> callback.onError(e));
+            }
+        });
     }
 
-    @Override
-    public void onSuccess() {
-        if (state.compareAndSet(2, 3)) {
-            cancelTimer();
-            callbackExecutor.execute(callback::onSuccess);
-        }
+    void onError(Exception e) {
+        state = State.ERROR;
+        cancelTimer();
+        callbackExecutor.execute(() -> callback.onError(e));
     }
 
-    @Override
-    public void onError(Exception e) {
-        if (compareAndSet(state, 3, 1, 2)) {
-            cancelTimer();
-            callbackExecutor.execute(() -> callback.onError(e));
-        }
-    }
-
-    @Override
-    public void onCancel() {
+    void onCanceled() {
+        state = State.CANCELED;
+        cancelTimer();
         callbackExecutor.execute(callback::onCancel);
     }
 
     private void cancelTimer() {
         if (timeoutFuture != null) {
             timeoutFuture.cancel(false);
+            timeoutFuture = null;
         }
     }
 
     private void startTimer() {
+        Runnable timeout = () -> taskManager.remove(this, Event.RESPONSE_TIME_OUT);
         timeoutFuture = options.getScheduledExecutor()
-                .schedule(() -> {
-                            taskManager.remove(this);
-                            onError(new EasyException(Event.RESPONSE_TIME_OUT, "Response time out."));
-                        }
-                        , options.getRequestTimeOut()
-                        , TimeUnit.SECONDS);
-    }
-
-    private boolean compareAndSet(AtomicInteger i, int value, int... range) {
-        int prev;
-        do {
-            prev = i.get();
-            if (range.length == 0) {
-                return false;
-            }
-            boolean contains = false;
-            for (int aRange : range) {
-                if (prev == aRange) {
-                    contains = true;
-                    break;
-                }
-            }
-            if (!contains) {
-                return false;
-            }
-        } while (!i.compareAndSet(prev, value));
-        return true;
+                .schedule(timeout, options.getRequestTimeOut(), TimeUnit.SECONDS);
     }
 
     @Override

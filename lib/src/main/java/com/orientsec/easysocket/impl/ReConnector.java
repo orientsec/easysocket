@@ -17,11 +17,10 @@ public class ReConnector<T> implements ConnectEventListener {
 
     private Options<T> options;
 
-    private AbstractConnection connection;
+    private final AbstractConnection connection;
 
-    private ScheduledExecutorService executorService;
+    private ScheduledExecutorService scheduler;
 
-    private final Object lock = new byte[0];
     /**
      * 连接失败次数,不包括断开异常
      */
@@ -38,7 +37,7 @@ public class ReConnector<T> implements ConnectEventListener {
     ReConnector(AbstractConnection<T> connection) {
         this.connection = connection;
         options = connection.options;
-        executorService = connection.options.getScheduledExecutor();
+        scheduler = connection.options.getScheduledExecutor();
     }
 
     @Override
@@ -96,11 +95,9 @@ public class ReConnector<T> implements ConnectEventListener {
      * 停止重连任务
      */
     void stopReconnect() {
-        synchronized (lock) {
-            if (reconnectTask != null) {
-                reconnectTask.cancel(true);
-                reconnectTask = null;
-            }
+        if (reconnectTask != null) {
+            reconnectTask.cancel(true);
+            reconnectTask = null;
         }
     }
 
@@ -108,57 +105,47 @@ public class ReConnector<T> implements ConnectEventListener {
      * 停止断开连接任务
      */
     void stopDisconnect() {
-        synchronized (lock) {
-            if (disconnectTask != null) {
-                disconnectTask.cancel(true);
-                disconnectTask = null;
-            }
+        if (disconnectTask != null) {
+            disconnectTask.cancel(true);
+            disconnectTask = null;
         }
     }
 
     void reconnectDelay() {
-        synchronized (lock) {
-            if (connection.state != AbstractConnection.State.IDLE
-                    || connection.isSleep()) {
-                return;
-            }
-            stopReconnect();
-            long delay = options.getConnectInterval()
-                    - (System.currentTimeMillis() - connection.connectTimestamp);
-            Runnable reconnect = () -> {
-                synchronized (lock) {
-                    stopReconnect();
-                    if (!connection.isSleep()) {
-                        connection.start();
-                    }
-                }
-            };
-            if (delay > 0) {
-                Logger.i("Reconnect after " + delay + " mill seconds...");
-                reconnectTask = executorService.schedule(reconnect, delay, TimeUnit.MILLISECONDS);
-            } else {
-                Logger.i("Reconnect immediately.");
-                reconnectTask = executorService.submit(reconnect);
-            }
+        if (connection.state != AbstractConnection.State.IDLE || connection.isSleep()) {
+            return;
         }
+        stopReconnect();
+        long delay = options.getConnectInterval();
+        Logger.i("Reconnect after " + delay + " mill seconds...");
+        Runnable reconnect = () -> {
+            synchronized (connection) {
+                if (!connection.isSleep()) {
+                    connection.start();
+                }
+                reconnectTask = null;
+            }
+        };
+        reconnectTask = scheduler.schedule(reconnect, delay, TimeUnit.MILLISECONDS);
     }
 
     void disconnectDelay() {
         if (connection.isShutdown() || options.getLivePolicy() != LivePolicy.STRONG) {
             return;
         }
-        synchronized (lock) {
-            stopDisconnect();
-            disconnectTask = executorService.schedule(() -> {
-                synchronized (lock) {
-                    stopDisconnect();
-                    if (connection.isSleep()) {
-                        Logger.i("will disconnect, state: sleep");
-                        stopReconnect();
-                        connection.disconnect(Event.SLEEP);
-                    }
+        if (disconnectTask != null) return;
+        long delay = options.getBackgroundLiveTime();
+        Logger.i("Reconnect after " + delay + " seconds...");
+        Runnable disconnect = () -> {
+            synchronized (connection) {
+                if (connection.isSleep()) {
+                    Logger.i("App is sleeping, stop connection.");
+                    stopReconnect();
+                    connection.disconnect(Event.SLEEP);
                 }
-            }, options.getBackgroundLiveTime(), TimeUnit.SECONDS);
-        }
+                disconnectTask = null;
+            }
+        };
+        disconnectTask = scheduler.schedule(disconnect, delay, TimeUnit.SECONDS);
     }
 }

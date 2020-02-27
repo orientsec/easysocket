@@ -1,5 +1,7 @@
 package com.orientsec.easysocket.adapter;
 
+import com.orientsec.easysocket.Connection;
+import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.Task;
 
 import io.reactivex.Observable;
@@ -17,12 +19,16 @@ public class TaskAdapter {
     /**
      * 将Task转换为Observable
      *
-     * @param task 可执行任务
-     * @param <T>  请求返回类型
+     * @param request 请求
+     * @param <T>     请求返回类型
      * @return Observable
      */
-    public static <T> Observable<T> toObservable(Task<T> task) {
-        return new TaskObservable<>(task);
+    public static <T, REQ, RES> Observable<RES>
+    buildObservable(Connection<T> connection, Request<T, REQ, RES> request) {
+        TaskObservable<RES> observable = new TaskObservable<>();
+        Task<RES> task = connection.buildTask(request, observable);
+        observable.setTask(task);
+        return observable;
     }
 
 }

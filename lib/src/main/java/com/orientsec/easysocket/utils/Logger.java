@@ -12,27 +12,29 @@ import com.orientsec.easysocket.Options;
  * coding is art not science
  */
 public class Logger {
+    static final String TAG = "EasySocket";
+
     public static void e(String msg) {
         if (Options.isDebug()) {
-            Log.e("Socket", msg);
+            Log.e(TAG, msg);
         }
     }
 
     public static void i(String msg) {
         if (Options.isDebug()) {
-            Log.i("Socket", msg);
+            Log.i(TAG, msg);
         }
     }
 
     public static void w(String msg) {
         if (Options.isDebug()) {
-            Log.w("Socket", msg);
+            Log.w(TAG, msg);
         }
     }
 
     public static void d(String msg) {
         if (Options.isDebug()) {
-            Log.d("Socket", msg);
+            Log.d(TAG, msg);
         }
     }
 }
