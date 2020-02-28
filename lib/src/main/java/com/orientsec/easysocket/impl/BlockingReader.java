@@ -38,7 +38,7 @@ public class BlockingReader<T> extends Looper implements Reader {
         byte[] headBytes = new byte[headLength];
         readInputStream(inputStream, headBytes);
         HeadParser.Head head = headParser.parseHead(headBytes);
-        int bodyLength = head.bodySize();
+        int bodyLength = head.getPacketSize();
         //Logger.i("need read body length: " + bodyLength);
         if (bodyLength > options.getMaxReadDataKB() * 1024) {
             throw new EasyException(Event.STREAM_SIZE_ERROR,

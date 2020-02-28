@@ -13,12 +13,16 @@ import com.orientsec.easysocket.exception.EasyException;
  * <p>
  * 推送消息监听
  */
-public interface PushManager<T, E> extends PacketHandler<T> {
+public interface PushManager<T, K, E> extends PacketHandler<T> {
 
     E parsePacket(Packet<T> packet) throws EasyException;
 
-    void registerPushListener(String key, PushListener<E> pushListener);
+    void registerPushListener(K key, PushListener<E> pushListener);
 
-    void unregisterPushListener(String key, PushListener<E> pushListener);
+    void registerPushLister(PushListener<E> pushListener);
+
+    void unregisterPushListener(K key, PushListener<E> pushListener);
+
+    void unregisterPushListener(PushListener<E> pushListener);
 
 }

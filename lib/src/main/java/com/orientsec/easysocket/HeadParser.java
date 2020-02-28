@@ -13,8 +13,16 @@ import com.orientsec.easysocket.exception.EasyException;
  */
 
 public interface HeadParser<T> {
-    interface Head {
-        int bodySize();
+    class Head {
+        protected int packetSize;
+
+        public Head(int packetSize) {
+            this.packetSize = packetSize;
+        }
+
+        public int getPacketSize() {
+            return packetSize;
+        }
     }
 
     /**
@@ -33,7 +41,7 @@ public interface HeadParser<T> {
     /**
      * 解析消息体
      *
-     * @param head    包头
+     * @param head      包头
      * @param bodyBytes 包体字节数组
      * @return 消息体
      */

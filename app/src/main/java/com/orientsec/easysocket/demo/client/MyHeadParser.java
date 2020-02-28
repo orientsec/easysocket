@@ -14,7 +14,7 @@ public class MyHeadParser implements HeadParser<byte[]> {
     }
 
     @Override
-    public Head parseHead(byte[] header) {
+    public MyHead parseHead(byte[] header) {
         ByteBuffer byteBuffer = ByteBuffer.wrap(header);
         int bodyLen = byteBuffer.getInt();
         int taskId = byteBuffer.getInt();

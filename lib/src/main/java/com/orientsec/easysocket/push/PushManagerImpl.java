@@ -11,40 +11,52 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
-public abstract class AbstractPushManager<T, E> implements PushManager<T, E> {
+public abstract class PushManagerImpl<T, K, E> implements PushManager<T, K, E> {
     private Executor codecExecutor;
     private Executor callbackExecutor;
 
-    private Map<String, Set<PushListener<E>>> listenerMap = new HashMap<>();
+    private Map<K, Set<PushListener<E>>> idListenerMap = new HashMap<>();
 
-    public AbstractPushManager() {
+    private Set<PushListener<E>> globalListenerSet = new HashSet<>();
+
+    public PushManagerImpl() {
         codecExecutor = Executors.codecExecutor;
         callbackExecutor = Executors.mainThreadExecutor;
     }
 
-    public AbstractPushManager(Executor codecExecutor, Executor callbackExecutor) {
+    public PushManagerImpl(Executor codecExecutor, Executor callbackExecutor) {
         this.codecExecutor = codecExecutor;
         this.callbackExecutor = callbackExecutor;
     }
 
     @Override
     public synchronized void registerPushListener
-            (String key, PushListener<E> pushListener) {
-        Set<PushListener<E>> set = listenerMap.get(key);
+            (K key, PushListener<E> pushListener) {
+        Set<PushListener<E>> set = idListenerMap.get(key);
         if (set == null) {
             set = new HashSet<>();
-            listenerMap.put(key, set);
+            idListenerMap.put(key, set);
         }
         set.add(pushListener);
     }
 
     @Override
     public synchronized void unregisterPushListener
-            (String key, PushListener<E> pushListener) {
-        Set<PushListener<E>> set = listenerMap.get(key);
+            (K key, PushListener<E> pushListener) {
+        Set<PushListener<E>> set = idListenerMap.get(key);
         if (set != null) {
             set.remove(pushListener);
         }
+    }
+
+    @Override
+    public void registerPushLister(PushListener<E> pushListener) {
+        globalListenerSet.add(pushListener);
+    }
+
+    @Override
+    public void unregisterPushListener(PushListener<E> pushListener) {
+        globalListenerSet.remove(pushListener);
     }
 
     @Override
@@ -52,7 +64,7 @@ public abstract class AbstractPushManager<T, E> implements PushManager<T, E> {
         codecExecutor.execute(() -> {
             try {
                 E event = parsePacket(packet);
-                String key = eventKey(event);
+                K key = eventKey(event);
                 callbackExecutor.execute(() -> sendPushEvent(key, event));
             } catch (EasyException e) {
                 onError(e);
@@ -62,16 +74,21 @@ public abstract class AbstractPushManager<T, E> implements PushManager<T, E> {
 
     abstract void onError(EasyException e);
 
-    abstract String eventKey(E event);
+    abstract K eventKey(E event);
 
-    protected synchronized void sendPushEvent(String key, E event) {
-        Set<PushListener<E>> set = listenerMap.get(key);
+    protected synchronized void sendPushEvent(K key, E event) {
+        Set<PushListener<E>> set = idListenerMap.get(key);
         if (set != null && !set.isEmpty()) {
             for (PushListener<E> listener : set) {
                 listener.onPush(event);
             }
         } else {
-            Logger.w("No push lister for event: " + key);
+            Logger.w("No push lister registered for event: " + key);
+        }
+        if (!globalListenerSet.isEmpty()) {
+            for (PushListener<E> listener : globalListenerSet) {
+                listener.onPush(event);
+            }
         }
     }
 }

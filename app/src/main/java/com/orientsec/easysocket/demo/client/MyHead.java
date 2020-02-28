@@ -3,8 +3,7 @@ package com.orientsec.easysocket.demo.client;
 import com.orientsec.easysocket.HeadParser;
 import com.orientsec.easysocket.impl.PacketType;
 
-class MyHead implements HeadParser.Head {
-    private int size;
+class MyHead extends HeadParser.Head {
     private int taskId;
     private PacketType packetType;
 
@@ -16,14 +15,10 @@ class MyHead implements HeadParser.Head {
         return packetType;
     }
 
-    MyHead(int size, int taskId, PacketType packetType) {
-        this.size = size;
+    MyHead(int packetSize, int taskId, PacketType packetType) {
+        super(packetSize);
         this.taskId = taskId;
         this.packetType = packetType;
     }
 
-    @Override
-    public int bodySize() {
-        return size;
-    }
 }
