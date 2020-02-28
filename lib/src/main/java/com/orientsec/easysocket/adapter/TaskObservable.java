@@ -2,6 +2,7 @@ package com.orientsec.easysocket.adapter;
 
 import com.orientsec.easysocket.Callback;
 import com.orientsec.easysocket.Task;
+import com.orientsec.easysocket.exception.EasyException;
 
 import io.reactivex.Observable;
 import io.reactivex.Observer;
@@ -44,7 +45,7 @@ class TaskObservable<T> extends Observable<T> implements Callback<T> {
     }
 
     @Override
-    public void onError(Exception e) {
+    public void onError(EasyException e) {
         if (!task.isCanceled()) {
             try {
                 observer.onError(e);
