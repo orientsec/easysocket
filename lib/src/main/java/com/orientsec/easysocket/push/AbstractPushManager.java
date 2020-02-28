@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
-public abstract class PushManagerImpl<T, K, E> implements PushManager<T, K, E> {
+public abstract class AbstractPushManager<T, K, E> implements PushManager<T, K, E> {
     private Executor codecExecutor;
     private Executor callbackExecutor;
 
@@ -19,12 +19,12 @@ public abstract class PushManagerImpl<T, K, E> implements PushManager<T, K, E> {
 
     private Set<PushListener<E>> globalListenerSet = new HashSet<>();
 
-    public PushManagerImpl() {
+    public AbstractPushManager() {
         codecExecutor = Executors.codecExecutor;
         callbackExecutor = Executors.mainThreadExecutor;
     }
 
-    public PushManagerImpl(Executor codecExecutor, Executor callbackExecutor) {
+    public AbstractPushManager(Executor codecExecutor, Executor callbackExecutor) {
         this.codecExecutor = codecExecutor;
         this.callbackExecutor = callbackExecutor;
     }
@@ -72,9 +72,9 @@ public abstract class PushManagerImpl<T, K, E> implements PushManager<T, K, E> {
         });
     }
 
-    abstract void onError(EasyException e);
+    protected abstract void onError(EasyException e);
 
-    abstract K eventKey(E event);
+    protected abstract K eventKey(E event);
 
     protected synchronized void sendPushEvent(K key, E event) {
         Set<PushListener<E>> set = idListenerMap.get(key);

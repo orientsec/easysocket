@@ -261,7 +261,7 @@ public class Options<T> {
             return this;
         }
 
-        public Builder<T> protocol(HeadParser<T> val) {
+        public Builder<T> headParser(HeadParser<T> val) {
             headParser = val;
             return this;
         }

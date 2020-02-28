@@ -181,7 +181,7 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
         });
     }
 
-    void onError(Exception e) {
+    void onError(EasyException e) {
         state = State.ERROR;
         cancelTimer();
         callbackExecutor.execute(() -> callback.onError(e));

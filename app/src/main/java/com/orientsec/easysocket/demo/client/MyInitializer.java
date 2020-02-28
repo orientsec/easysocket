@@ -5,7 +5,6 @@ import com.orientsec.easysocket.Connection;
 import com.orientsec.easysocket.Initializer;
 import com.orientsec.easysocket.Task;
 import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.exception.Event;
 
 public class MyInitializer implements Initializer<byte[]> {
     private Session session;
@@ -25,12 +24,8 @@ public class MyInitializer implements Initializer<byte[]> {
             }
 
             @Override
-            public void onError(Exception e) {
-                if (e instanceof EasyException) {
-                    emitter.fail(((EasyException) e).getEvent());
-                } else {
-                    emitter.fail(Event.unknown(e.getMessage()));
-                }
+            public void onError(EasyException e) {
+                emitter.fail(e.getEvent());
             }
         };
         Task<String> task = connection.buildTask(authRequest, callback);

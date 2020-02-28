@@ -1,5 +1,7 @@
 package com.orientsec.easysocket;
 
+import com.orientsec.easysocket.exception.EasyException;
+
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket
@@ -28,7 +30,7 @@ public interface Callback<RESPONSE> {
      *
      * @param e 异常
      */
-    void onError(Exception e);
+    void onError(EasyException e);
 
     /**
      * 取消回调
@@ -48,7 +50,7 @@ public interface Callback<RESPONSE> {
         }
 
         @Override
-        public void onError(Exception e) {
+        public void onError(EasyException e) {
 
         }
 

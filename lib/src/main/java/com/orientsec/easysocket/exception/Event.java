@@ -9,27 +9,40 @@ public class Event {
 
     public static final Event SHUT_DOWN = new Event(2, "Connection shut down.");
 
-    public static final Event NETWORK_NOT_AVAILABLE = new Event(3, "Network is not available.");
+    public static final Event NETWORK_NOT_AVAILABLE
+            = new Event(3, "Network is not available.");
 
-    public static final Event READ_IO_ERROR = new Event(101, "IO error in read looper.");
+    public static final Event READ_IO_ERROR
+            = new Event(101, "IO error in read looper.");
 
-    public static final Event WRITE_IO_ERROR = new Event(102, "IO error in write looper.");
+    public static final Event WRITE_IO_ERROR
+            = new Event(102, "IO error in write looper.");
 
-    public static final Event STREAM_SIZE_ERROR = new Event(103, "Invalid input stream size.");
+    public static final Event STREAM_SIZE_ERROR
+            = new Event(103, "Invalid input stream size.");
 
-    public static final Event PULSE_OVER_TIME = new Event(104, "Pulse over time.");
+    public static final Event PULSE_OVER_TIME
+            = new Event(104, "Pulse over time.");
 
-    public static final Event SOCKET_START_ERROR = new Event(105, "Fail to start a socket connect.");
+    public static final Event SOCKET_START_ERROR
+            = new Event(105, "Fail to start a socket connect.");
 
-    public static final Event TASK_REFUSED = new Event(1001, "Refuse to execute task.");
+    public static final Event TASK_REFUSED
+            = new Event(201, "Refuse to execute task.");
 
-    public static final Event RESPONSE_TIME_OUT = new Event(1002, "Response time out.");
+    public static final Event RESPONSE_TIME_OUT
+            = new Event(202, "Response time out.");
 
-    public static final Event TASK_CANCELED = new Event(1003, "Task canceled.");
+    public static final Event TASK_CANCELED
+            = new Event(203, "Task canceled.");
 
     public static Event unknown(String message) {
         if (message == null) message = "Unknown error!";
         return new Event(-1, message);
+    }
+
+    public static Event create(int code, String message) {
+        return new Event(code, message);
     }
 
     private int code;

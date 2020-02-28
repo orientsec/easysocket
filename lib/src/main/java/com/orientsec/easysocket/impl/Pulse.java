@@ -115,7 +115,7 @@ public class Pulse<T> implements PacketHandler<T>, Runnable {
 
         @Override
         public byte[] encode(int sequenceId) {
-            return pulseHandler.pulseData();
+            return pulseHandler.pulseData(sequenceId);
         }
 
         @Override

@@ -1,14 +1,14 @@
 package com.orientsec.easysocket;
 
 public interface PulseHandler<T> {
-    byte[] pulseData();
+    byte[] pulseData(int sequenceId);
 
     boolean onPulse(T body);
 
     final class EmptyPulseHandler<T> implements PulseHandler<T> {
 
         @Override
-        public byte[] pulseData() {
+        public byte[] pulseData(int sequenceId) {
             return new byte[0];
         }
 
