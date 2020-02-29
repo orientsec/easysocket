@@ -27,11 +27,11 @@ public class Options<T> {
     /**
      * 站点信息
      */
-    private ConnectionInfo connectionInfo;
+    private Address address;
     /**
      * 备用站点信息
      */
-    private List<ConnectionInfo> backupConnectionInfoList;
+    private List<Address> backupAddressList;
     /**
      * Socket factory
      */
@@ -116,8 +116,8 @@ public class Options<T> {
 
     private Options(Builder<T> builder) {
         pulseHandler = builder.pulseHandler;
-        connectionInfo = builder.connectionInfo;
-        backupConnectionInfoList = builder.backupConnectionInfoList;
+        address = builder.address;
+        backupAddressList = builder.backupAddressList;
         socketFactory = builder.socketFactory;
         headParser = builder.headParser;
         pushHandler = builder.pushHandler;
@@ -201,12 +201,12 @@ public class Options<T> {
         return connectTimeOut;
     }
 
-    public ConnectionInfo getConnectionInfo() {
-        return connectionInfo;
+    public Address getAddress() {
+        return address;
     }
 
-    public List<ConnectionInfo> getBackupConnectionInfoList() {
-        return backupConnectionInfoList;
+    public List<Address> getBackupAddressList() {
+        return backupAddressList;
     }
 
     public ScheduledExecutorService getScheduledExecutor() {
@@ -223,8 +223,8 @@ public class Options<T> {
 
     public static final class Builder<T> {
         private PulseHandler<T> pulseHandler;
-        private ConnectionInfo connectionInfo;
-        private List<ConnectionInfo> backupConnectionInfoList;
+        private Address address;
+        private List<Address> backupAddressList;
         private SocketFactory socketFactory;
         private HeadParser<T> headParser;
         private PacketHandler<T> pushHandler;
@@ -251,13 +251,13 @@ public class Options<T> {
             return this;
         }
 
-        public Builder<T> connectionInfo(ConnectionInfo val) {
-            connectionInfo = val;
+        public Builder<T> address(Address val) {
+            address = val;
             return this;
         }
 
-        public Builder<T> backupConnectionInfoList(List<ConnectionInfo> val) {
-            backupConnectionInfoList = val;
+        public Builder<T> backupAddressList(List<Address> val) {
+            backupAddressList = val;
             return this;
         }
 
@@ -354,7 +354,7 @@ public class Options<T> {
         }
 
         private boolean checkParams() {
-            if (connectionInfo == null) {
+            if (address == null) {
                 return false;
             }
             if (headParser == null) {

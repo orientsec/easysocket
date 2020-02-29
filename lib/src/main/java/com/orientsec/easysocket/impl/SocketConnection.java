@@ -1,14 +1,15 @@
 package com.orientsec.easysocket.impl;
 
+import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.Callback;
-import com.orientsec.easysocket.ConnectionInfo;
 import com.orientsec.easysocket.Initializer;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.PacketHandler;
 import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.Task;
-import com.orientsec.easysocket.exception.Event;
+import com.orientsec.easysocket.exception.EasyException;
+import com.orientsec.easysocket.exception.Error;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.io.IOException;
@@ -52,9 +53,9 @@ public class SocketConnection<T> extends AbstractConnection<T>
         }
 
         @Override
-        public void fail(Event event) {
-            Logger.i("Connection initialize failed: " + event);
-            disconnect(event);
+        public void fail(EasyException e) {
+            Logger.i("Connection initialize failed: " + e);
+            disconnect(e);
         }
     };
 
@@ -103,7 +104,7 @@ public class SocketConnection<T> extends AbstractConnection<T>
     }
 
     @Override
-    public ConnectionInfo getConnectionInfo() {
+    public Address getAddress() {
         if (!isConnect()) {
             return null;
         }
@@ -119,7 +120,7 @@ public class SocketConnection<T> extends AbstractConnection<T>
         if (inetAddress == null) {
             return null;
         }
-        return new ConnectionInfo(inetAddress.getHostAddress(), address.getPort());
+        return new Address(inetAddress.getHostAddress(), address.getPort());
 
     }
 
@@ -129,7 +130,7 @@ public class SocketConnection<T> extends AbstractConnection<T>
         if (isShutdown()) {
             return;
         }
-        Logger.i("begin socket connect, " + connectionInfo);
+        Logger.i("begin socket connect, " + address);
 
         Socket socket = openSocket();
         boolean closeSocket = false;
@@ -138,7 +139,7 @@ public class SocketConnection<T> extends AbstractConnection<T>
                 if (state == State.STARTING) {
                     state = State.IDLE;
                 }
-                stopWorkers(Event.SOCKET_START_ERROR);
+                stopWorkers(Error.create(Error.Code.SOCKET_CONNECT));
                 onConnectFailed();
             } else if (state == State.STARTING) {
                 state = State.CONNECT;
@@ -148,7 +149,7 @@ public class SocketConnection<T> extends AbstractConnection<T>
                 options.getInitializer().start(this, emitter);
             } else {
                 //connection is shutdown
-                stopWorkers(Event.SHUT_DOWN);
+                stopWorkers(Error.create(Error.Code.SHUT_DOWN));
                 closeSocket = true;
             }
         }
@@ -158,23 +159,23 @@ public class SocketConnection<T> extends AbstractConnection<T>
     }
 
     @Override
-    protected void disconnectRunnable(Event event) {
+    protected void disconnectRunnable(EasyException e) {
         Socket socket;
         synchronized (SocketConnection.this) {
             if (state == State.STOPPING) {
                 state = State.IDLE;
             }
-            stopWorkers(event);
+            stopWorkers(e);
             socket = SocketConnection.this.socket;
             SocketConnection.this.socket = null;
-            onDisconnect(event);
+            onDisconnect(e);
         }
         if (socket != null) {
             closeSocket(socket);
         }
     }
 
-    private void stopWorkers(Event event) {
+    private void stopWorkers(EasyException e) {
         //停止心跳
         pulse.stop();
         if (reader != null) {
@@ -185,7 +186,7 @@ public class SocketConnection<T> extends AbstractConnection<T>
             writer.shutdown();
             writer = null;
         }
-        taskManager.clear(event);
+        taskManager.clear(e);
     }
 
     private void startWorkers() {
@@ -201,7 +202,7 @@ public class SocketConnection<T> extends AbstractConnection<T>
         try {
             Socket socket = options.getSocketFactory().createSocket();
             SocketAddress socketAddress
-                    = new InetSocketAddress(connectionInfo.getHost(), connectionInfo.getPort());
+                    = new InetSocketAddress(address.getHost(), address.getPort());
             socket.connect(socketAddress, options.getConnectTimeOut());
             return socket;
         } catch (Exception e) {

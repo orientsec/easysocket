@@ -12,7 +12,7 @@ import com.orientsec.easysocket.Options;
  * coding is art not science
  */
 public class Logger {
-    static final String TAG = "EasySocket";
+    private static final String TAG = "EasySocket";
 
     public static void e(String msg) {
         if (Options.isDebug()) {

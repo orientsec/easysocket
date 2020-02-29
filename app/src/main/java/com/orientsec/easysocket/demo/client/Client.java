@@ -1,7 +1,7 @@
 package com.orientsec.easysocket.demo.client;
 
 import com.orientsec.easysocket.Connection;
-import com.orientsec.easysocket.ConnectionInfo;
+import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.adapter.TaskAdapter;
@@ -31,10 +31,10 @@ public class Client {
         Options.debug = true;
         session = new Session();
         Options<byte[]> options = new Options.Builder<byte[]>()
-                .connectionInfo(new ConnectionInfo("192.168.0.104", 10010))
-                .protocol(new MyHeadParser())
+                .address(new Address("192.168.0.107", 10010))
+                .headParser(new MyHeadParser())
                 .initializer(new MyInitializer(session))
-                .requestTimeOut(60)
+                .requestTimeOut(6)
                 .pulseRate(30)
                 .connectInterval(3000)
                 .backgroundLiveTime(60)

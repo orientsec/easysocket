@@ -3,7 +3,7 @@ package com.orientsec.easysocket.impl;
 import com.orientsec.easysocket.Callback;
 import com.orientsec.easysocket.PacketHandler;
 import com.orientsec.easysocket.Task;
-import com.orientsec.easysocket.exception.Event;
+import com.orientsec.easysocket.exception.EasyException;
 
 /**
  * Product: EasySocket
@@ -15,11 +15,13 @@ import com.orientsec.easysocket.exception.Event;
 public interface TaskManager<T, TASK extends Task<?>> extends PacketHandler<T> {
 
     /**
-     * 执行任务, 如果connection未启动，执行后开始进行连接
+     * 加入task
      *
      * @param task 任务
      */
-    void add(TASK task);
+    void add(TASK task) throws EasyException;
+
+    void enqueue(TASK task) throws EasyException;
 
     /**
      * 移除任务
@@ -28,9 +30,9 @@ public interface TaskManager<T, TASK extends Task<?>> extends PacketHandler<T> {
      *
      * @param task 任务
      */
-    void remove(TASK task, Event event);
+    void remove(TASK task);
 
-    void clear(Event event);
+    void clear(EasyException e);
 
     /**
      * 开始发送消息

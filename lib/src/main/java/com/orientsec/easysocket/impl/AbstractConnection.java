@@ -3,11 +3,12 @@ package com.orientsec.easysocket.impl;
 
 import com.orientsec.easysocket.ConnectEventListener;
 import com.orientsec.easysocket.Connection;
-import com.orientsec.easysocket.ConnectionInfo;
+import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.ConnectionManager;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Task;
-import com.orientsec.easysocket.exception.Event;
+import com.orientsec.easysocket.exception.EasyException;
+import com.orientsec.easysocket.exception.Error;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.Set;
@@ -62,7 +63,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
 
     private ReConnector reConnector;
 
-    ConnectionInfo connectionInfo;
+    Address address;
 
     protected Options<T> options;
 
@@ -79,7 +80,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
     AbstractConnection(Options<T> options) {
         this.options = options;
         reConnector = new ReConnector<>(this);
-        connectionInfo = options.getConnectionInfo();
+        address = options.getAddress();
         callbackExecutor = options.getCallbackExecutor();
         managerExecutor = options.getManagerExecutor();
     }
@@ -107,14 +108,15 @@ public abstract class AbstractConnection<T> implements Connection<T>,
             ConnectionManager.getInstance().removeConnection(this);
         }
         if (state == State.CONNECT || state == State.AVAILABLE) {
-            managerExecutor.execute(() -> disconnectRunnable(Event.SHUT_DOWN));
+            managerExecutor.execute(() ->
+                    disconnectRunnable(Error.create(Error.Code.SHUT_DOWN)));
         }
         state = State.SHUTDOWN;
     }
 
-    synchronized void disconnect(Event event) {
+    synchronized void disconnect(EasyException e) {
         if (state == State.CONNECT || state == State.AVAILABLE) {
-            managerExecutor.execute(() -> disconnectRunnable(event));
+            managerExecutor.execute(() -> disconnectRunnable(e));
             state = State.STOPPING;
         }
     }
@@ -125,7 +127,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
     }
 
     public void onAvailable() {
-        Logger.i("Connection is available," + connectionInfo);
+        Logger.i("Connection is available," + address);
         reConnector.onAvailable();
         if (connectEventListeners.size() > 0) {
             callbackExecutor.execute(() -> {
@@ -137,7 +139,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
     }
 
     public void onConnect() {
-        Logger.i("Connection is established, " + connectionInfo);
+        Logger.i("Connection is established, " + address);
         reConnector.onConnect();
         if (connectEventListeners.size() > 0) {
             callbackExecutor.execute(() -> {
@@ -148,21 +150,21 @@ public abstract class AbstractConnection<T> implements Connection<T>,
         }
     }
 
-    public void onDisconnect(Event event) {
-        Logger.i("Connection is disconnected, " + connectionInfo);
-        reConnector.onDisconnect(event);
+    public void onDisconnect(EasyException e) {
+        Logger.i("Connection is disconnected, " + address);
+        reConnector.onDisconnect(e);
 
         if (connectEventListeners.size() > 0) {
             callbackExecutor.execute(() -> {
                 for (ConnectEventListener listener : connectEventListeners) {
-                    listener.onDisconnect(event);
+                    listener.onDisconnect(e);
                 }
             });
         }
     }
 
     public void onConnectFailed() {
-        Logger.i("Fail to establish connection, " + connectionInfo);
+        Logger.i("Fail to establish connection, " + address);
         reConnector.onConnectFailed();
         if (connectEventListeners.size() > 0) {
             callbackExecutor.execute(() -> {
@@ -178,7 +180,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
         if (available) {
             reConnector.reconnectDelay();
         } else {
-            disconnect(Event.NETWORK_NOT_AVAILABLE);
+            disconnect(Error.create(Error.Code.NETWORK_NOT_AVAILABLE));
         }
     }
 
@@ -214,5 +216,5 @@ public abstract class AbstractConnection<T> implements Connection<T>,
 
     abstract void connectRunnable();
 
-    abstract void disconnectRunnable(Event event);
+    abstract void disconnectRunnable(EasyException e);
 }

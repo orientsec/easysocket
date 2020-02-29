@@ -1,11 +1,12 @@
 package com.orientsec.easysocket.impl;
 
 import com.orientsec.easysocket.ConnectEventListener;
-import com.orientsec.easysocket.ConnectionInfo;
+import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.ConnectionManager;
 import com.orientsec.easysocket.LivePolicy;
 import com.orientsec.easysocket.Options;
-import com.orientsec.easysocket.exception.Event;
+import com.orientsec.easysocket.exception.EasyException;
+import com.orientsec.easysocket.exception.Error;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.List;
@@ -46,7 +47,7 @@ public class ReConnector<T> implements ConnectEventListener {
     }
 
     @Override
-    public void onDisconnect(Event event) {
+    public void onDisconnect(EasyException e) {
         if (ConnectionManager.getInstance().isNetworkAvailable()) {
             switchServer();
             reconnectDelay();
@@ -77,15 +78,15 @@ public class ReConnector<T> implements ConnectEventListener {
         if (++failedTimes >= options.getRetryTimes()) {
             failedTimes = 0;
 
-            List<ConnectionInfo> connectionInfoList = options.getBackupConnectionInfoList();
-            if (connectionInfoList != null && connectionInfoList.size() > 0) {
-                if (++backUpIndex >= connectionInfoList.size()) {
+            List<Address> addressList = options.getBackupAddressList();
+            if (addressList != null && addressList.size() > 0) {
+                if (++backUpIndex >= addressList.size()) {
                     Logger.i("switch to main server");
                     backUpIndex = -1;
-                    connection.connectionInfo = options.getConnectionInfo();
+                    connection.address = options.getAddress();
                 } else {
                     Logger.i("switch to backup server");
-                    connection.connectionInfo = connectionInfoList.get(backUpIndex);
+                    connection.address = addressList.get(backUpIndex);
                 }
             }
         }
@@ -141,7 +142,7 @@ public class ReConnector<T> implements ConnectEventListener {
                 if (connection.isSleep()) {
                     Logger.i("App is sleeping, stop connection.");
                     stopReconnect();
-                    connection.disconnect(Event.SLEEP);
+                    connection.disconnect(Error.create(Error.Code.SLEEP));
                 }
                 disconnectTask = null;
             }

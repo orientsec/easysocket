@@ -68,6 +68,6 @@ public interface Connection<T> {
      *
      * @return 当前连接站点信息
      */
-    ConnectionInfo getConnectionInfo();
+    Address getAddress();
 
 }

@@ -6,7 +6,7 @@ import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.PacketHandler;
 import com.orientsec.easysocket.PulseHandler;
 import com.orientsec.easysocket.Request;
-import com.orientsec.easysocket.exception.Event;
+import com.orientsec.easysocket.exception.Error;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.concurrent.ScheduledFuture;
@@ -87,7 +87,7 @@ public class Pulse<T> implements PacketHandler<T>, Runnable {
         if (lostTimes.getAndAdd(1) > options.getPulseLostTimes()) {
             //心跳失败超过上限后断开连接
             Logger.w("pulse failed times up, invalid connection!");
-            connection.disconnect(Event.PULSE_OVER_TIME);
+            connection.disconnect(Error.create(Error.Code.PULSE_TIME_OUT));
         } else {
             //发送心跳消息
             Callback<Boolean> callback = new Callback.EmptyCallback<Boolean>() {

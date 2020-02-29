@@ -1,6 +1,6 @@
 package com.orientsec.easysocket;
 
-import com.orientsec.easysocket.exception.Event;
+import com.orientsec.easysocket.exception.EasyException;
 
 /**
  * Product: EasySocket
@@ -15,7 +15,7 @@ public interface ConnectEventListener {
     /**
      * 连接断开后进行的回调
      */
-    void onDisconnect(Event event);
+    void onDisconnect(EasyException e);
 
     /**
      * 连接连接建立成功后的回调

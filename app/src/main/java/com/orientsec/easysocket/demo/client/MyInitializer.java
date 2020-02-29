@@ -25,7 +25,7 @@ public class MyInitializer implements Initializer<byte[]> {
 
             @Override
             public void onError(EasyException e) {
-                emitter.fail(e.getEvent());
+                emitter.fail(e);
             }
         };
         Task<String> task = connection.buildTask(authRequest, callback);

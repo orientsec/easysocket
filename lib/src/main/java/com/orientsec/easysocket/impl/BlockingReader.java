@@ -4,7 +4,7 @@ import com.orientsec.easysocket.HeadParser;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.exception.Event;
+import com.orientsec.easysocket.exception.Error;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.io.IOException;
@@ -41,7 +41,7 @@ public class BlockingReader<T> extends Looper implements Reader {
         int bodyLength = head.getPacketSize();
         //Logger.i("need read body length: " + bodyLength);
         if (bodyLength > options.getMaxReadDataKB() * 1024) {
-            throw new EasyException(Event.STREAM_SIZE_ERROR,
+            throw Error.create(Error.Code.STREAM_SIZE,
                     "InputStream length to long:" + bodyLength);
         } else if (bodyLength >= 0) {
             byte[] data = new byte[bodyLength];
@@ -49,7 +49,7 @@ public class BlockingReader<T> extends Looper implements Reader {
             Packet<T> packet = headParser.decodePacket(head, data);
             connection.handlePacket(packet);
         } else {
-            throw new EasyException(Event.STREAM_SIZE_ERROR,
+            throw Error.create(Error.Code.STREAM_SIZE,
                     "Wrong body length " + bodyLength);
         }
     }
@@ -78,20 +78,22 @@ public class BlockingReader<T> extends Looper implements Reader {
 
     @Override
     protected void loopFinish(Exception e) {
-        Event event = Event.EMPTY;
+        EasyException ee;
         if (e != null) {
             //e.printStackTrace();
-            Logger.e("Blocking read error, thread is dead with exception: "
+            Logger.e("Blocking reader error, thread is dead with exception: "
                     + e.getMessage());
             if (e instanceof IOException) {
-                event = Event.READ_IO_ERROR;
+                ee = Error.create(Error.Code.READ_IO, e);
             } else if (e instanceof EasyException) {
-                event = ((EasyException) e).getEvent();
+                ee = (EasyException) e;
             } else {
-                event = Event.unknown(e.getMessage());
+                ee = Error.create(Error.Code.READ_OTHER, e);
             }
+        } else {
+            ee = Error.create(Error.Code.READ_EXIT);
         }
         inputStream = null;
-        connection.disconnect(event);
+        connection.disconnect(ee);
     }
 }

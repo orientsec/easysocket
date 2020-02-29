@@ -1,7 +1,7 @@
 package com.orientsec.easysocket.impl;
 
 import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.exception.Event;
+import com.orientsec.easysocket.exception.Error;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.io.IOException;
@@ -51,20 +51,22 @@ public class BlockingWriter<T> extends Looper implements Writer {
 
     @Override
     protected void loopFinish(Exception e) {
-        Event event = Event.EMPTY;
+        EasyException ee;
         if (e != null) {
             //e.printStackTrace();
-            Logger.e("Blocking write error, " +
+            Logger.e("Blocking writer error, " +
                     "thread is dead with exception: " + e.getMessage());
             if (e instanceof IOException) {
-                event = Event.WRITE_IO_ERROR;
+                ee = Error.create(Error.Code.WRITE_IO, e);
             } else if (e instanceof EasyException) {
-                event = ((EasyException) e).getEvent();
+                ee = (EasyException) e;
             } else {
-                event = Event.unknown(e.getMessage());
+                ee = Error.create(Error.Code.WRIT_OTHER, e);
             }
+        } else {
+            ee = Error.create(Error.Code.WRITE_EXIT);
         }
         mOutputStream = null;
-        connection.disconnect(event);
+        connection.disconnect(ee);
     }
 }

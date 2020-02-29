@@ -1,12 +1,12 @@
 package com.orientsec.easysocket;
 
-import com.orientsec.easysocket.exception.Event;
+import com.orientsec.easysocket.exception.EasyException;
 
 public interface Initializer<T> {
     interface Emitter {
         void success();
 
-        void fail(Event event);
+        void fail(EasyException e);
     }
 
     void start(Connection<T> connection, Emitter emitter);

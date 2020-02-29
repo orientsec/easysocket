@@ -1,11 +1,13 @@
 package com.orientsec.easysocket.impl;
 
 import com.orientsec.easysocket.Callback;
+import com.orientsec.easysocket.Connection;
+import com.orientsec.easysocket.ConnectionManager;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.Task;
 import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.exception.Event;
+import com.orientsec.easysocket.exception.Error;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
@@ -41,12 +43,13 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
     private Options<T> options;
     private Executor callbackExecutor;
     private Executor codecExecutor;
-    private TaskManager<T, RequestTask<T, ?, ?>> taskManager;
+    private Connection<T> connection;
+    private final TaskManager<T, RequestTask<T, ?, ?>> taskManager;
     private ScheduledFuture<?> timeoutFuture;
     /**
-     * 消息id
+     * 每一个任务的id是唯一的，通过taskId，客户端可以匹配每个请求的返回
      */
-    private int taskId;
+    int taskId;
     /**
      * 编码后的请求数据
      *
@@ -58,6 +61,7 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
                 Callback<RESPONSE> callback,
                 SocketConnection<T> connection) {
         this.request = request;
+        this.connection = connection;
         this.options = connection.options;
         this.callback = callback;
         callbackExecutor = options.getCallbackExecutor();
@@ -71,16 +75,6 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
     }
 
     /**
-     * 获取任务id
-     * 每一个任务的id是唯一的，通过taskId，客户端可以匹配每个请求的返回
-     *
-     * @return taskId
-     */
-    int getTaskId() {
-        return taskId;
-    }
-
-    /**
      * 获取请求的编码数据。
      * 在加入请求队列之前，{@link RequestTaskManager}会调用{@link #encode()}
      * 进行编码，编码成功之后data才会有数据。
@@ -91,12 +85,12 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
         return data;
     }
 
-    boolean isInit() {
-        return request.isInit();
-    }
-
     boolean isSync() {
         return request.isSync();
+    }
+
+    boolean isInit() {
+        return request.isInit();
     }
 
     /**
@@ -110,7 +104,55 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
 
     @Override
     public void execute() {
-        taskManager.add(this);
+        boolean valid;
+        synchronized (this) {
+            if (state == State.IDLE) {
+                state = State.PREPARING;
+                valid = true;
+            } else {
+                valid = false;
+            }
+        }
+        if (!valid) {
+            onError(Error.create(Error.Code.TASK_REFUSED, "Task has already executed."));
+            return;
+        }
+        if (connection.isShutdown()) {
+            onError(Error.create(Error.Code.SHUT_DOWN, "Connection is show down."));
+        } else if (!ConnectionManager.getInstance().isNetworkAvailable()) {
+            onError(Error.create(Error.Code.NETWORK_NOT_AVAILABLE,
+                    "Network is unavailable!"));
+        } else {
+            connection.start();
+            try {
+                synchronized (this) {
+                    if (state != State.PREPARING) return;
+                    taskManager.add(this);
+                }
+            } catch (EasyException e) {
+                onError(e);
+            }
+        }
+    }
+
+    /**
+     * 对请求消息进行编码, 获取最终写入的字节数组。
+     * 在编解码线程中执行。
+     */
+    void encode() {
+        codecExecutor.execute(() -> {
+            try {
+                data = getRequest().encode(taskId);
+                if (data == null) throw new IllegalStateException("Request data is null.");
+
+                synchronized (this) {
+                    if (state != State.PREPARING) return;
+                    taskManager.enqueue(this);
+                }
+            } catch (EasyException e) {
+                onError(e);
+            }
+        });
     }
 
     /**
@@ -130,31 +172,14 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
         return state != State.IDLE;
     }
 
-    boolean onPrepare() {
-        if (state != State.IDLE) {
-            return false;
-        }
-        state = State.PREPARING;
-        return true;
-    }
-
-    boolean isPreparing() {
-        return state == State.PREPARING;
-    }
-
-    /**
-     * 对请求消息进行编码, 获取最终写入的字节数组。
-     *
-     * @throws EasyException 编码错误
-     */
-    void encode() throws EasyException {
-        data = getRequest().encode(taskId);
-        if (data == null) throw new IllegalStateException("Request data is null.");
-    }
 
     @Override
-    public void cancel() {
-        taskManager.remove(this, Event.TASK_CANCELED);
+    public synchronized void cancel() {
+        if (isFinished()) return;
+        state = State.CANCELED;
+        cancelTimer();
+        taskManager.remove(this);
+        callbackExecutor.execute(callback::onCancel);
     }
 
     @Override
@@ -162,13 +187,15 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
         return state == State.CANCELED;
     }
 
-    void onSend() {
+    synchronized void onSend() {
+        if (isCanceled()) return;
         state = State.WAITING;
         startTimer();
         callbackExecutor.execute(() -> callback.onStart());
     }
 
-    void onReceive(T data) {
+    synchronized void onReceive(T data) {
+        if (isCanceled()) return;
         state = State.SUCCESS;
         cancelTimer();
         codecExecutor.execute(() -> {
@@ -181,16 +208,11 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
         });
     }
 
-    void onError(EasyException e) {
+    synchronized void onError(EasyException e) {
+        if (isCanceled()) return;
         state = State.ERROR;
         cancelTimer();
         callbackExecutor.execute(() -> callback.onError(e));
-    }
-
-    void onCanceled() {
-        state = State.CANCELED;
-        cancelTimer();
-        callbackExecutor.execute(callback::onCancel);
     }
 
     private void cancelTimer() {
@@ -201,9 +223,14 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
     }
 
     private void startTimer() {
-        Runnable timeout = () -> taskManager.remove(this, Event.RESPONSE_TIME_OUT);
         timeoutFuture = options.getScheduledExecutor()
-                .schedule(timeout, options.getRequestTimeOut(), TimeUnit.SECONDS);
+                .schedule(this::timeout, options.getRequestTimeOut(), TimeUnit.SECONDS);
+    }
+
+    private synchronized void timeout() {
+        if (isFinished()) return;
+        taskManager.remove(this);
+        onError(Error.create(Error.Code.RESPONSE_TIME_OUT));
     }
 
     @Override

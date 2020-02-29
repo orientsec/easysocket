@@ -6,7 +6,7 @@ import java.io.Serializable;
  * 连接信息服务类
  * Created by xuhao on 2017/5/16.
  */
-public final class ConnectionInfo implements Serializable, Cloneable {
+public final class Address implements Serializable, Cloneable {
     /**
      * IPV4地址
      */
@@ -16,7 +16,7 @@ public final class ConnectionInfo implements Serializable, Cloneable {
      */
     private int port;
 
-    public ConnectionInfo(String host, int port) {
+    public Address(String host, int port) {
         this.host = host;
         this.port = port;
     }
@@ -44,11 +44,11 @@ public final class ConnectionInfo implements Serializable, Cloneable {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof ConnectionInfo)) {
+        if (!(o instanceof Address)) {
             return false;
         }
 
-        ConnectionInfo connectInfo = (ConnectionInfo) o;
+        Address connectInfo = (Address) o;
 
         return port == connectInfo.port && host.equals(connectInfo.host);
     }
@@ -62,6 +62,6 @@ public final class ConnectionInfo implements Serializable, Cloneable {
 
     @Override
     public String toString() {
-        return "ConnectionInfo{host='" + host + ", port=" + port + '}';
+        return "Address{host='" + host + ", port=" + port + '}';
     }
 }
