@@ -33,4 +33,12 @@ public class EasyException extends Exception {
                 ", message=" + getMessage() +
                 '}';
     }
+
+    public int getCode() {
+        return code;
+    }
+
+    public int getType() {
+        return type;
+    }
 }
