@@ -64,7 +64,7 @@ public abstract class AbstractPushManager<T, K, E> implements PushManager<T, K, 
         codecExecutor.execute(() -> {
             try {
                 E event = parsePacket(packet);
-                K key = eventKey(event);
+                K key = eventKey(packet.getBody(), event);
                 callbackExecutor.execute(() -> sendPushEvent(key, event));
             } catch (EasyException e) {
                 onError(e);
@@ -74,7 +74,7 @@ public abstract class AbstractPushManager<T, K, E> implements PushManager<T, K, 
 
     protected abstract void onError(EasyException e);
 
-    protected abstract K eventKey(E event);
+    protected abstract K eventKey(T body, E event);
 
     protected synchronized void sendPushEvent(K key, E event) {
         Set<PushListener<E>> set = idListenerMap.get(key);
