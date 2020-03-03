@@ -33,10 +33,10 @@ public interface HeadParser<T> {
     int headSize();
 
     /**
-     * @param header 包头原始数据
+     * @param bytes 包头原始数据
      * @return 包体大小
      */
-    Head parseHead(byte[] header) throws EasyException;
+    Head parseHead(byte[] bytes) throws EasyException;
 
     /**
      * 解析消息体

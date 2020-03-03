@@ -10,10 +10,14 @@ public class DefaultSocketFactory implements SocketFactory {
     @Override
     public Socket createSocket() throws SocketException {
         Socket socket = new Socket();
+        setSocketOptions(socket);
+        return socket;
+    }
+
+    protected void setSocketOptions(Socket socket) throws SocketException {
         //关闭Nagle算法,无论TCP数据报大小,立即发送
         socket.setTcpNoDelay(true);
         socket.setKeepAlive(true);
         socket.setPerformancePreferences(1, 2, 0);
-        return socket;
     }
 }
