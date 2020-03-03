@@ -30,7 +30,7 @@ public interface Callback<RESPONSE> {
      *
      * @param e 异常
      */
-    void onError(EasyException e);
+    void onError(Exception e);
 
     /**
      * 取消回调
@@ -50,7 +50,7 @@ public interface Callback<RESPONSE> {
         }
 
         @Override
-        public void onError(EasyException e) {
+        public void onError(Exception e) {
 
         }
 

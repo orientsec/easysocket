@@ -149,7 +149,7 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
                     if (state != State.PREPARING) return;
                     taskManager.enqueue(this);
                 }
-            } catch (EasyException e) {
+            } catch (Exception e) {
                 onError(e);
             }
         });
@@ -202,13 +202,13 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
             try {
                 RESPONSE response = request.decode(data);
                 callbackExecutor.execute(() -> callback.onSuccess(response));
-            } catch (EasyException e) {
+            } catch (Exception e) {
                 callbackExecutor.execute(() -> callback.onError(e));
             }
         });
     }
 
-    synchronized void onError(EasyException e) {
+    synchronized void onError(Exception e) {
         if (isCanceled()) return;
         state = State.ERROR;
         cancelTimer();

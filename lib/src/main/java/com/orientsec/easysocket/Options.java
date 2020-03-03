@@ -341,7 +341,7 @@ public class Options<T> {
             return this;
         }
 
-        public Builder<T> socketFactory(Supplier<SocketFactory> val) {
+        public Builder<T> socketFactorySupplier(Supplier<SocketFactory> val) {
             socketFactorySupplier = val;
             return this;
         }

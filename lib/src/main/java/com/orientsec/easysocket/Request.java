@@ -74,9 +74,9 @@ public abstract class Request<T, REQ, RES> {
      * 对请求数据进行处理，可以进行统一的业务数据填充、校验，数据编码等。
      *
      * @return 发送的字节数组
-     * @throws EasyException 数据处理中的异常
+     * @throws Exception 数据处理中的异常
      */
-    public abstract byte[] encode(int sequenceId) throws EasyException;
+    public abstract byte[] encode(int sequenceId) throws Exception;
 
     /**
      * 获取的服务器消息经过{@link HeadParser#decodePacket(HeadParser.Head, byte[])}
@@ -85,7 +85,7 @@ public abstract class Request<T, REQ, RES> {
      *
      * @param data 消息数据
      * @return 接码后的响应结果
-     * @throws EasyException 异常
+     * @throws Exception 异常
      */
-    public abstract RES decode(T data) throws EasyException;
+    public abstract RES decode(T data) throws Exception;
 }
