@@ -35,7 +35,7 @@ public class Options<T> {
     /**
      * Socket factory
      */
-    private SocketFactory socketFactory;
+    private Supplier<SocketFactory> socketFactorySupplier;
     /**
      * 数据协议
      */
@@ -118,7 +118,7 @@ public class Options<T> {
         pulseHandler = builder.pulseHandler;
         address = builder.address;
         backupAddressList = builder.backupAddressList;
-        socketFactory = builder.socketFactory;
+        socketFactorySupplier = builder.socketFactorySupplier;
         headParser = builder.headParser;
         pushHandler = builder.pushHandler;
         callbackExecutor = builder.callbackExecutor;
@@ -153,8 +153,8 @@ public class Options<T> {
         return headParser;
     }
 
-    public SocketFactory getSocketFactory() {
-        return socketFactory;
+    public Supplier<SocketFactory> getSocketFactorySupplier() {
+        return socketFactorySupplier;
     }
 
     public Executor getCallbackExecutor() {
@@ -225,7 +225,7 @@ public class Options<T> {
         private PulseHandler<T> pulseHandler;
         private Address address;
         private List<Address> backupAddressList;
-        private SocketFactory socketFactory;
+        private Supplier<SocketFactory> socketFactorySupplier;
         private HeadParser<T> headParser;
         private PacketHandler<T> pushHandler;
         private Initializer<T> initializer;
@@ -341,8 +341,8 @@ public class Options<T> {
             return this;
         }
 
-        public Builder<T> socketFactory(SocketFactory val) {
-            socketFactory = val;
+        public Builder<T> socketFactory(Supplier<SocketFactory> val) {
+            socketFactorySupplier = val;
             return this;
         }
 
@@ -384,8 +384,8 @@ public class Options<T> {
             if (connectInterval <= 1000) {
                 return false;
             }
-            if (socketFactory == null) {
-                socketFactory = SocketFactory.getDefault();
+            if (socketFactorySupplier == null) {
+                socketFactorySupplier = SocketFactory::getDefault;
             }
             if (pulseHandler == null) {
                 pulseHandler = new PulseHandler.EmptyPulseHandler<>();

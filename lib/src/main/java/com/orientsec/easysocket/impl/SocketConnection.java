@@ -200,7 +200,9 @@ public class SocketConnection<T> extends AbstractConnection<T>
 
     private Socket openSocket() {
         try {
-            Socket socket = options.getSocketFactory().createSocket();
+            Socket socket = options.getSocketFactorySupplier()
+                    .get()
+                    .createSocket();
             //关闭Nagle算法,无论TCP数据报大小,立即发送
             socket.setTcpNoDelay(true);
             socket.setKeepAlive(true);
