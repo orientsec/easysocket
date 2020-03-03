@@ -201,6 +201,10 @@ public class SocketConnection<T> extends AbstractConnection<T>
     private Socket openSocket() {
         try {
             Socket socket = options.getSocketFactory().createSocket();
+            //关闭Nagle算法,无论TCP数据报大小,立即发送
+            socket.setTcpNoDelay(true);
+            socket.setKeepAlive(true);
+            socket.setPerformancePreferences(1, 2, 0);
             SocketAddress socketAddress
                     = new InetSocketAddress(address.getHost(), address.getPort());
             socket.connect(socketAddress, options.getConnectTimeOut());

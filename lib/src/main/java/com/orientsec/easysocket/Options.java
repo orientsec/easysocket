@@ -1,10 +1,10 @@
 package com.orientsec.easysocket;
 
-import com.orientsec.easysocket.impl.DefaultSocketFactory;
-
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
+
+import javax.net.SocketFactory;
 
 import io.reactivex.annotations.NonNull;
 
@@ -385,7 +385,7 @@ public class Options<T> {
                 return false;
             }
             if (socketFactory == null) {
-                socketFactory = new DefaultSocketFactory();
+                socketFactory = SocketFactory.getDefault();
             }
             if (pulseHandler == null) {
                 pulseHandler = new PulseHandler.EmptyPulseHandler<>();
