@@ -1,5 +1,7 @@
 package com.orientsec.easysocket.push;
 
+import androidx.annotation.NonNull;
+
 import com.orientsec.easysocket.Executors;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.exception.EasyException;
@@ -60,7 +62,7 @@ public abstract class AbstractPushManager<T, K, E> implements PushManager<T, K, 
     }
 
     @Override
-    public void handlePacket(Packet<T> packet) {
+    public void handlePacket(@NonNull Packet<T> packet) {
         codecExecutor.execute(() -> {
             try {
                 E event = parsePacket(packet);

@@ -1,5 +1,7 @@
 package com.orientsec.easysocket.exception;
 
+import androidx.annotation.NonNull;
+
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket.exception
@@ -10,21 +12,28 @@ package com.orientsec.easysocket.exception;
 
 public class EasyException extends Exception {
     private int code;
-    private int type;
+    private String type;
 
-    public EasyException(int code, int type, String message) {
+    public EasyException(int code, String type, String message) {
         super(message);
         this.code = code;
         this.type = type;
     }
 
-    public EasyException(int code, int type, String message, Throwable cause) {
+    public EasyException(int code, String type, String message, Throwable cause) {
         super(message, cause);
         this.code = code;
         this.type = type;
     }
 
+    public EasyException(int code, String type, Throwable cause) {
+        super(cause);
+        this.code = code;
+        this.type = type;
+    }
 
+
+    @NonNull
     @Override
     public String toString() {
         return "EasyException{" +
@@ -38,7 +47,7 @@ public class EasyException extends Exception {
         return code;
     }
 
-    public int getType() {
+    public String getType() {
         return type;
     }
 }

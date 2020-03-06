@@ -1,5 +1,7 @@
 package com.orientsec.easysocket.demo.client;
 
+import android.support.annotation.NonNull;
+
 import com.orientsec.easysocket.HeadParser;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.impl.PacketType;
@@ -14,7 +16,8 @@ public class MyHeadParser implements HeadParser<byte[]> {
     }
 
     @Override
-    public MyHead parseHead(byte[] header) {
+    @NonNull
+    public MyHead parseHead(@NonNull byte[] header) {
         ByteBuffer byteBuffer = ByteBuffer.wrap(header);
         int bodyLen = byteBuffer.getInt();
         int taskId = byteBuffer.getInt();
@@ -29,7 +32,8 @@ public class MyHeadParser implements HeadParser<byte[]> {
     }
 
     @Override
-    public Packet<byte[]> decodePacket(Head head, byte[] bodyBytes) {
+    @NonNull
+    public Packet<byte[]> decodePacket(@NonNull Head head, @NonNull byte[] bodyBytes) {
         MyHead myHead = (MyHead) head;
         return new Packet<>(myHead.getPacketType(), myHead.getTaskId(), bodyBytes);
     }

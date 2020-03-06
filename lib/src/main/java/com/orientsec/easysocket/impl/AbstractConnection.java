@@ -1,21 +1,23 @@
 package com.orientsec.easysocket.impl;
 
 
+import androidx.annotation.NonNull;
+
+import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.ConnectEventListener;
 import com.orientsec.easysocket.Connection;
-import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.ConnectionManager;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Task;
 import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.exception.Error;
+import com.orientsec.easysocket.exception.ErrorCode;
+import com.orientsec.easysocket.exception.ErrorType;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Executor;
 
-import io.reactivex.annotations.NonNull;
 
 /**
  * Product: EasySocket
@@ -108,8 +110,11 @@ public abstract class AbstractConnection<T> implements Connection<T>,
             ConnectionManager.getInstance().removeConnection(this);
         }
         if (state == State.CONNECT || state == State.AVAILABLE) {
-            managerExecutor.execute(() ->
-                    disconnectRunnable(Error.create(Error.Code.SHUT_DOWN)));
+            managerExecutor.execute(() -> {
+                EasyException e = new EasyException(ErrorCode.SHUT_DOWN,
+                        ErrorType.SYSTEM, "Connection shut down.");
+                disconnectRunnable(e);
+            });
         }
         state = State.SHUTDOWN;
     }
@@ -150,7 +155,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
         }
     }
 
-    public void onDisconnect(EasyException e) {
+    public void onDisconnect(@NonNull EasyException e) {
         Logger.i("Connection is disconnected, " + address);
         reConnector.onDisconnect(e);
 
@@ -180,7 +185,9 @@ public abstract class AbstractConnection<T> implements Connection<T>,
         if (available) {
             reConnector.reconnectDelay();
         } else {
-            disconnect(Error.create(Error.Code.NETWORK_NOT_AVAILABLE));
+            EasyException e = new EasyException(ErrorCode.NETWORK_NOT_AVAILABLE,
+                    ErrorType.NETWORK, "Network is not available.");
+            disconnectRunnable(e);
         }
     }
 
@@ -197,7 +204,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
     }
 
     boolean isSleep() {
-        return System.currentTimeMillis() - timestamp > options.getBackgroundLiveTime() * 1000
+        return System.currentTimeMillis() - timestamp > options.getBackgroundLiveTime()
                 && timestamp != 0;
     }
 
@@ -212,7 +219,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
     }
 
 
-    public abstract TaskManager<T, ? extends Task<?>> taskManager();
+    public abstract TaskManager<T, ? extends Task<T, ?>> taskManager();
 
     abstract void connectRunnable();
 

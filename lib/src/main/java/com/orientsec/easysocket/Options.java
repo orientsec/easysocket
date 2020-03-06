@@ -234,11 +234,11 @@ public class Options<T> {
         private Executor codecExecutor;
         private ScheduledExecutorService scheduledExecutor;
         private int maxReadDataKB = 1024;
-        private int requestTimeOut = 5;
+        private int requestTimeOut = 5000;
         private int connectTimeOut = 5000;
-        private int pulseRate = 60;
+        private int pulseRate = 60 * 1000;
         private int pulseLostTimes = 2;
-        private int backgroundLiveTime = 120;
+        private int backgroundLiveTime = 120 * 1000;
         private LivePolicy livePolicy = LivePolicy.DEFAULT;
         private int retryTimes;
         private int connectInterval = 3000;
@@ -246,52 +246,52 @@ public class Options<T> {
         public Builder() {
         }
 
-        public Builder<T> pulseHandler(PulseHandler<T> val) {
+        public Builder<T> pulseHandler(@NonNull PulseHandler<T> val) {
             pulseHandler = val;
             return this;
         }
 
-        public Builder<T> address(Address val) {
+        public Builder<T> address(@NonNull Address val) {
             address = val;
             return this;
         }
 
-        public Builder<T> backupAddressList(List<Address> val) {
+        public Builder<T> backupAddressList(@NonNull List<Address> val) {
             backupAddressList = val;
             return this;
         }
 
-        public Builder<T> headParser(HeadParser<T> val) {
+        public Builder<T> headParser(@NonNull HeadParser<T> val) {
             headParser = val;
             return this;
         }
 
-        public Builder<T> pushHandler(PacketHandler<T> val) {
+        public Builder<T> pushHandler(@NonNull PacketHandler<T> val) {
             pushHandler = val;
             return this;
         }
 
-        public Builder<T> initializer(Initializer<T> val) {
+        public Builder<T> initializer(@NonNull Initializer<T> val) {
             initializer = val;
             return this;
         }
 
-        public Builder<T> scheduledExecutor(ScheduledExecutorService val) {
+        public Builder<T> scheduledExecutor(@NonNull ScheduledExecutorService val) {
             scheduledExecutor = val;
             return this;
         }
 
-        public Builder<T> callbackExecutor(Executor val) {
+        public Builder<T> callbackExecutor(@NonNull Executor val) {
             callbackExecutor = val;
             return this;
         }
 
-        public Builder<T> managerExecutor(Executor val) {
+        public Builder<T> managerExecutor(@NonNull Executor val) {
             managerExecutor = val;
             return this;
         }
 
-        public Builder<T> codecExecutor(Executor val) {
+        public Builder<T> codecExecutor(@NonNull Executor val) {
             codecExecutor = val;
             return this;
         }
@@ -341,48 +341,49 @@ public class Options<T> {
             return this;
         }
 
-        public Builder<T> socketFactorySupplier(Supplier<SocketFactory> val) {
+        public Builder<T> socketFactorySupplier(@NonNull Supplier<SocketFactory> val) {
             socketFactorySupplier = val;
             return this;
         }
 
         public Options<T> build() {
-            if (!checkParams()) {
-                throw new IllegalArgumentException();
+            if (checkParams().isEmpty()) {
+                return new Options<>(this);
             }
-            return new Options<>(this);
+            throw new IllegalArgumentException();
         }
 
-        private boolean checkParams() {
+        @NonNull
+        private String checkParams() {
             if (address == null) {
-                return false;
+                return "Address not set.";
             }
             if (headParser == null) {
-                return false;
+                return "Head parser not set.";
             }
             if (maxReadDataKB <= 0) {
-                return false;
+                return "Max read data size in kb must be positive.";
             }
             if (connectTimeOut < 0) {
-                return false;
+                return "Connect time out is negative.";
             }
             if (requestTimeOut <= 0) {
-                return false;
+                return "Request time out must be positive..";
             }
-            if (pulseRate < 30) {
-                return false;
+            if (pulseRate < 30 * 1000) {
+                return "Pulse rate must big than 30s.";
             }
             if (pulseLostTimes < 0) {
-                return false;
+                return "Pulse lost time is negative.";
             }
-            if (backgroundLiveTime <= 30) {
-                return false;
+            if (backgroundLiveTime <= 15 * 1000) {
+                return "Background live time must big than 15s.";
             }
             if (retryTimes < 0) {
-                return false;
+                return "Retry time is negative.";
             }
             if (connectInterval <= 1000) {
-                return false;
+                return "Connect interval must big than 1000ms.";
             }
             if (socketFactorySupplier == null) {
                 socketFactorySupplier = SocketFactory::getDefault;
@@ -409,7 +410,7 @@ public class Options<T> {
                 scheduledExecutor = Executors.scheduledExecutor;
             }
 
-            return true;
+            return "";
         }
     }
 }

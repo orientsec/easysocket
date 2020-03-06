@@ -24,7 +24,7 @@ public class Executors {
 
     public static final ExecutorService codecExecutor
             = new ThreadPoolExecutor(0, 4,
-            60L, TimeUnit.MILLISECONDS,
+            60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>());
 
     public static final Executor mainThreadExecutor = new Executor() {

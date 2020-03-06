@@ -1,5 +1,7 @@
 package com.orientsec.easysocket.impl;
 
+import androidx.annotation.NonNull;
+
 import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.Callback;
 import com.orientsec.easysocket.Initializer;
@@ -9,7 +11,8 @@ import com.orientsec.easysocket.PacketHandler;
 import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.Task;
 import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.exception.Error;
+import com.orientsec.easysocket.exception.ErrorCode;
+import com.orientsec.easysocket.exception.ErrorType;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.io.IOException;
@@ -70,7 +73,7 @@ public class SocketConnection<T> extends AbstractConnection<T>
     }
 
     @Override
-    public TaskManager<T, RequestTask<T, ?, ?>> taskManager() {
+    public TaskManager<T, RequestTask<T, ?>> taskManager() {
         return taskManager;
     }
 
@@ -80,8 +83,9 @@ public class SocketConnection<T> extends AbstractConnection<T>
     }
 
     @Override
-    public <REQUEST, RESPONSE> Task<RESPONSE>
-    buildTask(Request<T, REQUEST, RESPONSE> request, Callback<RESPONSE> callback) {
+    @NonNull
+    public <R> Task<T, R> buildTask(@NonNull Request<T, R> request,
+                                    @NonNull Callback<R> callback) {
         return new RequestTask<>(request, callback, this);
     }
 
@@ -93,7 +97,7 @@ public class SocketConnection<T> extends AbstractConnection<T>
     }
 
     @Override
-    public void handlePacket(Packet<T> packet) {
+    public void handlePacket(@NonNull Packet<T> packet) {
         PacketHandler<T> packetHandler
                 = messageHandlerMap.get(packet.getPacketType().getValue());
         if (packetHandler == null) {
@@ -139,7 +143,9 @@ public class SocketConnection<T> extends AbstractConnection<T>
                 if (state == State.STARTING) {
                     state = State.IDLE;
                 }
-                stopWorkers(Error.create(Error.Code.SOCKET_CONNECT));
+                EasyException e = new EasyException(ErrorCode.SOCKET_CONNECT,
+                        ErrorType.CONNECT, "Fail to start a socket connect.");
+                stopWorkers(e);
                 onConnectFailed();
             } else if (state == State.STARTING) {
                 state = State.CONNECT;
@@ -149,7 +155,9 @@ public class SocketConnection<T> extends AbstractConnection<T>
                 options.getInitializer().start(this, emitter);
             } else {
                 //connection is shutdown
-                stopWorkers(Error.create(Error.Code.SHUT_DOWN));
+                EasyException e = new EasyException(ErrorCode.SHUT_DOWN,
+                        ErrorType.SYSTEM, "Connection shut down.");
+                stopWorkers(e);
                 closeSocket = true;
             }
         }

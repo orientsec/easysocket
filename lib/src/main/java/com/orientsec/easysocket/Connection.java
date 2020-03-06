@@ -1,5 +1,8 @@
 package com.orientsec.easysocket;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket
@@ -46,28 +49,30 @@ public interface Connection<T> {
      * @param callback 结果回调。
      * @return 可执行任务。
      */
-    <REQUEST, RESPONSE> Task<RESPONSE> buildTask(Request<T, REQUEST, RESPONSE> request,
-                                                 Callback<RESPONSE> callback);
+    @NonNull
+    <RE> Task<T, RE> buildTask(@NonNull Request<T, RE> request,
+                                 @NonNull Callback<RE> callback);
 
     /**
      * 添加连接事件监听器
      *
      * @param listener 监听器
      */
-    void addConnectEventListener(ConnectEventListener listener);
+    void addConnectEventListener(@NonNull ConnectEventListener listener);
 
     /**
      * 移除连接事件监听器
      *
      * @param listener 监听器
      */
-    void removeConnectEventListener(ConnectEventListener listener);
+    void removeConnectEventListener(@NonNull ConnectEventListener listener);
 
     /**
      * 获取当前连接站点信息
      *
      * @return 当前连接站点信息
      */
+    @Nullable
     Address getAddress();
 
 }

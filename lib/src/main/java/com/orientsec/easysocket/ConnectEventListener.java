@@ -1,5 +1,7 @@
 package com.orientsec.easysocket;
 
+import androidx.annotation.NonNull;
+
 import com.orientsec.easysocket.exception.EasyException;
 
 /**
@@ -15,7 +17,7 @@ public interface ConnectEventListener {
     /**
      * 连接断开后进行的回调
      */
-    void onDisconnect(EasyException e);
+    void onDisconnect(@NonNull EasyException e);
 
     /**
      * 连接连接建立成功后的回调

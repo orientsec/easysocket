@@ -1,5 +1,7 @@
 package com.orientsec.easysocket;
 
+import androidx.annotation.NonNull;
+
 import com.orientsec.easysocket.exception.EasyException;
 
 /**
@@ -36,7 +38,8 @@ public interface HeadParser<T> {
      * @param bytes 包头原始数据
      * @return 包体大小
      */
-    Head parseHead(byte[] bytes) throws EasyException;
+    @NonNull
+    Head parseHead(@NonNull byte[] bytes) throws EasyException;
 
     /**
      * 解析消息体
@@ -45,6 +48,8 @@ public interface HeadParser<T> {
      * @param bodyBytes 包体字节数组
      * @return 消息体
      */
-    Packet<T> decodePacket(Head head, byte[] bodyBytes) throws EasyException;
+    @NonNull
+    Packet<T> decodePacket(@NonNull Head head, @NonNull byte[] bodyBytes)
+            throws EasyException;
 
 }

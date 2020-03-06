@@ -1,5 +1,7 @@
 package com.orientsec.easysocket;
 
+import androidx.annotation.NonNull;
+
 import com.orientsec.easysocket.utils.Logger;
 
 public interface PacketHandler<T> {
@@ -8,12 +10,12 @@ public interface PacketHandler<T> {
      *
      * @param packet 消息体
      */
-    void handlePacket(Packet<T> packet);
+    void handlePacket(@NonNull Packet<T> packet);
 
     class EmptyPacketHandler<T> implements PacketHandler<T> {
 
         @Override
-        public void handlePacket(Packet<T> packet) {
+        public void handlePacket(@NonNull Packet<T> packet) {
             Logger.i("Unhandled packet." + packet);
         }
     }

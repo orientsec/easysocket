@@ -1,5 +1,7 @@
 package com.orientsec.easysocket.impl;
 
+import androidx.annotation.NonNull;
+
 import com.orientsec.easysocket.Callback;
 import com.orientsec.easysocket.Connection;
 import com.orientsec.easysocket.ConnectionManager;
@@ -7,7 +9,8 @@ import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.Task;
 import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.exception.Error;
+import com.orientsec.easysocket.exception.ErrorCode;
+import com.orientsec.easysocket.exception.ErrorType;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
@@ -21,7 +24,7 @@ import java.util.concurrent.TimeUnit;
  * coding is art not science
  */
 
-public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
+public class RequestTask<T, R> implements Task<T, R> {
     enum State {
         //初始状态
         IDLE,
@@ -38,13 +41,13 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
     }
 
     private volatile State state = State.IDLE;
-    private Request<T, REQUEST, RESPONSE> request;
-    private Callback<RESPONSE> callback;
+    private Request<T, R> request;
+    private Callback<R> callback;
     private Options<T> options;
     private Executor callbackExecutor;
     private Executor codecExecutor;
     private Connection<T> connection;
-    private final TaskManager<T, RequestTask<T, ?, ?>> taskManager;
+    private final TaskManager<T, RequestTask<T, ?>> taskManager;
     private ScheduledFuture<?> timeoutFuture;
     /**
      * 每一个任务的id是唯一的，通过taskId，客户端可以匹配每个请求的返回
@@ -57,9 +60,9 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
      */
     private byte[] data;
 
-    RequestTask(Request<T, REQUEST, RESPONSE> request,
-                Callback<RESPONSE> callback,
-                SocketConnection<T> connection) {
+    RequestTask(@NonNull Request<T, R> request,
+                @NonNull Callback<R> callback,
+                @NonNull SocketConnection<T> connection) {
         this.request = request;
         this.connection = connection;
         this.options = connection.options;
@@ -114,14 +117,19 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
             }
         }
         if (!valid) {
-            onError(Error.create(Error.Code.TASK_REFUSED, "Task has already executed."));
+            EasyException e = new EasyException(ErrorCode.TASK_REFUSED, ErrorType.TASK,
+                    "Task has already executed.");
+            onError(e);
             return;
         }
         if (connection.isShutdown()) {
-            onError(Error.create(Error.Code.SHUT_DOWN, "Connection is show down."));
+            EasyException e = new EasyException(ErrorCode.SHUT_DOWN, ErrorType.SYSTEM,
+                    "Connection is show down.");
+            onError(e);
         } else if (!ConnectionManager.getInstance().isNetworkAvailable()) {
-            onError(Error.create(Error.Code.NETWORK_NOT_AVAILABLE,
-                    "Network is unavailable!"));
+            EasyException e = new EasyException(ErrorCode.NETWORK_NOT_AVAILABLE,
+                    ErrorType.NETWORK, "Network is unavailable!");
+            onError(e);
         } else {
             connection.start();
             try {
@@ -143,7 +151,6 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
         codecExecutor.execute(() -> {
             try {
                 data = getRequest().encode(taskId);
-                if (data == null) throw new IllegalStateException("Request data is null.");
 
                 synchronized (this) {
                     if (state != State.PREPARING) return;
@@ -200,7 +207,7 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
         cancelTimer();
         codecExecutor.execute(() -> {
             try {
-                RESPONSE response = request.decode(data);
+                R response = request.decode(data);
                 callbackExecutor.execute(() -> callback.onSuccess(response));
             } catch (Exception e) {
                 callbackExecutor.execute(() -> callback.onError(e));
@@ -224,17 +231,20 @@ public class RequestTask<T, REQUEST, RESPONSE> implements Task<RESPONSE> {
 
     private void startTimer() {
         timeoutFuture = options.getScheduledExecutor()
-                .schedule(this::timeout, options.getRequestTimeOut(), TimeUnit.SECONDS);
+                .schedule(this::timeout, options.getRequestTimeOut(), TimeUnit.MILLISECONDS);
     }
 
     private synchronized void timeout() {
         if (isFinished()) return;
         taskManager.remove(this);
-        onError(Error.create(Error.Code.RESPONSE_TIME_OUT));
+        EasyException e = new EasyException(ErrorCode.RESPONSE_TIME_OUT,
+                ErrorType.RESPONSE, "Response time out.");
+        onError(e);
     }
 
     @Override
-    public Request<T, ?, RESPONSE> getRequest() {
+    @NonNull
+    public Request<T, R> getRequest() {
         return request;
     }
 }

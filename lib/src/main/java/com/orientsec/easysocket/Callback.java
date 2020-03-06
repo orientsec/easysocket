@@ -1,6 +1,6 @@
 package com.orientsec.easysocket;
 
-import com.orientsec.easysocket.exception.EasyException;
+import androidx.annotation.NonNull;
 
 /**
  * Product: EasySocket
@@ -12,7 +12,7 @@ import com.orientsec.easysocket.exception.EasyException;
  * 请求结果回调
  */
 
-public interface Callback<RESPONSE> {
+public interface Callback<R> {
     /**
      * 请求开始执行回调
      */
@@ -23,14 +23,14 @@ public interface Callback<RESPONSE> {
      *
      * @param res 响应
      */
-    void onSuccess(RESPONSE res);
+    void onSuccess(@NonNull R res);
 
     /**
      * 失败回调
      *
      * @param e 异常
      */
-    void onError(Exception e);
+    void onError(@NonNull Exception e);
 
     /**
      * 取消回调
@@ -45,12 +45,12 @@ public interface Callback<RESPONSE> {
         }
 
         @Override
-        public void onSuccess(R res) {
+        public void onSuccess(@NonNull R res) {
 
         }
 
         @Override
-        public void onError(Exception e) {
+        public void onError(@NonNull Exception e) {
 
         }
 

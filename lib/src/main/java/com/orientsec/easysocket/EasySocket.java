@@ -38,7 +38,8 @@ public class EasySocket {
      * @param options 连接设置选项
      * @return 连接
      */
-    public static <T> Connection<T> open(Options<T> options) {
+    @NonNull
+    public static <T> Connection<T> open(@NonNull Options<T> options) {
         SocketConnection<T> connection = new SocketConnection<>(options);
         ConnectionManager.getInstance().addConnection(connection);
         return connection;

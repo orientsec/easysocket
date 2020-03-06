@@ -12,7 +12,7 @@ import com.orientsec.easysocket.exception.EasyException;
  * Author: Fredric
  * coding is art not science
  */
-public interface TaskManager<T, TASK extends Task<?>> extends PacketHandler<T> {
+public interface TaskManager<T, TASK extends Task<T, ?>> extends PacketHandler<T> {
 
     /**
      * 加入task
@@ -39,7 +39,7 @@ public interface TaskManager<T, TASK extends Task<?>> extends PacketHandler<T> {
      *
      * @param task task
      */
-    void onSend(RequestTask<T, ?, ?> task);
+    void onSend(RequestTask<T, ?> task);
 
     /**
      * 连接准备就绪。在完成资源初始化、登录之后，连接进入可用状态

@@ -1,6 +1,8 @@
 package com.orientsec.easysocket;
 
 
+import androidx.annotation.NonNull;
+
 import com.orientsec.easysocket.impl.PacketType;
 
 
@@ -14,11 +16,11 @@ import com.orientsec.easysocket.impl.PacketType;
 
 public class Packet<T> {
 
-    public Packet(PacketType packetType, T body) {
+    public Packet(@NonNull PacketType packetType, @NonNull T body) {
         this(packetType, Task.SYNC_TASK_ID, body);
     }
 
-    public Packet(PacketType packetType, int taskId, T body) {
+    public Packet(@NonNull PacketType packetType, int taskId, @NonNull T body) {
         this.taskId = taskId;
         this.packetType = packetType;
         this.body = body;
@@ -31,11 +33,13 @@ public class Packet<T> {
     /**
      * 包体
      */
+    @NonNull
     private T body;
 
     /**
      * 消息类型
      */
+    @NonNull
     private PacketType packetType;
 
     /**
@@ -55,6 +59,7 @@ public class Packet<T> {
      *
      * @return 协议消息体
      */
+    @NonNull
     public T getBody() {
         return body;
     }
@@ -64,11 +69,13 @@ public class Packet<T> {
      *
      * @return 消息类型
      */
+    @NonNull
     public PacketType getPacketType() {
         return packetType;
     }
 
     @Override
+    @NonNull
     public String toString() {
         return "Packet{" +
                 "taskId=" + taskId +

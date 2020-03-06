@@ -1,12 +1,15 @@
 package com.orientsec.easysocket.impl;
 
-import com.orientsec.easysocket.ConnectEventListener;
+import androidx.annotation.NonNull;
+
 import com.orientsec.easysocket.Address;
+import com.orientsec.easysocket.ConnectEventListener;
 import com.orientsec.easysocket.ConnectionManager;
 import com.orientsec.easysocket.LivePolicy;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.exception.Error;
+import com.orientsec.easysocket.exception.ErrorCode;
+import com.orientsec.easysocket.exception.ErrorType;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.List;
@@ -47,7 +50,7 @@ public class ReConnector<T> implements ConnectEventListener {
     }
 
     @Override
-    public void onDisconnect(EasyException e) {
+    public void onDisconnect(@NonNull EasyException e) {
         if (ConnectionManager.getInstance().isNetworkAvailable()) {
             switchServer();
             reconnectDelay();
@@ -136,17 +139,19 @@ public class ReConnector<T> implements ConnectEventListener {
         }
         if (disconnectTask != null) return;
         long delay = options.getBackgroundLiveTime();
-        Logger.i("Reconnect after " + delay + " seconds...");
+        Logger.i("Reconnect after " + delay + " mill seconds...");
         Runnable disconnect = () -> {
             synchronized (connection) {
                 if (connection.isSleep()) {
                     Logger.i("App is sleeping, stop connection.");
                     stopReconnect();
-                    connection.disconnect(Error.create(Error.Code.SLEEP));
+                    EasyException e = new EasyException(ErrorCode.SLEEP,
+                            ErrorType.SYSTEM, "App is sleeping.");
+                    connection.disconnect(e);
                 }
                 disconnectTask = null;
             }
         };
-        disconnectTask = scheduler.schedule(disconnect, delay, TimeUnit.SECONDS);
+        disconnectTask = scheduler.schedule(disconnect, delay, TimeUnit.MILLISECONDS);
     }
 }

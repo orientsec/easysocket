@@ -1,12 +1,16 @@
 package com.orientsec.easysocket.impl;
 
+import androidx.annotation.NonNull;
+
 import com.orientsec.easysocket.Callback;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.PacketHandler;
 import com.orientsec.easysocket.PulseHandler;
 import com.orientsec.easysocket.Request;
-import com.orientsec.easysocket.exception.Error;
+import com.orientsec.easysocket.exception.EasyException;
+import com.orientsec.easysocket.exception.ErrorCode;
+import com.orientsec.easysocket.exception.ErrorType;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.concurrent.ScheduledFuture;
@@ -56,7 +60,7 @@ public class Pulse<T> implements PacketHandler<T>, Runnable {
     synchronized void start() {
         int rate = options.getPulseRate();
         future = options.getScheduledExecutor()
-                .scheduleAtFixedRate(this, rate, rate, TimeUnit.SECONDS);
+                .scheduleAtFixedRate(this, rate, rate, TimeUnit.MILLISECONDS);
 
     }
 
@@ -78,7 +82,8 @@ public class Pulse<T> implements PacketHandler<T>, Runnable {
         if (future != null) {
             future.cancel(false);
             future = options.getScheduledExecutor()
-                    .scheduleAtFixedRate(this, 0, options.getPulseRate(), TimeUnit.SECONDS);
+                    .scheduleAtFixedRate(this, 0,
+                            options.getPulseRate(), TimeUnit.MILLISECONDS);
         }
     }
 
@@ -87,12 +92,14 @@ public class Pulse<T> implements PacketHandler<T>, Runnable {
         if (lostTimes.getAndAdd(1) > options.getPulseLostTimes()) {
             //心跳失败超过上限后断开连接
             Logger.w("pulse failed times up, invalid connection!");
-            connection.disconnect(Error.create(Error.Code.PULSE_TIME_OUT));
+            EasyException e = new EasyException(ErrorCode.PULSE_TIME_OUT,
+                    ErrorType.CONNECT, "Pulse time out.");
+            connection.disconnect(e);
         } else {
             //发送心跳消息
             Callback<Boolean> callback = new Callback.EmptyCallback<Boolean>() {
                 @Override
-                public void onSuccess(Boolean res) {
+                public void onSuccess(@NonNull Boolean res) {
                     feed(res);
                 }
             };
@@ -102,11 +109,11 @@ public class Pulse<T> implements PacketHandler<T>, Runnable {
     }
 
     @Override
-    public void handlePacket(Packet<T> packet) {
+    public void handlePacket(@NonNull Packet<T> packet) {
         feed(pulseHandler.onPulse(packet.getBody()));
     }
 
-    private static class PulseRequest<T> extends Request<T, Void, Boolean> {
+    private static class PulseRequest<T> extends Request<T, Boolean> {
         private PulseHandler<T> pulseHandler;
 
         PulseRequest(PulseHandler<T> pulseHandler) {
@@ -114,12 +121,14 @@ public class Pulse<T> implements PacketHandler<T>, Runnable {
         }
 
         @Override
+        @NonNull
         public byte[] encode(int sequenceId) {
             return pulseHandler.pulseData(sequenceId);
         }
 
         @Override
-        public Boolean decode(T data) {
+        @NonNull
+        public Boolean decode(@NonNull T data) {
             return pulseHandler.onPulse(data);
         }
     }

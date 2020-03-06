@@ -9,6 +9,8 @@ import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
+
 import com.orientsec.easysocket.impl.AbstractConnection;
 import com.orientsec.easysocket.utils.NetUtils;
 
@@ -41,6 +43,7 @@ public class ConnectionManager {
     private ConnectionManager() {
     }
 
+    @NonNull
     public static ConnectionManager getInstance() {
         return InstanceHolder.INSTANCE;
     }
@@ -50,7 +53,7 @@ public class ConnectionManager {
      *
      * @param application 应用
      */
-    void init(Application application) {
+    void init(@NonNull Application application) {
         this.application = application;
         application.registerActivityLifecycleCallbacks(new EasySocketAppLifecycleListener());
         isNetworkAvailable = NetUtils.isNetworkAvailable(application);
@@ -59,7 +62,7 @@ public class ConnectionManager {
         application.registerReceiver(new NetworkStateReceiver(), intentFilter);
     }
 
-    void addConnection(AbstractConnection connection) {
+    void addConnection(@NonNull AbstractConnection connection) {
         connections.add(connection);
         /*if (background) {
             connection.setBackground();
@@ -68,7 +71,7 @@ public class ConnectionManager {
         }*/
     }
 
-    public void removeConnection(AbstractConnection connection) {
+    public void removeConnection(@NonNull AbstractConnection connection) {
         connections.remove(connection);
     }
 

@@ -1,5 +1,7 @@
 package com.orientsec.easysocket.adapter;
 
+import androidx.annotation.NonNull;
+
 import com.orientsec.easysocket.Callback;
 import com.orientsec.easysocket.Task;
 
@@ -17,11 +19,11 @@ import io.reactivex.plugins.RxJavaPlugins;
  * Author: Fredric
  * coding is art not science
  */
-class TaskObservable<T> extends Observable<T> implements Callback<T> {
-    private Task<T> task;
-    private Observer<? super T> observer;
+class TaskObservable<T, R> extends Observable<R> implements Callback<R> {
+    private Task<T, R> task;
+    private Observer<? super R> observer;
 
-    public void setTask(Task<T> task) {
+    public void setTask(Task<T, R> task) {
         this.task = task;
     }
 
@@ -31,7 +33,7 @@ class TaskObservable<T> extends Observable<T> implements Callback<T> {
     }
 
     @Override
-    public void onSuccess(T res) {
+    public void onSuccess(@NonNull R res) {
         if (!task.isCanceled()) {
             try {
                 observer.onNext(res);
@@ -44,7 +46,7 @@ class TaskObservable<T> extends Observable<T> implements Callback<T> {
     }
 
     @Override
-    public void onError(Exception e) {
+    public void onError(@NonNull Exception e) {
         if (!task.isCanceled()) {
             try {
                 observer.onError(e);
@@ -67,7 +69,7 @@ class TaskObservable<T> extends Observable<T> implements Callback<T> {
 
 
     @Override
-    protected void subscribeActual(Observer<? super T> observer) {
+    protected void subscribeActual(Observer<? super R> observer) {
         this.observer = observer;
         observer.onSubscribe(new TaskDisposable(task));
         task.execute();

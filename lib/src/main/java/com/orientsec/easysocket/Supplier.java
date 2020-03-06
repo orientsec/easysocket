@@ -1,5 +1,7 @@
 package com.orientsec.easysocket;
 
+import androidx.annotation.NonNull;
+
 public interface Supplier<T> {
 
     /**
@@ -7,6 +9,7 @@ public interface Supplier<T> {
      *
      * @return a result
      */
+    @NonNull
     T get();
 }
 

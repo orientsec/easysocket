@@ -4,7 +4,8 @@ import com.orientsec.easysocket.HeadParser;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.exception.Error;
+import com.orientsec.easysocket.exception.ErrorCode;
+import com.orientsec.easysocket.exception.ErrorType;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.io.IOException;
@@ -41,15 +42,15 @@ public class BlockingReader<T> extends Looper implements Reader {
         int bodyLength = head.getPacketSize();
         //Logger.i("need read body length: " + bodyLength);
         if (bodyLength > options.getMaxReadDataKB() * 1024) {
-            throw Error.create(Error.Code.STREAM_SIZE,
-                    "InputStream length to long:" + bodyLength);
+            throw new EasyException(ErrorCode.STREAM_SIZE, ErrorType.CONNECT,
+                    "InputStream length too long:" + bodyLength);
         } else if (bodyLength >= 0) {
             byte[] data = new byte[bodyLength];
             readInputStream(inputStream, data);
             Packet<T> packet = headParser.decodePacket(head, data);
             connection.handlePacket(packet);
         } else {
-            throw Error.create(Error.Code.STREAM_SIZE,
+            throw new EasyException(ErrorCode.STREAM_SIZE, ErrorType.CONNECT,
                     "Wrong body length " + bodyLength);
         }
     }
@@ -80,18 +81,18 @@ public class BlockingReader<T> extends Looper implements Reader {
     protected void loopFinish(Exception e) {
         EasyException ee;
         if (e != null) {
-            //e.printStackTrace();
             Logger.e("Blocking reader error, thread is dead with exception: "
                     + e.getMessage());
-            if (e instanceof IOException) {
-                ee = Error.create(Error.Code.READ_IO, e);
-            } else if (e instanceof EasyException) {
+            if (e instanceof EasyException) {
                 ee = (EasyException) e;
+            } else if (e instanceof IOException) {
+                ee = new EasyException(ErrorCode.READ_IO, ErrorType.CONNECT, e);
             } else {
-                ee = Error.create(Error.Code.READ_OTHER, e);
+                ee = new EasyException(ErrorCode.READ_OTHER, ErrorType.CONNECT, e);
             }
         } else {
-            ee = Error.create(Error.Code.READ_EXIT);
+            ee = new EasyException(ErrorCode.READ_EXIT, ErrorType.CONNECT,
+                    "Read looper exit.");
         }
         inputStream = null;
         connection.disconnect(ee);

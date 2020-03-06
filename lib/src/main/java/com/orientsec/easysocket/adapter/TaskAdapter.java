@@ -20,13 +20,14 @@ public class TaskAdapter {
      * 将Task转换为Observable
      *
      * @param request 请求
-     * @param <T>     请求返回类型
+     * @param <T>     连接数据包类型
+     * @param <R>     请求返回类型
      * @return Observable
      */
-    public static <T, REQ, RES> Observable<RES>
-    buildObservable(Connection<T> connection, Request<T, REQ, RES> request) {
-        TaskObservable<RES> observable = new TaskObservable<>();
-        Task<RES> task = connection.buildTask(request, observable);
+    public static <T, R> Observable<R>
+    buildObservable(Connection<T> connection, Request<T, R> request) {
+        TaskObservable<T, R> observable = new TaskObservable<>();
+        Task<T, R> task = connection.buildTask(request, observable);
         observable.setTask(task);
         return observable;
     }

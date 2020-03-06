@@ -1,5 +1,7 @@
 package com.orientsec.easysocket;
 
+import androidx.annotation.NonNull;
+
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket
@@ -8,7 +10,7 @@ package com.orientsec.easysocket;
  * coding is art not science
  */
 
-public interface Task<RESPONSE> {
+public interface Task<T, R> {
     int SYNC_TASK_ID = 0;
 
     /**
@@ -46,5 +48,6 @@ public interface Task<RESPONSE> {
      *
      * @return request
      */
-    Request<?, ?, RESPONSE> getRequest();
+    @NonNull
+    Request<T, R> getRequest();
 }

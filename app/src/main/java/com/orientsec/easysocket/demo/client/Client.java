@@ -34,10 +34,10 @@ public class Client {
                 .address(new Address("192.168.0.107", 10010))
                 .headParser(new MyHeadParser())
                 .initializer(new MyInitializer(session))
-                .requestTimeOut(6)
-                .pulseRate(30)
+                .requestTimeOut(6000)
+                .pulseRate(30000)
                 .connectInterval(3000)
-                .backgroundLiveTime(60)
+                .backgroundLiveTime(60000)
                 .build();
         connection = EasySocket.open(options);
     }
