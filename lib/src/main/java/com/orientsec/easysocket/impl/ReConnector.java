@@ -81,16 +81,12 @@ public class ReConnector<T> implements ConnectEventListener {
         if (++failedTimes >= options.getRetryTimes()) {
             failedTimes = 0;
 
-            List<Address> addressList = options.getBackupAddressList();
-            if (addressList != null && addressList.size() > 0) {
-                if (++backUpIndex >= addressList.size()) {
-                    Logger.i("switch to main server");
-                    backUpIndex = -1;
-                    connection.address = options.getAddress();
-                } else {
-                    Logger.i("switch to backup server");
-                    connection.address = addressList.get(backUpIndex);
-                }
+            List<Address> addressList = options.getAddressList();
+            if (++backUpIndex >= addressList.size()) {
+                backUpIndex = 0;
+                Address address = addressList.get(backUpIndex);
+                connection.address = address;
+                Logger.i("Switch to server, " + address);
             }
         }
     }

@@ -6,6 +6,9 @@ import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.adapter.TaskAdapter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import io.reactivex.Observable;
 
 /**
@@ -30,8 +33,11 @@ public class Client {
     private Client() {
         Options.debug = true;
         session = new Session();
+        Address address = new Address("192.168.0.107", 10010);
+        List<Address> addresses = new ArrayList<>();
+        addresses.add(address);
         Options<byte[]> options = new Options.Builder<byte[]>()
-                .address(new Address("192.168.0.107", 10010))
+                .addressList(addresses)
                 .headParser(new MyHeadParser())
                 .initializer(new MyInitializer(session))
                 .requestTimeOut(6000)

@@ -27,11 +27,7 @@ public class Options<T> {
     /**
      * 站点信息
      */
-    private Address address;
-    /**
-     * 备用站点信息
-     */
-    private List<Address> backupAddressList;
+    private List<Address> addressList;
     /**
      * Socket factory
      */
@@ -116,8 +112,7 @@ public class Options<T> {
 
     private Options(Builder<T> builder) {
         pulseHandler = builder.pulseHandler;
-        address = builder.address;
-        backupAddressList = builder.backupAddressList;
+        addressList = builder.addressList;
         socketFactorySupplier = builder.socketFactorySupplier;
         headParser = builder.headParser;
         pushHandler = builder.pushHandler;
@@ -201,12 +196,8 @@ public class Options<T> {
         return connectTimeOut;
     }
 
-    public Address getAddress() {
-        return address;
-    }
-
-    public List<Address> getBackupAddressList() {
-        return backupAddressList;
+    public List<Address> getAddressList() {
+        return addressList;
     }
 
     public ScheduledExecutorService getScheduledExecutor() {
@@ -223,8 +214,7 @@ public class Options<T> {
 
     public static final class Builder<T> {
         private PulseHandler<T> pulseHandler;
-        private Address address;
-        private List<Address> backupAddressList;
+        private List<Address> addressList;
         private Supplier<SocketFactory> socketFactorySupplier;
         private HeadParser<T> headParser;
         private PacketHandler<T> pushHandler;
@@ -251,13 +241,8 @@ public class Options<T> {
             return this;
         }
 
-        public Builder<T> address(@NonNull Address val) {
-            address = val;
-            return this;
-        }
-
-        public Builder<T> backupAddressList(@NonNull List<Address> val) {
-            backupAddressList = val;
+        public Builder<T> addressList(@NonNull List<Address> val) {
+            addressList = val;
             return this;
         }
 
@@ -355,7 +340,7 @@ public class Options<T> {
 
         @NonNull
         private String checkParams() {
-            if (address == null) {
+            if (addressList.isEmpty()) {
                 return "Address not set.";
             }
             if (headParser == null) {
