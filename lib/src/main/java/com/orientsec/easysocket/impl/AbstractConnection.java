@@ -82,7 +82,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
     AbstractConnection(Options<T> options) {
         this.options = options;
         reConnector = new ReConnector<>(this);
-        address = options.getAddress();
+        address = options.getAddressList().get(0);
         callbackExecutor = options.getCallbackExecutor();
         managerExecutor = options.getManagerExecutor();
     }
