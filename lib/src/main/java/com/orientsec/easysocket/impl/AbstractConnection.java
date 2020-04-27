@@ -185,9 +185,11 @@ public abstract class AbstractConnection<T> implements Connection<T>,
         if (available) {
             reConnector.reconnectDelay();
         } else {
-            EasyException e = new EasyException(ErrorCode.NETWORK_NOT_AVAILABLE,
-                    ErrorType.NETWORK, "Network is not available.");
-            disconnectRunnable(e);
+            managerExecutor.execute(() -> {
+                EasyException e = new EasyException(ErrorCode.NETWORK_NOT_AVAILABLE,
+                        ErrorType.NETWORK, "Network is not available.");
+                disconnectRunnable(e);
+            });
         }
     }
 
