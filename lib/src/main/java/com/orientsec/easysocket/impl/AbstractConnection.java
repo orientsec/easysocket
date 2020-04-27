@@ -109,13 +109,9 @@ public abstract class AbstractConnection<T> implements Connection<T>,
             reConnector.stopReconnect();
             ConnectionManager.getInstance().removeConnection(this);
         }
-        if (state == State.CONNECT || state == State.AVAILABLE) {
-            managerExecutor.execute(() -> {
-                EasyException e = new EasyException(ErrorCode.SHUT_DOWN,
-                        ErrorType.SYSTEM, "Connection shut down.");
-                disconnectRunnable(e);
-            });
-        }
+        EasyException e = new EasyException(ErrorCode.SHUT_DOWN,
+                ErrorType.SYSTEM, "Connection shut down.");
+        disconnect(e);
         state = State.SHUTDOWN;
     }
 
@@ -185,11 +181,9 @@ public abstract class AbstractConnection<T> implements Connection<T>,
         if (available) {
             reConnector.reconnectDelay();
         } else {
-            managerExecutor.execute(() -> {
-                EasyException e = new EasyException(ErrorCode.NETWORK_NOT_AVAILABLE,
-                        ErrorType.NETWORK, "Network is not available.");
-                disconnectRunnable(e);
-            });
+            EasyException e = new EasyException(ErrorCode.NETWORK_NOT_AVAILABLE,
+                    ErrorType.NETWORK, "Network is not available.");
+            disconnect(e);
         }
     }
 
