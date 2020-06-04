@@ -47,6 +47,7 @@ public class RequestTaskManager<T> implements TaskManager<T, RequestTask<T, ?>> 
 
     @Override
     public synchronized void add(RequestTask<T, ?> task) throws EasyException {
+        if (!task.isExecutable()) return;
         if (task.isSync()) {
             if (taskArray.indexOfKey(task.taskId) > 0) {
                 throw new EasyException(ErrorCode.TASK_REFUSED,
@@ -63,6 +64,7 @@ public class RequestTaskManager<T> implements TaskManager<T, RequestTask<T, ?>> 
 
     @Override
     public synchronized void enqueue(RequestTask<T, ?> task) throws EasyException {
+        if (!task.isExecutable()) return;
         if (!taskQueue.offer(task)) {
             taskArray.remove(task.taskId);
             throw new EasyException(ErrorCode.TASK_REFUSED,

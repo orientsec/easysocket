@@ -133,10 +133,7 @@ public class RequestTask<T, R> implements Task<T, R> {
         } else {
             connection.start();
             try {
-                synchronized (this) {
-                    if (state != State.PREPARING) return;
-                    taskManager.add(this);
-                }
+                taskManager.add(this);
             } catch (EasyException e) {
                 onError(e);
             }
@@ -151,11 +148,7 @@ public class RequestTask<T, R> implements Task<T, R> {
         codecExecutor.execute(() -> {
             try {
                 data = getRequest().encode(taskId);
-
-                synchronized (this) {
-                    if (state != State.PREPARING) return;
-                    taskManager.enqueue(this);
-                }
+                taskManager.enqueue(this);
             } catch (Exception e) {
                 onError(e);
             }
@@ -175,18 +168,25 @@ public class RequestTask<T, R> implements Task<T, R> {
     }
 
     @Override
+    public boolean isExecutable() {
+        return state == State.PREPARING;
+    }
+
+    @Override
     public boolean isExecuted() {
         return state != State.IDLE;
     }
 
 
     @Override
-    public synchronized void cancel() {
-        if (isFinished()) return;
-        state = State.CANCELED;
-        cancelTimer();
+    public void cancel() {
+        synchronized (this) {
+            if (isFinished()) return;
+            state = State.CANCELED;
+            cancelTimer();
+            callbackExecutor.execute(callback::onCancel);
+        }
         taskManager.remove(this);
-        callbackExecutor.execute(callback::onCancel);
     }
 
     @Override
@@ -234,12 +234,14 @@ public class RequestTask<T, R> implements Task<T, R> {
                 .schedule(this::timeout, options.getRequestTimeOut(), TimeUnit.MILLISECONDS);
     }
 
-    private synchronized void timeout() {
-        if (isFinished()) return;
+    private void timeout() {
+        synchronized (this) {
+            if (isFinished()) return;
+            EasyException e = new EasyException(ErrorCode.RESPONSE_TIME_OUT,
+                    ErrorType.RESPONSE, "Response time out.");
+            onError(e);
+        }
         taskManager.remove(this);
-        EasyException e = new EasyException(ErrorCode.RESPONSE_TIME_OUT,
-                ErrorType.RESPONSE, "Response time out.");
-        onError(e);
     }
 
     @Override

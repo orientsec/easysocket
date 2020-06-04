@@ -44,6 +44,13 @@ public interface Task<T, R> {
     boolean isFinished();
 
     /**
+     * True if task can execute.
+     *
+     * @return True if task can execute.
+     */
+    boolean isExecutable();
+
+    /**
      * Obtain request of this task.
      *
      * @return request
