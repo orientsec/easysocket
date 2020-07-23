@@ -1,6 +1,7 @@
 package com.orientsec.easysocket.demo.client;
 
-import android.support.annotation.NonNull;
+
+import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.Request;
 

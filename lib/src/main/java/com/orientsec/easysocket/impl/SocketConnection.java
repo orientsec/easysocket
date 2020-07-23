@@ -30,12 +30,11 @@ import java.util.Map;
  * Author: Fredric
  * coding is art not science
  */
-public class SocketConnection<T> extends AbstractConnection<T>
-        implements PacketHandler<T> {
+public class SocketConnection<T> extends AbstractConnection<T> implements PacketHandler<T> {
 
     private Socket socket;
 
-    private BlockingReader reader;
+    private BlockingReader<T> reader;
 
     private BlockingWriter<T> writer;
 

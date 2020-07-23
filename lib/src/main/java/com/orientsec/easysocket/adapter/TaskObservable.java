@@ -76,9 +76,9 @@ class TaskObservable<T, R> extends Observable<R> implements Callback<R> {
     }
 
     static final class TaskDisposable implements Disposable {
-        private final Task task;
+        private final Task<?, ?> task;
 
-        TaskDisposable(Task task) {
+        TaskDisposable(Task<?, ?> task) {
             this.task = task;
         }
 

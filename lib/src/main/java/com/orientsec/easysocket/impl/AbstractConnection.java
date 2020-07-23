@@ -26,8 +26,7 @@ import java.util.concurrent.Executor;
  * Author: Fredric
  * coding is art not science
  */
-public abstract class AbstractConnection<T> implements Connection<T>,
-        ConnectionManager.OnNetworkStateChangedListener, ConnectEventListener {
+public abstract class AbstractConnection<T> implements Connection<T>, ConnectEventListener {
     /**
      * 连接状态
      * <p>
@@ -63,7 +62,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
 
     private Set<ConnectEventListener> connectEventListeners = new CopyOnWriteArraySet<>();
 
-    private ReConnector reConnector;
+    private ReConnector<T> reConnector;
 
     Address address;
 
@@ -94,8 +93,7 @@ public abstract class AbstractConnection<T> implements Connection<T>,
 
     @Override
     public synchronized void start() {
-        if (state == State.IDLE
-                && ConnectionManager.getInstance().isNetworkAvailable()) {
+        if (state == State.IDLE) {
             state = State.STARTING;
             managerExecutor.execute(this::connectRunnable);
         }
@@ -176,15 +174,8 @@ public abstract class AbstractConnection<T> implements Connection<T>,
         }
     }
 
-    @Override
-    public synchronized void onNetworkStateChanged(boolean available) {
-        if (available) {
-            reConnector.reconnectDelay();
-        } else {
-            EasyException e = new EasyException(ErrorCode.NETWORK_NOT_AVAILABLE,
-                    ErrorType.NETWORK, "Network is not available.");
-            disconnect(e);
-        }
+    public synchronized void onNetworkAvailable() {
+        reConnector.reconnectDelay();
     }
 
     public synchronized void setBackground() {

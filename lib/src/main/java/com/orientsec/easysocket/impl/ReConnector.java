@@ -21,7 +21,7 @@ public class ReConnector<T> implements ConnectEventListener {
 
     private Options<T> options;
 
-    private final AbstractConnection connection;
+    private final AbstractConnection<T> connection;
 
     private ScheduledExecutorService scheduler;
 
@@ -51,18 +51,12 @@ public class ReConnector<T> implements ConnectEventListener {
 
     @Override
     public void onDisconnect(@NonNull EasyException e) {
-        if (ConnectionManager.getInstance().isNetworkAvailable()) {
-            switchServer();
-            reconnectDelay();
-        }
+        reconnectDelay();
     }
 
     @Override
     public void onConnectFailed() {
-        if (ConnectionManager.getInstance().isNetworkAvailable()) {
-            switchServer();
-            reconnectDelay();
-        }
+        reconnectDelay();
     }
 
     @Override
@@ -112,10 +106,13 @@ public class ReConnector<T> implements ConnectEventListener {
     }
 
     void reconnectDelay() {
-        if (connection.state != AbstractConnection.State.IDLE || connection.isSleep()) {
+        if (connection.state != AbstractConnection.State.IDLE
+                || connection.isSleep()
+                || !ConnectionManager.getInstance().isNetworkAvailable()) {
             return;
         }
         stopReconnect();
+        switchServer();
         long delay = options.getConnectInterval();
         Logger.i("Reconnect after " + delay + " mill seconds...");
         Runnable reconnect = () -> {

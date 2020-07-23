@@ -33,7 +33,7 @@ public class Pulse<T> implements PacketHandler<T>, Runnable {
 
     private PulseHandler<T> pulseHandler;
 
-    private ScheduledFuture future;
+    private ScheduledFuture<?> future;
 
     private AtomicInteger lostTimes = new AtomicInteger();
 

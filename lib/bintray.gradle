@@ -1,0 +1,89 @@
+apply plugin: 'maven-publish'
+
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    archiveClassifier.set('sources')
+}
+
+task javadoc(type: Javadoc) {
+    options.addStringOption('Xdoclint:none', '-quiet')
+    options.charSet = 'UTF-8'
+    options.encoding = "UTF-8"
+    source = android.sourceSets.main.java.srcDirs
+    classpath += configurations.compile
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    archiveClassifier.set('javadoc')
+    from javadoc.destinationDir
+}
+
+javadoc {
+    options {
+        encoding "UTF-8"
+        charSet 'UTF-8'
+        author true
+        version true
+        links "http://docs.oracle.com/javase/7/docs/api"
+        title "$project.name $PROJ_VERSION"
+    }
+}
+
+
+def pomConfig = {
+    licenses {
+        license {
+            name PROJ_LICENCE_NAME
+            url PROJ_LICENCE_URL
+            distribution PROJ_LICENCE_DIST
+        }
+    }
+    developers {
+        developer {
+            id DEVELOPER_ID
+            name DEVELOPER_NAME
+            email DEVELOPER_EMAIL
+        }
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            url RELEASE_REPOSITORY_URL
+            credentials {
+                username NEXUS_USERNAME
+                password NEXUS_PASSWORD
+            }
+        }
+    }
+    publications {
+        mavenJava(MavenPublication) {
+            groupId PROJ_GROUP
+            artifactId PROJ_ARTIFACTID
+            //artifact javadocJar
+            artifact sourcesJar
+            version = PROJ_VERSION
+            pom.withXml {
+                def root = asNode()
+                root.appendNode('description', PROJ_DESCRIPTION)
+                root.children().last() + pomConfig
+
+                def dependenciesNode = root.appendNode('dependencies')
+                configurations.implementation.allDependencies.each {
+                    if (it.group && it.name && it.version) {
+                        def dependencyNode = dependenciesNode.appendNode('dependency')
+                        dependencyNode.appendNode('groupId', it.group)
+                        dependencyNode.appendNode('artifactId', it.name)
+                        dependencyNode.appendNode('version', it.version)
+                    }
+                }
+            }
+        }
+    }
+}
+
+afterEvaluate {
+    publishing.publications.mavenJava.artifact(bundleReleaseAar)
+}

@@ -2,11 +2,11 @@ package com.orientsec.easysocket;
 
 import android.app.Activity;
 import android.app.Application;
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -31,10 +31,8 @@ public class ConnectionManager {
 
     private Application application;
 
-    private boolean isNetworkAvailable;
-
     //fix ConcurrentModificationException when Iterator
-    private Set<AbstractConnection> connections = new CopyOnWriteArraySet<>();
+    private Set<AbstractConnection<?>> connections = new CopyOnWriteArraySet<>();
 
     private static class InstanceHolder {
         static ConnectionManager INSTANCE = new ConnectionManager();
@@ -56,27 +54,23 @@ public class ConnectionManager {
     void init(@NonNull Application application) {
         this.application = application;
         application.registerActivityLifecycleCallbacks(new EasySocketAppLifecycleListener());
-        isNetworkAvailable = NetUtils.isNetworkAvailable(application);
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
-        application.registerReceiver(new NetworkStateReceiver(), intentFilter);
+        NetworkRequest request = new NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build();
+        ConnectivityManager cm = (ConnectivityManager) application.getSystemService(Context.CONNECTIVITY_SERVICE);
+        cm.registerNetworkCallback(request, new NetworkCallbackImpl());
     }
 
-    void addConnection(@NonNull AbstractConnection connection) {
+    void addConnection(@NonNull AbstractConnection<?> connection) {
         connections.add(connection);
-        /*if (background) {
-            connection.setBackground();
-        } else {
-            connection.setForeground();
-        }*/
     }
 
-    public void removeConnection(@NonNull AbstractConnection connection) {
+    public void removeConnection(@NonNull AbstractConnection<?> connection) {
         connections.remove(connection);
     }
 
     public boolean isNetworkAvailable() {
-        return isNetworkAvailable;
+        return NetUtils.isNetworkAvailable(application);
     }
 
     /**
@@ -85,13 +79,13 @@ public class ConnectionManager {
     private class EasySocketAppLifecycleListener implements Application.ActivityLifecycleCallbacks {
 
         @Override
-        public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
+        public void onActivityCreated(@NonNull Activity activity, Bundle savedInstanceState) {
         }
 
         @Override
-        public void onActivityStarted(Activity activity) {
+        public void onActivityStarted(@NonNull Activity activity) {
             if (count == 0) {
-                for (AbstractConnection connection : connections) {
+                for (AbstractConnection<?> connection : connections) {
                     connection.setForeground();
                 }
             }
@@ -99,63 +93,49 @@ public class ConnectionManager {
         }
 
         @Override
-        public void onActivityResumed(Activity activity) {
+        public void onActivityResumed(@NonNull Activity activity) {
 
         }
 
         @Override
-        public void onActivityPaused(Activity activity) {
+        public void onActivityPaused(@NonNull Activity activity) {
 
         }
 
         @Override
-        public void onActivityStopped(Activity activity) {
+        public void onActivityStopped(@NonNull Activity activity) {
             count--;
             if (count == 0) {
-                for (AbstractConnection connection : connections) {
+                for (AbstractConnection<?> connection : connections) {
                     connection.setBackground();
                 }
             }
         }
 
         @Override
-        public void onActivitySaveInstanceState(Activity activity, Bundle outState) {
+        public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) {
 
         }
 
         @Override
-        public void onActivityDestroyed(Activity activity) {
+        public void onActivityDestroyed(@NonNull Activity activity) {
 
         }
     }
 
-    /**
-     * 网络状态监听器
-     */
-    public interface OnNetworkStateChangedListener {
-        void onNetworkStateChanged(boolean available);
-    }
 
     /**
      * 网络状态的广播监听
      */
-    private class NetworkStateReceiver extends BroadcastReceiver {
-        private boolean init;
-
+    private class NetworkCallbackImpl extends ConnectivityManager.NetworkCallback {
         @Override
-        public void onReceive(Context context, Intent intent) {
-            if (!init) {
-                init = true;
-                return;
+        public void onAvailable(@NonNull Network network) {
+            super.onAvailable(network);
+            for (AbstractConnection<?> connection : connections) {
+                connection.onNetworkAvailable();
             }
-            if (ConnectivityManager.CONNECTIVITY_ACTION.equals(intent.getAction())) {
-                boolean isNetworkAvailable = NetUtils.isNetworkAvailable(application);
-                ConnectionManager.this.isNetworkAvailable = isNetworkAvailable;
-                for (AbstractConnection connection : connections) {
-                    connection.onNetworkStateChanged(isNetworkAvailable);
-                }
-            }
-
         }
     }
+
+
 }

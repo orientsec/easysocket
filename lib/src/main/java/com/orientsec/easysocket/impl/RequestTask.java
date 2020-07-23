@@ -4,7 +4,6 @@ import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.Callback;
 import com.orientsec.easysocket.Connection;
-import com.orientsec.easysocket.ConnectionManager;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.Task;
@@ -125,10 +124,6 @@ public class RequestTask<T, R> implements Task<T, R> {
         if (connection.isShutdown()) {
             EasyException e = new EasyException(ErrorCode.SHUT_DOWN, ErrorType.SYSTEM,
                     "Connection is show down.");
-            onError(e);
-        } else if (!ConnectionManager.getInstance().isNetworkAvailable()) {
-            EasyException e = new EasyException(ErrorCode.NETWORK_NOT_AVAILABLE,
-                    ErrorType.NETWORK, "Network is unavailable!");
             onError(e);
         } else {
             connection.start();
