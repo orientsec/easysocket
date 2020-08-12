@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -133,8 +134,9 @@ public class SocketConnection<T> extends AbstractConnection<T> implements Packet
         if (isShutdown()) {
             return;
         }
-        Logger.i("begin socket connect, " + address);
 
+        getAddressList();
+        Logger.i("begin socket connect, " + address);
         Socket socket = openSocket();
         boolean closeSocket = false;
         synchronized (SocketConnection.this) {
@@ -203,6 +205,17 @@ public class SocketConnection<T> extends AbstractConnection<T> implements Packet
         reader = new BlockingReader<>(SocketConnection.this);
         writer.start();
         reader.start();
+    }
+
+    private synchronized void getAddressList() {
+        if (addressList == null) {
+            List<Address> addressList = options.getAddressSupplier().get();
+            if (addressList.isEmpty()) {
+                throw new IllegalArgumentException("Address list is empty");
+            }
+            this.addressList = addressList;
+            address = addressList.get(0);
+        }
     }
 
     private Socket openSocket() {

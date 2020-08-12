@@ -70,12 +70,11 @@ public class ReConnector<T> implements ConnectEventListener {
     /**
      * 切换服务器
      */
-    private void switchServer() {
+    private void switchServer(List<Address> addressList) {
         //连接失败达到阈值,需要切换备用线路
         if (++failedTimes >= options.getRetryTimes()) {
             failedTimes = 0;
 
-            List<Address> addressList = options.getAddressList();
             if (++backUpIndex >= addressList.size()) {
                 backUpIndex = 0;
                 Address address = addressList.get(backUpIndex);
@@ -106,13 +105,15 @@ public class ReConnector<T> implements ConnectEventListener {
     }
 
     void reconnectDelay() {
+        List<Address> addressList = connection.addressList;
         if (connection.state != AbstractConnection.State.IDLE
                 || connection.isSleep()
+                || addressList == null
                 || !ConnectionManager.getInstance().isNetworkAvailable()) {
             return;
         }
         stopReconnect();
-        switchServer();
+        switchServer(addressList);
         long delay = options.getConnectInterval();
         Logger.i("Reconnect after " + delay + " mill seconds...");
         Runnable reconnect = () -> {

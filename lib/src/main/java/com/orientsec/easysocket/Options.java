@@ -27,7 +27,7 @@ public class Options<T> {
     /**
      * 站点信息
      */
-    private List<Address> addressList;
+    private Supplier<List<Address>> addressSupplier;
     /**
      * Socket factory
      */
@@ -112,7 +112,7 @@ public class Options<T> {
 
     private Options(Builder<T> builder) {
         pulseHandler = builder.pulseHandler;
-        addressList = builder.addressList;
+        addressSupplier = builder.addressSupplier;
         socketFactorySupplier = builder.socketFactorySupplier;
         headParser = builder.headParser;
         pushHandler = builder.pushHandler;
@@ -196,8 +196,8 @@ public class Options<T> {
         return connectTimeOut;
     }
 
-    public List<Address> getAddressList() {
-        return addressList;
+    public Supplier<List<Address>> getAddressSupplier() {
+        return addressSupplier;
     }
 
     public ScheduledExecutorService getScheduledExecutor() {
@@ -214,7 +214,7 @@ public class Options<T> {
 
     public static final class Builder<T> {
         private PulseHandler<T> pulseHandler;
-        private List<Address> addressList;
+        private Supplier<List<Address>> addressSupplier;
         private Supplier<SocketFactory> socketFactorySupplier;
         private HeadParser<T> headParser;
         private PacketHandler<T> pushHandler;
@@ -242,7 +242,12 @@ public class Options<T> {
         }
 
         public Builder<T> addressList(@NonNull List<Address> val) {
-            addressList = val;
+            addressSupplier = StaticAddressSupplier.build(val);
+            return this;
+        }
+
+        public Builder<T> addressSupplier(@NonNull Supplier<List<Address>> val) {
+            addressSupplier = val;
             return this;
         }
 
@@ -340,9 +345,6 @@ public class Options<T> {
 
         @NonNull
         private String checkParams() {
-            if (addressList.isEmpty()) {
-                return "Address not set.";
-            }
             if (headParser == null) {
                 return "Head parser not set.";
             }

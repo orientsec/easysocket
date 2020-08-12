@@ -14,6 +14,7 @@ import com.orientsec.easysocket.exception.ErrorCode;
 import com.orientsec.easysocket.exception.ErrorType;
 import com.orientsec.easysocket.utils.Logger;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Executor;
@@ -64,6 +65,8 @@ public abstract class AbstractConnection<T> implements Connection<T>, ConnectEve
 
     private ReConnector<T> reConnector;
 
+    List<Address> addressList;
+
     Address address;
 
     protected Options<T> options;
@@ -81,7 +84,6 @@ public abstract class AbstractConnection<T> implements Connection<T>, ConnectEve
     AbstractConnection(Options<T> options) {
         this.options = options;
         reConnector = new ReConnector<>(this);
-        address = options.getAddressList().get(0);
         callbackExecutor = options.getCallbackExecutor();
         managerExecutor = options.getManagerExecutor();
     }
