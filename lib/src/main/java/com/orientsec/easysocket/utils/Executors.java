@@ -1,33 +1,31 @@
-package com.orientsec.easysocket;
+package com.orientsec.easysocket.utils;
 
 import android.os.Handler;
 import android.os.Looper;
 
+import androidx.annotation.NonNull;
+
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import io.reactivex.annotations.NonNull;
 
-public class Executors {
-    public static final ScheduledExecutorService scheduledExecutor
-            = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
+public interface Executors {
 
-    public static final ExecutorService managerExecutor
+    ExecutorService connectExecutor
             = new ThreadPoolExecutor(0, 4,
             30L, TimeUnit.SECONDS,
             new SynchronousQueue<>());
 
-    public static final ExecutorService codecExecutor
+    ExecutorService codecExecutor
             = new ThreadPoolExecutor(0, 4,
             60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>());
 
-    public static final Executor mainThreadExecutor = new Executor() {
+    Executor mainThreadExecutor = new Executor() {
         private Handler handler = new Handler(Looper.getMainLooper());
 
         @Override

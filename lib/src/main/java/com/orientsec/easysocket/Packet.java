@@ -3,7 +3,7 @@ package com.orientsec.easysocket;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.impl.PacketType;
+import com.orientsec.easysocket.inner.PacketType;
 
 
 /**
@@ -15,10 +15,6 @@ import com.orientsec.easysocket.impl.PacketType;
  */
 
 public class Packet<T> {
-
-    public Packet(@NonNull PacketType packetType, @NonNull T body) {
-        this(packetType, Task.SYNC_TASK_ID, body);
-    }
 
     public Packet(@NonNull PacketType packetType, int taskId, @NonNull T body) {
         this.taskId = taskId;

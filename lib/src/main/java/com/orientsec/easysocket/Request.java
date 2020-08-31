@@ -15,33 +15,14 @@ import androidx.annotation.NonNull;
  */
 public abstract class Request<T, R> {
     /**
-     * this IN is only send, there is no OUT from server
-     */
-    protected boolean sendOnly;
-    /**
      * 初始化任务。
      * 在连接可用之前，非初始化请求会进入等待状态，直到连接可用之后，
      * 进行编码、发送。初始化请求在连接成功之后可以直接执行。
      */
-    protected boolean init;
+    protected boolean initialize;
 
-    /**
-     * 同步请求。和半双工模式的socket类似，请求发送之后等待响应，
-     * 同一时间只能有一个同步请求，在一个请求收到响应之后，才可以
-     * 发送下一条请求。
-     */
-    protected boolean sync;
-
-    public boolean isSendOnly() {
-        return sendOnly;
-    }
-
-    public boolean isInit() {
-        return init;
-    }
-
-    public boolean isSync() {
-        return sync;
+    public boolean isInitialize() {
+        return initialize;
     }
 
     /**

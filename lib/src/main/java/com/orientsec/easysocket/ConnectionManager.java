@@ -8,10 +8,12 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Bundle;
+import android.os.HandlerThread;
+import android.os.Looper;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.impl.AbstractConnection;
+import com.orientsec.easysocket.inner.EasyConnection;
 import com.orientsec.easysocket.utils.NetUtils;
 
 import java.util.Set;
@@ -32,13 +34,17 @@ public class ConnectionManager {
     private Application application;
 
     //fix ConcurrentModificationException when Iterator
-    private Set<AbstractConnection<?>> connections = new CopyOnWriteArraySet<>();
+    private Set<EasyConnection<?>> connections = new CopyOnWriteArraySet<>();
+
+    private final HandlerThread mHandlerThread;
 
     private static class InstanceHolder {
         static ConnectionManager INSTANCE = new ConnectionManager();
     }
 
     private ConnectionManager() {
+        mHandlerThread = new HandlerThread("EasyConnectionManager");
+        mHandlerThread.start();
     }
 
     @NonNull
@@ -59,13 +65,14 @@ public class ConnectionManager {
                 .build();
         ConnectivityManager cm = (ConnectivityManager) application.getSystemService(Context.CONNECTIVITY_SERVICE);
         cm.registerNetworkCallback(request, new NetworkCallbackImpl());
+
     }
 
-    void addConnection(@NonNull AbstractConnection<?> connection) {
+    void addConnection(@NonNull EasyConnection<?> connection) {
         connections.add(connection);
     }
 
-    public void removeConnection(@NonNull AbstractConnection<?> connection) {
+    public void removeConnection(@NonNull EasyConnection<?> connection) {
         connections.remove(connection);
     }
 
@@ -73,10 +80,15 @@ public class ConnectionManager {
         return NetUtils.isNetworkAvailable(application);
     }
 
+    public Looper getMainLooper() {
+        return mHandlerThread.getLooper();
+    }
+
     /**
      * Activity生命周期监听。用于控制连接的前后台切换
      */
     private class EasySocketAppLifecycleListener implements Application.ActivityLifecycleCallbacks {
+
 
         @Override
         public void onActivityCreated(@NonNull Activity activity, Bundle savedInstanceState) {
@@ -85,7 +97,7 @@ public class ConnectionManager {
         @Override
         public void onActivityStarted(@NonNull Activity activity) {
             if (count == 0) {
-                for (AbstractConnection<?> connection : connections) {
+                for (EasyConnection<?> connection : connections) {
                     connection.setForeground();
                 }
             }
@@ -106,7 +118,7 @@ public class ConnectionManager {
         public void onActivityStopped(@NonNull Activity activity) {
             count--;
             if (count == 0) {
-                for (AbstractConnection<?> connection : connections) {
+                for (EasyConnection<?> connection : connections) {
                     connection.setBackground();
                 }
             }
@@ -121,6 +133,7 @@ public class ConnectionManager {
         public void onActivityDestroyed(@NonNull Activity activity) {
 
         }
+
     }
 
 
@@ -128,10 +141,11 @@ public class ConnectionManager {
      * 网络状态的广播监听
      */
     private class NetworkCallbackImpl extends ConnectivityManager.NetworkCallback {
+
         @Override
         public void onAvailable(@NonNull Network network) {
             super.onAvailable(network);
-            for (AbstractConnection<?> connection : connections) {
+            for (EasyConnection<?> connection : connections) {
                 connection.onNetworkAvailable();
             }
         }

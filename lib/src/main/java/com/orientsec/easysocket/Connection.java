@@ -3,6 +3,9 @@ package com.orientsec.easysocket;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.orientsec.easysocket.exception.EasyException;
+import com.orientsec.easysocket.task.TaskFactory;
+
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket
@@ -10,11 +13,13 @@ import androidx.annotation.Nullable;
  * Author: Fredric
  * coding is art not science
  */
-public interface Connection<T> {
+public interface Connection<T> extends TaskFactory<T> {
     /**
      * 启动连接, 如果连接以经启动，无效果。
      */
     void start();
+
+    void stop(EasyException e);
 
     /**
      * 关闭连接, 连接关闭之后不再可用
@@ -41,17 +46,6 @@ public interface Connection<T> {
      * @return 是否可达
      */
     boolean isAvailable();
-
-    /**
-     * 创建一个请求任务。
-     *
-     * @param request  发往服务端的请求。
-     * @param callback 结果回调。
-     * @return 可执行任务。
-     */
-    @NonNull
-    <RE> Task<T, RE> buildTask(@NonNull Request<T, RE> request,
-                                 @NonNull Callback<RE> callback);
 
     /**
      * 添加连接事件监听器

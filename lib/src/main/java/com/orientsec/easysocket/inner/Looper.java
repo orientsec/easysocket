@@ -1,4 +1,4 @@
-package com.orientsec.easysocket.impl;
+package com.orientsec.easysocket.inner;
 
 import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.utils.Logger;

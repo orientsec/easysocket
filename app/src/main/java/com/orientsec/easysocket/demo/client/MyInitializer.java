@@ -6,7 +6,7 @@ import androidx.annotation.NonNull;
 import com.orientsec.easysocket.Callback;
 import com.orientsec.easysocket.Connection;
 import com.orientsec.easysocket.Initializer;
-import com.orientsec.easysocket.Task;
+import com.orientsec.easysocket.task.Task;
 import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.exception.ErrorType;
 

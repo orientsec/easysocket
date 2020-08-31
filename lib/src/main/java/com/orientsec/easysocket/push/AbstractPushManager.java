@@ -2,7 +2,7 @@ package com.orientsec.easysocket.push;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.Executors;
+import com.orientsec.easysocket.utils.Executors;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.utils.Logger;

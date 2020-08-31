@@ -1,6 +1,8 @@
-package com.orientsec.easysocket;
+package com.orientsec.easysocket.task;
 
 import androidx.annotation.NonNull;
+
+import com.orientsec.easysocket.Request;
 
 /**
  * Product: EasySocket
@@ -11,19 +13,16 @@ import androidx.annotation.NonNull;
  */
 
 public interface Task<T, R> {
-    int SYNC_TASK_ID = 0;
+
+    int taskId();
+
+    byte[] data();
 
     /**
      * Asynchronously send the OUT and notify {@code callback} of its IN or if an error
      * occurred talking to the server, creating the OUT, or processing the IN.
      */
     void execute();
-
-    /**
-     * Returns true if this call has been {@linkplain #execute() executed}.
-     * It is an error to execute or enqueue a call more than once.
-     */
-    boolean isExecuted();
 
     /**
      * Cancel this call. An attempt will be made to cancel in-flight calls, and
@@ -44,17 +43,10 @@ public interface Task<T, R> {
     boolean isFinished();
 
     /**
-     * True if task can execute.
-     *
-     * @return True if task can execute.
-     */
-    boolean isExecutable();
-
-    /**
      * Obtain request of this task.
      *
      * @return request
      */
     @NonNull
-    Request<T, R> getRequest();
+    Request<T, R> request();
 }

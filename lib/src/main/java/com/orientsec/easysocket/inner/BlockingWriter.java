@@ -1,12 +1,14 @@
-package com.orientsec.easysocket.impl;
+package com.orientsec.easysocket.inner;
 
 import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.exception.ErrorCode;
 import com.orientsec.easysocket.exception.ErrorType;
+import com.orientsec.easysocket.task.Task;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
 
 /**
@@ -18,23 +20,25 @@ import java.util.concurrent.BlockingQueue;
  */
 public class BlockingWriter<T> extends Looper implements Writer {
     private OutputStream mOutputStream;
-    private SocketConnection<T> connection;
-    private BlockingQueue<RequestTask<T, ?>> taskQueue;
+    private BlockingQueue<Task<T, ?>> taskQueue;
+    private final Socket socket;
+    private final EventManager eventManager;
 
-    BlockingWriter(AbstractConnection<T> context,
-                   BlockingQueue<RequestTask<T, ?>> taskQueue) {
-        this.connection = (SocketConnection<T>) context;
+    BlockingWriter(Socket socket,
+                   EventManager eventManager,
+                   BlockingQueue<Task<T, ?>> taskQueue) {
+        this.socket = socket;
+        this.eventManager = eventManager;
         this.taskQueue = taskQueue;
     }
 
     @Override
     public void write() throws IOException {
         try {
-            RequestTask<T, ?> task = taskQueue.take();
-            TaskManager<T, ?> taskManager = connection.taskManager();
-            mOutputStream.write(task.getData());
+            Task<T, ?> task = taskQueue.take();
+            mOutputStream.write(task.data());
             mOutputStream.flush();
-            taskManager.onSend(task);
+            eventManager.publish(Events.TASK_SEND, task);
         } catch (InterruptedException e) {
             //ignore;
         }
@@ -42,7 +46,7 @@ public class BlockingWriter<T> extends Looper implements Writer {
 
     @Override
     protected void beforeLoop() throws IOException {
-        mOutputStream = connection.socket().getOutputStream();
+        mOutputStream = socket.getOutputStream();
     }
 
     @Override
@@ -54,8 +58,7 @@ public class BlockingWriter<T> extends Looper implements Writer {
     protected void loopFinish(Exception e) {
         EasyException ee;
         if (e != null) {
-            Logger.e("Blocking writer error, thread is dead with exception: "
-                    + e.getMessage());
+            Logger.e("Blocking writer error, thread is dead with exception: " + e.getMessage());
             if (e instanceof EasyException) {
                 ee = (EasyException) e;
             } else if (e instanceof IOException) {
@@ -64,10 +67,12 @@ public class BlockingWriter<T> extends Looper implements Writer {
                 ee = new EasyException(ErrorCode.WRIT_OTHER, ErrorType.CONNECT, e);
             }
         } else {
-            ee = new EasyException(ErrorCode.WRITE_EXIT, ErrorType.CONNECT,
-                    "Write looper exit.");
+            ee = new EasyException(ErrorCode.WRITE_EXIT, ErrorType.CONNECT, "Write looper exit.");
         }
-        mOutputStream = null;
-        connection.disconnect(ee);
+        synchronized (this) {
+            if (!isShutdown()) {
+                eventManager.publish(Events.STOP, ee);
+            }
+        }
     }
 }

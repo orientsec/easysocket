@@ -1,7 +1,7 @@
 package com.orientsec.easysocket.demo.client;
 
 import com.orientsec.easysocket.HeadParser;
-import com.orientsec.easysocket.impl.PacketType;
+import com.orientsec.easysocket.inner.PacketType;
 
 class MyHead extends HeadParser.Head {
     private int taskId;

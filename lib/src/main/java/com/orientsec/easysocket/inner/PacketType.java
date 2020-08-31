@@ -1,4 +1,4 @@
-package com.orientsec.easysocket.impl;
+package com.orientsec.easysocket.inner;
 
 /**
  * Product: EasySocket

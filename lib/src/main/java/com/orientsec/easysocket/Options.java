@@ -1,12 +1,13 @@
 package com.orientsec.easysocket;
 
+import androidx.annotation.NonNull;
+
+import com.orientsec.easysocket.utils.Executors;
+
 import java.util.List;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ScheduledExecutorService;
 
 import javax.net.SocketFactory;
-
-import io.reactivex.annotations.NonNull;
 
 /**
  * Product: EasySocket
@@ -54,7 +55,7 @@ public class Options<T> {
      * 连接管理线程池
      * 启动连接、关闭连接的执行线程池
      */
-    private Executor managerExecutor;
+    private Executor connectExecutor;
 
     /**
      * 编解码执行器
@@ -96,11 +97,6 @@ public class Options<T> {
     private LivePolicy livePolicy;
 
     /**
-     * 连接的任务执行器
-     */
-    private ScheduledExecutorService scheduledExecutor;
-
-    /**
      * 失败重连尝试次数
      */
     private int retryTimes;
@@ -117,7 +113,7 @@ public class Options<T> {
         headParser = builder.headParser;
         pushHandler = builder.pushHandler;
         callbackExecutor = builder.callbackExecutor;
-        managerExecutor = builder.managerExecutor;
+        connectExecutor = builder.connectExecutor;
         codecExecutor = builder.codecExecutor;
         maxReadDataKB = builder.maxReadDataKB;
         requestTimeOut = builder.requestTimeOut;
@@ -126,7 +122,6 @@ public class Options<T> {
         pulseLostTimes = builder.pulseLostTimes;
         backgroundLiveTime = builder.backgroundLiveTime;
         livePolicy = builder.livePolicy;
-        scheduledExecutor = builder.scheduledExecutor;
         retryTimes = builder.retryTimes;
         connectInterval = builder.connectInterval;
         initializer = builder.initializer;
@@ -156,8 +151,8 @@ public class Options<T> {
         return callbackExecutor;
     }
 
-    public Executor getManagerExecutor() {
-        return managerExecutor;
+    public Executor getConnectExecutor() {
+        return connectExecutor;
     }
 
     public Executor getCodecExecutor() {
@@ -200,10 +195,6 @@ public class Options<T> {
         return addressSupplier;
     }
 
-    public ScheduledExecutorService getScheduledExecutor() {
-        return scheduledExecutor;
-    }
-
     public int getRetryTimes() {
         return retryTimes;
     }
@@ -220,9 +211,8 @@ public class Options<T> {
         private PacketHandler<T> pushHandler;
         private Initializer<T> initializer;
         private Executor callbackExecutor;
-        private Executor managerExecutor;
+        private Executor connectExecutor;
         private Executor codecExecutor;
-        private ScheduledExecutorService scheduledExecutor;
         private int maxReadDataKB = 1024;
         private int requestTimeOut = 5000;
         private int connectTimeOut = 5000;
@@ -266,18 +256,13 @@ public class Options<T> {
             return this;
         }
 
-        public Builder<T> scheduledExecutor(@NonNull ScheduledExecutorService val) {
-            scheduledExecutor = val;
-            return this;
-        }
-
         public Builder<T> callbackExecutor(@NonNull Executor val) {
             callbackExecutor = val;
             return this;
         }
 
-        public Builder<T> managerExecutor(@NonNull Executor val) {
-            managerExecutor = val;
+        public Builder<T> connectExecutor(@NonNull Executor val) {
+            connectExecutor = val;
             return this;
         }
 
@@ -387,14 +372,11 @@ public class Options<T> {
             if (callbackExecutor == null) {
                 callbackExecutor = Executors.mainThreadExecutor;
             }
-            if (managerExecutor == null) {
-                managerExecutor = Executors.managerExecutor;
+            if (connectExecutor == null) {
+                connectExecutor = Executors.connectExecutor;
             }
             if (codecExecutor == null) {
                 codecExecutor = Executors.codecExecutor;
-            }
-            if (scheduledExecutor == null) {
-                scheduledExecutor = Executors.scheduledExecutor;
             }
 
             return "";

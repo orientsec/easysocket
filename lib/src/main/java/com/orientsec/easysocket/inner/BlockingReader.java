@@ -1,4 +1,4 @@
-package com.orientsec.easysocket.impl;
+package com.orientsec.easysocket.inner;
 
 import com.orientsec.easysocket.HeadParser;
 import com.orientsec.easysocket.Options;
@@ -10,6 +10,7 @@ import com.orientsec.easysocket.utils.Logger;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.Socket;
 
 /**
  * Product: EasySocket
@@ -21,15 +22,18 @@ import java.io.InputStream;
 public class BlockingReader<T> extends Looper implements Reader {
     private InputStream inputStream;
 
-    private HeadParser<T> headParser;
+    private final HeadParser<T> headParser;
 
-    private SocketConnection<T> connection;
+    private final Socket socket;
 
-    private Options<T> options;
+    private final EventManager eventManager;
 
-    BlockingReader(SocketConnection<T> connection) {
-        this.connection = connection;
-        this.options = connection.options;
+    private final Options<T> options;
+
+    BlockingReader(Socket socket, Options<T> options, EventManager eventManager) {
+        this.socket = socket;
+        this.options = options;
+        this.eventManager = eventManager;
         this.headParser = options.getHeadParser();
     }
 
@@ -48,7 +52,7 @@ public class BlockingReader<T> extends Looper implements Reader {
             byte[] data = new byte[bodyLength];
             readInputStream(inputStream, data);
             Packet<T> packet = headParser.decodePacket(head, data);
-            connection.handlePacket(packet);
+            eventManager.publish(Events.ON_PACKET, packet);
         } else {
             throw new EasyException(ErrorCode.STREAM_SIZE, ErrorType.CONNECT,
                     "Wrong body length " + bodyLength);
@@ -69,7 +73,7 @@ public class BlockingReader<T> extends Looper implements Reader {
 
     @Override
     protected void beforeLoop() throws IOException {
-        inputStream = connection.socket().getInputStream();
+        inputStream = socket.getInputStream();
     }
 
     @Override
@@ -91,10 +95,12 @@ public class BlockingReader<T> extends Looper implements Reader {
                 ee = new EasyException(ErrorCode.READ_OTHER, ErrorType.CONNECT, e);
             }
         } else {
-            ee = new EasyException(ErrorCode.READ_EXIT, ErrorType.CONNECT,
-                    "Read looper exit.");
+            ee = new EasyException(ErrorCode.READ_EXIT, ErrorType.CONNECT, "Read looper exit.");
         }
-        inputStream = null;
-        connection.disconnect(ee);
+        synchronized (this) {
+            if (!isShutdown()) {
+                eventManager.publish(Events.STOP, ee);
+            }
+        }
     }
 }

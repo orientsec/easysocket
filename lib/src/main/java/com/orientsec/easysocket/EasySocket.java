@@ -2,11 +2,12 @@ package com.orientsec.easysocket;
 
 import android.app.Application;
 
-import com.orientsec.easysocket.impl.SocketConnection;
+import androidx.annotation.NonNull;
+
+import com.orientsec.easysocket.inner.EasyConnection;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import io.reactivex.annotations.NonNull;
 
 /**
  * Product: EasySocket
@@ -40,7 +41,7 @@ public class EasySocket {
      */
     @NonNull
     public static <T> Connection<T> open(@NonNull Options<T> options) {
-        SocketConnection<T> connection = new SocketConnection<>(options);
+        EasyConnection<T> connection = new EasyConnection<>(options);
         ConnectionManager.getInstance().addConnection(connection);
         return connection;
     }
