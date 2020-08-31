@@ -8,7 +8,7 @@ import com.orientsec.easysocket.inner.PacketType;
 
 import java.nio.ByteBuffer;
 
-public class MyHeadParser implements HeadParser<byte[]> {
+public class MyHeadParser implements HeadParser {
 
     @Override
     public int headSize() {

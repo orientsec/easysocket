@@ -13,9 +13,9 @@ import com.orientsec.easysocket.exception.EasyException;
  * <p>
  * 推送消息监听
  */
-public interface PushManager<T, K, E> extends PacketHandler<T> {
+public interface PushManager<K, E> extends PacketHandler {
 
-    E parsePacket(Packet<T> packet) throws EasyException;
+    E parsePacket(Packet<?> packet) throws EasyException;
 
     void registerPushListener(K key, PushListener<E> pushListener);
 

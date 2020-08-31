@@ -2,9 +2,9 @@ package com.orientsec.easysocket.push;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.utils.Executors;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.exception.EasyException;
+import com.orientsec.easysocket.utils.Executors;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.HashMap;
@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
-public abstract class AbstractPushManager<T, K, E> implements PushManager<T, K, E> {
+public abstract class AbstractPushManager<K, E> implements PushManager<K, E> {
     private Executor codecExecutor;
     private Executor callbackExecutor;
 
@@ -62,11 +62,11 @@ public abstract class AbstractPushManager<T, K, E> implements PushManager<T, K, 
     }
 
     @Override
-    public void handlePacket(@NonNull Packet<T> packet) {
+    public void handlePacket(@NonNull Packet<?> packet) {
         codecExecutor.execute(() -> {
             try {
                 E event = parsePacket(packet);
-                K key = eventKey(packet.getBody(), event);
+                K key = eventKey(packet, event);
                 callbackExecutor.execute(() -> sendPushEvent(key, event));
             } catch (EasyException e) {
                 onError(e);
@@ -76,7 +76,7 @@ public abstract class AbstractPushManager<T, K, E> implements PushManager<T, K, 
 
     protected abstract void onError(EasyException e);
 
-    protected abstract K eventKey(T body, E event);
+    protected abstract K eventKey(@NonNull Packet<?> packet, E event);
 
     protected synchronized void sendPushEvent(K key, E event) {
         Set<PushListener<E>> set = idListenerMap.get(key);

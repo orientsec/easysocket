@@ -1,10 +1,10 @@
 package com.orientsec.easysocket.demo.client;
 
-import com.orientsec.easysocket.Connection;
 import com.orientsec.easysocket.Address;
+import com.orientsec.easysocket.Connection;
 import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Options;
-import com.orientsec.easysocket.adapter.TaskAdapter;
+import com.orientsec.easysocket.demo.adapter.TaskAdapter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +19,7 @@ import io.reactivex.Observable;
  * coding is art not science
  */
 public class Client {
-    private Connection<byte[]> connection;
+    private Connection connection;
     private Session session;
 
     private static class ClientHolder {
@@ -36,7 +36,7 @@ public class Client {
         Address address = new Address("192.168.0.107", 10010);
         List<Address> addresses = new ArrayList<>();
         addresses.add(address);
-        Options<byte[]> options = new Options.Builder<byte[]>()
+        Options options = new Options.Builder()
                 .addressList(addresses)
                 .headParser(new MyHeadParser())
                 .initializer(new MyInitializer(session))

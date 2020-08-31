@@ -19,7 +19,7 @@ import com.orientsec.easysocket.exception.ErrorCode;
 import com.orientsec.easysocket.exception.ErrorType;
 import com.orientsec.easysocket.task.Task;
 import com.orientsec.easysocket.task.TaskManager;
-import com.orientsec.easysocket.task.TaskManagerImpl;
+import com.orientsec.easysocket.task.TaskHolder;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.HashMap;
@@ -37,23 +37,23 @@ import java.util.concurrent.Executor;
  * Author: Fredric
  * coding is art not science
  */
-public class EasyConnection<T> implements Connection<T>, EventListener, Initializer.Emitter {
+public class EasyConnection implements Connection, EventListener, Initializer.Emitter {
 
     final EventManager eventManager;
 
-    protected final Options<T> options;
+    protected final Options options;
 
     private final Executor callbackExecutor;
 
     protected final Executor connectExecutor;
 
-    protected final ReConnector<T> reConnector;
+    protected final ReConnector reConnector;
 
-    private final TaskManager<T> taskManager;
+    private final TaskManager taskManager;
 
-    private final Map<String, PacketHandler<T>> messageHandlerMap;
+    private final Map<String, PacketHandler> messageHandlerMap;
 
-    protected final Pulser<T> pulser;
+    protected final Pulser pulser;
 
     protected final Set<ConnectEventListener> connectEventListeners = new CopyOnWriteArraySet<>();
 
@@ -70,17 +70,17 @@ public class EasyConnection<T> implements Connection<T>, EventListener, Initiali
 
     private Session session;
 
-    private final ConnectRunnable<T> connectRunnable;
+    private final ConnectRunnable connectRunnable;
 
-    public EasyConnection(Options<T> options) {
+    public EasyConnection(Options options) {
         this.options = options;
         eventManager = new EventManager();
-        reConnector = new ReConnector<>(this);
+        reConnector = new ReConnector(this);
         callbackExecutor = options.getCallbackExecutor();
         connectExecutor = options.getConnectExecutor();
-        taskManager = new TaskManagerImpl<>(this, eventManager, options);
-        pulser = new Pulser<>(this, options, eventManager);
-        connectRunnable = new ConnectRunnable<>(this);
+        taskManager = new TaskHolder(this, eventManager, options);
+        pulser = new Pulser(this, options, eventManager);
+        connectRunnable = new ConnectRunnable(this);
 
         messageHandlerMap = new HashMap<>();
         messageHandlerMap.put(PacketType.RESPONSE.getValue(), taskManager);
@@ -113,13 +113,13 @@ public class EasyConnection<T> implements Connection<T>, EventListener, Initiali
 
     @Override
     @NonNull
-    public <R> Task<T, R> buildTask(@NonNull Request<T, R> request,
-                                    @NonNull Callback<R> callback) {
+    public <R> Task<R> buildTask(@NonNull Request<R> request,
+                                 @NonNull Callback<R> callback) {
         return taskManager.buildTask(request, callback);
     }
 
-    private void dispatchPacket(@NonNull Packet<T> packet) {
-        PacketHandler<T> packetHandler = messageHandlerMap.get(packet.getPacketType().getValue());
+    private void dispatchPacket(@NonNull Packet<?> packet) {
+        PacketHandler packetHandler = messageHandlerMap.get(packet.getPacketType().getValue());
         if (packetHandler == null) {
             Logger.e("No packet handler for type: " + packet.getPacketType());
         } else {
@@ -315,7 +315,7 @@ public class EasyConnection<T> implements Connection<T>, EventListener, Initiali
                 break;
             case Events.ON_PACKET:
                 assert object != null;
-                dispatchPacket((Packet<T>) object);
+                dispatchPacket((Packet<?>) object);
                 break;
             case Events.PULSE:
                 pulser.pulse();
@@ -334,12 +334,12 @@ public class EasyConnection<T> implements Connection<T>, EventListener, Initiali
         }
     }
 
-    private static class ConnectRunnable<T> implements Runnable {
+    private static class ConnectRunnable implements Runnable {
         private final EventManager eventManager;
 
-        private final EasyConnection<T> connection;
+        private final EasyConnection connection;
 
-        public ConnectRunnable(EasyConnection<T> connection) {
+        public ConnectRunnable(EasyConnection connection) {
             this.connection = connection;
             this.eventManager = connection.eventManager;
         }
@@ -349,7 +349,7 @@ public class EasyConnection<T> implements Connection<T>, EventListener, Initiali
             setAddressList();
             Logger.i("begin socket connect, " + connection.address);
             try {
-                Session session = new SocketSession<>(connection, connection.options,
+                Session session = new SocketSession(connection, connection.options,
                         eventManager, connection.taskManager.taskQueue());
                 session.open();
                 eventManager.publish(Events.CONNECT_SUCCESS, session);

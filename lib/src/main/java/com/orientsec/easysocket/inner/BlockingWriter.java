@@ -18,15 +18,15 @@ import java.util.concurrent.BlockingQueue;
  * Author: Fredric
  * coding is art not science
  */
-public class BlockingWriter<T> extends Looper implements Writer {
+public class BlockingWriter extends Looper implements Writer {
     private OutputStream mOutputStream;
-    private BlockingQueue<Task<T, ?>> taskQueue;
+    private BlockingQueue<Task<?>> taskQueue;
     private final Socket socket;
     private final EventManager eventManager;
 
     BlockingWriter(Socket socket,
                    EventManager eventManager,
-                   BlockingQueue<Task<T, ?>> taskQueue) {
+                   BlockingQueue<Task<?>> taskQueue) {
         this.socket = socket;
         this.eventManager = eventManager;
         this.taskQueue = taskQueue;
@@ -35,7 +35,7 @@ public class BlockingWriter<T> extends Looper implements Writer {
     @Override
     public void write() throws IOException {
         try {
-            Task<T, ?> task = taskQueue.take();
+            Task<?> task = taskQueue.take();
             mOutputStream.write(task.data());
             mOutputStream.flush();
             eventManager.publish(Events.TASK_SEND, task);

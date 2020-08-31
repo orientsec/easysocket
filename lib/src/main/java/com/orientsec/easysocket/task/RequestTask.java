@@ -3,12 +3,20 @@ package com.orientsec.easysocket.task;
 import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.Callback;
+import com.orientsec.easysocket.Connection;
 import com.orientsec.easysocket.Options;
+import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.Request;
+import com.orientsec.easysocket.exception.EasyException;
+import com.orientsec.easysocket.exception.ErrorCode;
+import com.orientsec.easysocket.exception.ErrorType;
 import com.orientsec.easysocket.inner.EventManager;
 import com.orientsec.easysocket.inner.Events;
 
+import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -19,7 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * coding is art not science
  */
 
-public class RequestTask<T, R> implements Task<T, R> {
+public class RequestTask<R> implements Task<R> {
     protected enum State {
         //收到响应
         SUCCESS,
@@ -32,11 +40,18 @@ public class RequestTask<T, R> implements Task<T, R> {
     // Guarded by this.
     private final AtomicBoolean executed = new AtomicBoolean();
     private volatile State state;
-    private final Request<T, R> request;
+    private final Request<R> request;
     private final Callback<R> callback;
     private final Executor callbackExecutor;
     private final Executor codecExecutor;
     private final EventManager eventManager;
+    private final Connection connection;
+    private final Options options;
+    private final Map<Integer, RequestTask<?>> taskMap;
+
+    private final LinkedBlockingQueue<Task<?>> writingQueue;
+
+    private final Queue<RequestTask<?>> waitingQueue;
     /**
      * 每一个任务的id是唯一的，通过taskId，客户端可以匹配每个请求的返回
      */
@@ -52,15 +67,24 @@ public class RequestTask<T, R> implements Task<T, R> {
 
     private Exception exception;
 
-    RequestTask(@NonNull Request<T, R> request,
-                @NonNull Callback<R> callback,
-                @NonNull EventManager eventManager,
-                @NonNull Options<T> options,
-                int taskId) {
+    RequestTask(int taskId,
+                Request<R> request,
+                Callback<R> callback,
+                Connection connection,
+                Options options,
+                EventManager eventManager,
+                Map<Integer, RequestTask<?>> taskMap,
+                LinkedBlockingQueue<Task<?>> writingQueue,
+                Queue<RequestTask<?>> waitingQueue) {
         this.request = request;
+        this.connection = connection;
         this.eventManager = eventManager;
         this.callback = callback;
         this.taskId = taskId;
+        this.options = options;
+        this.taskMap = taskMap;
+        this.writingQueue = writingQueue;
+        this.waitingQueue = waitingQueue;
         callbackExecutor = options.getCallbackExecutor();
         codecExecutor = options.getCodecExecutor();
     }
@@ -116,6 +140,25 @@ public class RequestTask<T, R> implements Task<T, R> {
     }
 
     void onStart() {
+        if (isFinished()) return;
+        if (connection.isShutdown()) {
+            EasyException e = new EasyException(ErrorCode.SHUT_DOWN, ErrorType.SYSTEM,
+                    "Connection is show down.");
+            onError(e);
+        } else {
+            connection.start();
+            taskMap.put(taskId, this);
+            if (connection.isAvailable() || isInitialize()) {
+                onEncode();
+            } else {
+                waitingQueue.add(this);
+            }
+        }
+
+    }
+
+    void onEncode() {
+        if (isFinished()) return;
         //对请求消息进行编码, 获取最终写入的字节数组。
         codecExecutor.execute(() -> {
             try {
@@ -128,19 +171,37 @@ public class RequestTask<T, R> implements Task<T, R> {
         });
     }
 
+    void onEnqueue() {
+        if (!isFinished() && !writingQueue.offer(this)) {
+            taskMap.remove(taskId);
+            EasyException e = new EasyException(ErrorCode.TASK_REFUSED,
+                    ErrorType.TASK, "Task queue refuse to accept task!");
+            onError(e);
+        }
+    }
+
     void onCancel() {
-        state = State.CANCELED;
-        callbackExecutor.execute(callback::onCancel);
+        if (!isFinished()) {
+            taskMap.remove(taskId);
+            writingQueue.remove(this);
+            waitingQueue.remove(this);
+            state = State.CANCELED;
+            callbackExecutor.execute(callback::onCancel);
+        }
     }
 
     void onSend() {
-        callbackExecutor.execute(callback::onStart);
+        if (!isFinished()) {
+            eventManager.publish(Events.TASK_TIME_OUT, this, options.getRequestTimeOut());
+            callbackExecutor.execute(callback::onStart);
+        }
     }
 
-    void onReceive(T data) {
+    void onReceive(Packet<?> packet) {
+        eventManager.remove(Events.TASK_TIME_OUT, this);
         codecExecutor.execute(() -> {
             try {
-                response = request.decode(data);
+                response = request.decode(packet);
                 eventManager.publish(Events.TASK_SUCCESS, this);
             } catch (Exception e) {
                 exception = e;
@@ -150,8 +211,11 @@ public class RequestTask<T, R> implements Task<T, R> {
     }
 
     void onSuccess() {
-        state = State.SUCCESS;
-        callbackExecutor.execute(() -> callback.onSuccess(response));
+        if (!isFinished()) {
+            taskMap.remove(taskId);
+            state = State.SUCCESS;
+            callbackExecutor.execute(() -> callback.onSuccess(response));
+        }
     }
 
     void onError(@NonNull Exception e) {
@@ -161,13 +225,25 @@ public class RequestTask<T, R> implements Task<T, R> {
     }
 
     void onError() {
-        state = State.ERROR;
-        callbackExecutor.execute(() -> callback.onError(exception));
+        if (!isFinished()) {
+            taskMap.remove(taskId);
+            state = State.ERROR;
+            callbackExecutor.execute(() -> callback.onError(exception));
+        }
+    }
+
+    void onTimeout() {
+        if (!isFinished()) {
+            taskMap.remove(taskId);
+            EasyException e = new EasyException(ErrorCode.RESPONSE_TIME_OUT,
+                    ErrorType.RESPONSE, "Response time out.");
+            onError(e);
+        }
     }
 
     @Override
     @NonNull
-    public Request<T, R> request() {
+    public Request<R> request() {
         return request;
     }
 }

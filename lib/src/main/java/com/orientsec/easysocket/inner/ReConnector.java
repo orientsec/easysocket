@@ -10,11 +10,11 @@ import com.orientsec.easysocket.utils.Logger;
 
 import java.util.List;
 
-public class ReConnector<T> {
+public class ReConnector {
 
-    private final Options<T> options;
+    private final Options options;
 
-    private final EasyConnection<T> connection;
+    private final EasyConnection connection;
 
     private final EventManager eventManager;
 
@@ -27,7 +27,7 @@ public class ReConnector<T> {
      */
     private int backUpIndex = -1;
 
-    ReConnector(EasyConnection<T> connection) {
+    ReConnector(EasyConnection connection) {
         this.connection = connection;
         eventManager = connection.eventManager;
         options = connection.options;

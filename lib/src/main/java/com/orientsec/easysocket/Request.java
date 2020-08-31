@@ -13,7 +13,7 @@ import androidx.annotation.NonNull;
  *
  * @param <R> 返回类型
  */
-public abstract class Request<T, R> {
+public abstract class Request<R> {
     /**
      * 初始化任务。
      * 在连接可用之前，非初始化请求会进入等待状态，直到连接可用之后，
@@ -45,5 +45,5 @@ public abstract class Request<T, R> {
      * @throws Exception 异常
      */
     @NonNull
-    public abstract R decode(@NonNull T data) throws Exception;
+    public abstract R decode(@NonNull Packet<?> data) throws Exception;
 }

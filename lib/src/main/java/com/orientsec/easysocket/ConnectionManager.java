@@ -34,7 +34,7 @@ public class ConnectionManager {
     private Application application;
 
     //fix ConcurrentModificationException when Iterator
-    private Set<EasyConnection<?>> connections = new CopyOnWriteArraySet<>();
+    private Set<EasyConnection> connections = new CopyOnWriteArraySet<>();
 
     private final HandlerThread mHandlerThread;
 
@@ -68,11 +68,11 @@ public class ConnectionManager {
 
     }
 
-    void addConnection(@NonNull EasyConnection<?> connection) {
+    void addConnection(@NonNull EasyConnection connection) {
         connections.add(connection);
     }
 
-    public void removeConnection(@NonNull EasyConnection<?> connection) {
+    public void removeConnection(@NonNull EasyConnection connection) {
         connections.remove(connection);
     }
 
@@ -97,7 +97,7 @@ public class ConnectionManager {
         @Override
         public void onActivityStarted(@NonNull Activity activity) {
             if (count == 0) {
-                for (EasyConnection<?> connection : connections) {
+                for (EasyConnection connection : connections) {
                     connection.setForeground();
                 }
             }
@@ -118,7 +118,7 @@ public class ConnectionManager {
         public void onActivityStopped(@NonNull Activity activity) {
             count--;
             if (count == 0) {
-                for (EasyConnection<?> connection : connections) {
+                for (EasyConnection connection : connections) {
                     connection.setBackground();
                 }
             }
@@ -145,7 +145,7 @@ public class ConnectionManager {
         @Override
         public void onAvailable(@NonNull Network network) {
             super.onAvailable(network);
-            for (EasyConnection<?> connection : connections) {
+            for (EasyConnection connection : connections) {
                 connection.onNetworkAvailable();
             }
         }

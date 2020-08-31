@@ -12,7 +12,7 @@ import com.orientsec.easysocket.Request;
  * coding is art not science
  */
 
-public interface Task<T, R> {
+public interface Task<R> {
 
     int taskId();
 
@@ -48,5 +48,5 @@ public interface Task<T, R> {
      * @return request
      */
     @NonNull
-    Request<T, R> request();
+    Request<R> request();
 }

@@ -40,8 +40,8 @@ public class EasySocket {
      * @return 连接
      */
     @NonNull
-    public static <T> Connection<T> open(@NonNull Options<T> options) {
-        EasyConnection<T> connection = new EasyConnection<>(options);
+    public static Connection open(@NonNull Options options) {
+        EasyConnection connection = new EasyConnection(options);
         ConnectionManager.getInstance().addConnection(connection);
         return connection;
     }

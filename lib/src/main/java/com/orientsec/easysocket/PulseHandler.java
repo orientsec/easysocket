@@ -2,13 +2,13 @@ package com.orientsec.easysocket;
 
 import androidx.annotation.NonNull;
 
-public interface PulseHandler<T> {
+public interface PulseHandler {
     @NonNull
     byte[] pulseData(int sequenceId);
 
-    boolean onPulse(@NonNull T body);
+    boolean onPulse(@NonNull Packet<?> packet);
 
-    final class EmptyPulseHandler<T> implements PulseHandler<T> {
+    final class EmptyPulseHandler implements PulseHandler {
 
         @Override
         @NonNull
@@ -17,7 +17,7 @@ public interface PulseHandler<T> {
         }
 
         @Override
-        public boolean onPulse(@NonNull T body) {
+        public boolean onPulse(@NonNull Packet<?> packet) {
             return true;
         }
     }

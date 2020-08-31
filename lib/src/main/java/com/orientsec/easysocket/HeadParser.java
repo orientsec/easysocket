@@ -14,7 +14,7 @@ import com.orientsec.easysocket.exception.EasyException;
  * 数据协议
  */
 
-public interface HeadParser<T> {
+public interface HeadParser {
     class Head {
         protected int packetSize;
 
@@ -49,7 +49,7 @@ public interface HeadParser<T> {
      * @return 消息体
      */
     @NonNull
-    Packet<T> decodePacket(@NonNull Head head, @NonNull byte[] bodyBytes)
+    Packet<?> decodePacket(@NonNull Head head, @NonNull byte[] bodyBytes)
             throws EasyException;
 
 }

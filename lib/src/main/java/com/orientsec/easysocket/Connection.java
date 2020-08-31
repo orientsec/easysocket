@@ -13,7 +13,7 @@ import com.orientsec.easysocket.task.TaskFactory;
  * Author: Fredric
  * coding is art not science
  */
-public interface Connection<T> extends TaskFactory<T> {
+public interface Connection extends TaskFactory {
     /**
      * 启动连接, 如果连接以经启动，无效果。
      */

@@ -12,14 +12,14 @@ import java.util.concurrent.BlockingQueue;
  * Author: Fredric
  * coding is art not science
  */
-public interface TaskManager<T> extends PacketHandler<T>, TaskFactory<T> {
+public interface TaskManager extends PacketHandler, TaskFactory {
 
     /**
      * 获取任务队列
      *
      * @return 任务队列
      */
-    BlockingQueue<Task<T, ?>> taskQueue();
+    BlockingQueue<Task<?>> taskQueue();
 
     /**
      * 复位任务管理器。
@@ -32,4 +32,5 @@ public interface TaskManager<T> extends PacketHandler<T>, TaskFactory<T> {
      * 启动任务管理器。在完成资源初始化、登录之后，连接连接准备就绪，进入可用状态。
      */
     void start();
+
 }

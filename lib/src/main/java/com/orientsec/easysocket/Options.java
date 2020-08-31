@@ -18,13 +18,13 @@ import javax.net.SocketFactory;
  * <p>
  * 连接配置类
  */
-public class Options<T> {
+public class Options {
     /**
      * 是否是调试模式
      */
     public static boolean debug;
 
-    private PulseHandler<T> pulseHandler;
+    private PulseHandler pulseHandler;
     /**
      * 站点信息
      */
@@ -36,15 +36,15 @@ public class Options<T> {
     /**
      * 数据协议
      */
-    private HeadParser<T> headParser;
+    private HeadParser headParser;
     /**
      * 推送消息处理器
      */
-    private PacketHandler<T> pushHandler;
+    private PacketHandler pushHandler;
     /**
      * 连接初始化
      */
-    private Initializer<T> initializer;
+    private Initializer initializer;
     /**
      * 消息分发执行器
      * 连接状态监听回调，请求回调，都执行在Executor所在线程
@@ -106,7 +106,7 @@ public class Options<T> {
      */
     private int connectInterval;
 
-    private Options(Builder<T> builder) {
+    private Options(Builder builder) {
         pulseHandler = builder.pulseHandler;
         addressSupplier = builder.addressSupplier;
         socketFactorySupplier = builder.socketFactorySupplier;
@@ -131,15 +131,15 @@ public class Options<T> {
         return debug;
     }
 
-    public PulseHandler<T> getPulseHandler() {
+    public PulseHandler getPulseHandler() {
         return pulseHandler;
     }
 
-    public Initializer<T> getInitializer() {
+    public Initializer getInitializer() {
         return initializer;
     }
 
-    public HeadParser<T> getHeadParser() {
+    public HeadParser getHeadParser() {
         return headParser;
     }
 
@@ -183,7 +183,7 @@ public class Options<T> {
         return livePolicy;
     }
 
-    public PacketHandler<T> getPushHandler() {
+    public PacketHandler getPushHandler() {
         return pushHandler;
     }
 
@@ -203,13 +203,13 @@ public class Options<T> {
         return connectInterval;
     }
 
-    public static final class Builder<T> {
-        private PulseHandler<T> pulseHandler;
+    public static final class Builder {
+        private PulseHandler pulseHandler;
         private Supplier<List<Address>> addressSupplier;
         private Supplier<SocketFactory> socketFactorySupplier;
-        private HeadParser<T> headParser;
-        private PacketHandler<T> pushHandler;
-        private Initializer<T> initializer;
+        private HeadParser headParser;
+        private PacketHandler pushHandler;
+        private Initializer initializer;
         private Executor callbackExecutor;
         private Executor connectExecutor;
         private Executor codecExecutor;
@@ -226,104 +226,104 @@ public class Options<T> {
         public Builder() {
         }
 
-        public Builder<T> pulseHandler(@NonNull PulseHandler<T> val) {
+        public Builder pulseHandler(@NonNull PulseHandler val) {
             pulseHandler = val;
             return this;
         }
 
-        public Builder<T> addressList(@NonNull List<Address> val) {
+        public Builder addressList(@NonNull List<Address> val) {
             addressSupplier = StaticAddressSupplier.build(val);
             return this;
         }
 
-        public Builder<T> addressSupplier(@NonNull Supplier<List<Address>> val) {
+        public Builder addressSupplier(@NonNull Supplier<List<Address>> val) {
             addressSupplier = val;
             return this;
         }
 
-        public Builder<T> headParser(@NonNull HeadParser<T> val) {
+        public Builder headParser(@NonNull HeadParser val) {
             headParser = val;
             return this;
         }
 
-        public Builder<T> pushHandler(@NonNull PacketHandler<T> val) {
+        public Builder pushHandler(@NonNull PacketHandler val) {
             pushHandler = val;
             return this;
         }
 
-        public Builder<T> initializer(@NonNull Initializer<T> val) {
+        public Builder initializer(@NonNull Initializer val) {
             initializer = val;
             return this;
         }
 
-        public Builder<T> callbackExecutor(@NonNull Executor val) {
+        public Builder callbackExecutor(@NonNull Executor val) {
             callbackExecutor = val;
             return this;
         }
 
-        public Builder<T> connectExecutor(@NonNull Executor val) {
+        public Builder connectExecutor(@NonNull Executor val) {
             connectExecutor = val;
             return this;
         }
 
-        public Builder<T> codecExecutor(@NonNull Executor val) {
+        public Builder codecExecutor(@NonNull Executor val) {
             codecExecutor = val;
             return this;
         }
 
-        public Builder<T> maxReadDataKB(int val) {
+        public Builder maxReadDataKB(int val) {
             maxReadDataKB = val;
             return this;
         }
 
-        public Builder<T> requestTimeOut(int val) {
+        public Builder requestTimeOut(int val) {
             requestTimeOut = val;
             return this;
         }
 
-        public Builder<T> connectTimeOut(int val) {
+        public Builder connectTimeOut(int val) {
             connectTimeOut = val;
             return this;
         }
 
-        public Builder<T> pulseRate(int val) {
+        public Builder pulseRate(int val) {
             pulseRate = val;
             return this;
         }
 
-        public Builder<T> pulseLostTimes(int val) {
+        public Builder pulseLostTimes(int val) {
             pulseLostTimes = val;
             return this;
         }
 
-        public Builder<T> backgroundLiveTime(int val) {
+        public Builder backgroundLiveTime(int val) {
             backgroundLiveTime = val;
             return this;
         }
 
-        public Builder<T> livePolicy(@NonNull LivePolicy val) {
+        public Builder livePolicy(@NonNull LivePolicy val) {
             livePolicy = val;
             return this;
         }
 
-        public Builder<T> retryTimes(int val) {
+        public Builder retryTimes(int val) {
             retryTimes = val;
             return this;
         }
 
-        public Builder<T> connectInterval(int val) {
+        public Builder connectInterval(int val) {
             connectInterval = val;
             return this;
         }
 
-        public Builder<T> socketFactorySupplier(@NonNull Supplier<SocketFactory> val) {
+        public Builder socketFactorySupplier(@NonNull Supplier<SocketFactory> val) {
             socketFactorySupplier = val;
             return this;
         }
 
-        public Options<T> build() {
+        public Options build() {
             if (checkParams().isEmpty()) {
-                return new Options<>(this);
+                return new Options(this);
             }
             throw new IllegalArgumentException();
         }
@@ -361,13 +361,13 @@ public class Options<T> {
                 socketFactorySupplier = SocketFactory::getDefault;
             }
             if (pulseHandler == null) {
-                pulseHandler = new PulseHandler.EmptyPulseHandler<>();
+                pulseHandler = new PulseHandler.EmptyPulseHandler();
             }
             if (pushHandler == null) {
-                pushHandler = new PacketHandler.EmptyPacketHandler<>();
+                pushHandler = new PacketHandler.EmptyPacketHandler();
             }
             if (initializer == null) {
-                initializer = new Initializer.EmptyInitializer<>();
+                initializer = new Initializer.EmptyInitializer();
             }
             if (callbackExecutor == null) {
                 callbackExecutor = Executors.mainThreadExecutor;

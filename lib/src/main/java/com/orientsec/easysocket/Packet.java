@@ -50,7 +50,7 @@ public class Packet<T> {
 
     /**
      * 获取包体内容，类型可以自定义。
-     * 在业务层{@link Request#decode(Object)}进行解码、反序列化。
+     * 在业务层{@link Request#decode(Packet)}进行解码、反序列化。
      * 可以根据自定义协议，返回任意类型的结构。
      *
      * @return 协议消息体

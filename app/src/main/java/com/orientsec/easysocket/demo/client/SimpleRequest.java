@@ -3,11 +3,12 @@ package com.orientsec.easysocket.demo.client;
 
 import androidx.annotation.NonNull;
 
+import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.Request;
 
 import java.nio.ByteBuffer;
 
-public class SimpleRequest extends Request<byte[], String> {
+public class SimpleRequest extends Request<String> {
     private int cmd;
     private Session session;
     private String param;
@@ -26,7 +27,7 @@ public class SimpleRequest extends Request<byte[], String> {
 
     public SimpleRequest(String param, int cmd, boolean init, Session session) {
         this.cmd = cmd;
-        this.init = init;
+        this.initialize = init;
         this.session = session;
         this.param = param;
     }
@@ -51,7 +52,7 @@ public class SimpleRequest extends Request<byte[], String> {
 
     @Override
     @NonNull
-    public String decode(@NonNull byte[] data) {
-        return new String(data);
+    public String decode(@NonNull Packet<?> packet) {
+        return new String((byte[]) packet.getBody());
     }
 }

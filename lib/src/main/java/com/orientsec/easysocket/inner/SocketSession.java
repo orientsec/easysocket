@@ -20,28 +20,28 @@ import java.util.concurrent.Executor;
  * Author: Fredric
  * coding is art not science
  */
-public class SocketSession<T> implements Session {
+public class SocketSession implements Session {
 
     private Socket socket;
 
-    private BlockingReader<T> reader;
+    private BlockingReader reader;
 
-    private BlockingWriter<T> writer;
+    private BlockingWriter writer;
 
     private final Executor connectExecutor;
 
-    private final BlockingQueue<Task<T, ?>> taskQueue;
+    private final BlockingQueue<Task<?>> taskQueue;
 
-    private final Options<T> options;
+    private final Options options;
 
-    private final Connection<T> connection;
+    private final Connection connection;
 
     private final EventManager eventManager;
 
-    SocketSession(Connection<T> connection,
-                  Options<T> options,
+    SocketSession(Connection connection,
+                  Options options,
                   EventManager eventManager,
-                  BlockingQueue<Task<T, ?>> taskQueue) {
+                  BlockingQueue<Task<?>> taskQueue) {
         this.connection = connection;
         this.options = options;
         this.taskQueue = taskQueue;
@@ -106,8 +106,8 @@ public class SocketSession<T> implements Session {
 
     @Override
     public void active() {
-        writer = new BlockingWriter<>(socket, eventManager, taskQueue);
-        reader = new BlockingReader<>(socket, options, eventManager);
+        writer = new BlockingWriter(socket, eventManager, taskQueue);
+        reader = new BlockingReader(socket, options, eventManager);
         writer.start();
         reader.start();
     }

@@ -26,20 +26,20 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * 心跳管理器
  */
-public class Pulser<T> implements PacketHandler<T> {
-    private final Connection<T> connection;
+public class Pulser implements PacketHandler {
+    private final Connection connection;
 
-    private final Options<T> options;
+    private final Options options;
 
     private final EventManager eventManager;
 
-    private final PulseHandler<T> pulseHandler;
+    private final PulseHandler pulseHandler;
 
     private final AtomicInteger lostTimes = new AtomicInteger();
 
     private final Executor codecExecutor;
 
-    Pulser(Connection<T> connection, Options<T> options, EventManager eventManager) {
+    Pulser(Connection connection, Options options, EventManager eventManager) {
         this.connection = connection;
         this.options = options;
         this.eventManager = eventManager;
@@ -93,21 +93,21 @@ public class Pulser<T> implements PacketHandler<T> {
                     feed(res);
                 }
             };
-            connection.buildTask(new PulseRequest<>(pulseHandler), callback)
+            connection.buildTask(new PulseRequest(pulseHandler), callback)
                     .execute();
             start();
         }
     }
 
     @Override
-    public void handlePacket(@NonNull Packet<T> packet) {
-        codecExecutor.execute(() -> feed(pulseHandler.onPulse(packet.getBody())));
+    public void handlePacket(@NonNull Packet<?> packet) {
+        codecExecutor.execute(() -> feed(pulseHandler.onPulse(packet)));
     }
 
-    private static class PulseRequest<T> extends Request<T, Boolean> {
-        private PulseHandler<T> pulseHandler;
+    private static class PulseRequest extends Request<Boolean> {
+        private PulseHandler pulseHandler;
 
-        PulseRequest(PulseHandler<T> pulseHandler) {
+        PulseRequest(PulseHandler pulseHandler) {
             this.pulseHandler = pulseHandler;
         }
 
@@ -119,8 +119,8 @@ public class Pulser<T> implements PacketHandler<T> {
 
         @Override
         @NonNull
-        public Boolean decode(@NonNull T data) {
-            return pulseHandler.onPulse(data);
+        public Boolean decode(@NonNull Packet<?> packet) {
+            return pulseHandler.onPulse(packet);
         }
     }
 

@@ -10,7 +10,7 @@ import com.orientsec.easysocket.task.Task;
 import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.exception.ErrorType;
 
-public class MyInitializer implements Initializer<byte[]> {
+public class MyInitializer implements Initializer {
     private Session session;
 
     MyInitializer(Session session) {
@@ -18,7 +18,7 @@ public class MyInitializer implements Initializer<byte[]> {
     }
 
     @Override
-    public void start(@NonNull Connection<byte[]> connection, @NonNull Emitter emitter) {
+    public void start(@NonNull Connection connection, @NonNull Emitter emitter) {
         SimpleRequest authRequest = new SimpleRequest("test", 1, true, session);
         Callback<String> callback = new Callback.EmptyCallback<String>() {
             @Override
@@ -38,7 +38,7 @@ public class MyInitializer implements Initializer<byte[]> {
                 }
             }
         };
-        Task<byte[], String> task = connection.buildTask(authRequest, callback);
+        Task<String> task = connection.buildTask(authRequest, callback);
         task.execute();
     }
 }

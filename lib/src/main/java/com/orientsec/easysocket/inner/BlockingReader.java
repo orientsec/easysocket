@@ -19,18 +19,18 @@ import java.net.Socket;
  * Author: Fredric
  * coding is art not science
  */
-public class BlockingReader<T> extends Looper implements Reader {
+public class BlockingReader extends Looper implements Reader {
     private InputStream inputStream;
 
-    private final HeadParser<T> headParser;
+    private final HeadParser headParser;
 
     private final Socket socket;
 
     private final EventManager eventManager;
 
-    private final Options<T> options;
+    private final Options options;
 
-    BlockingReader(Socket socket, Options<T> options, EventManager eventManager) {
+    BlockingReader(Socket socket, Options options, EventManager eventManager) {
         this.socket = socket;
         this.options = options;
         this.eventManager = eventManager;
@@ -51,7 +51,7 @@ public class BlockingReader<T> extends Looper implements Reader {
         } else if (bodyLength >= 0) {
             byte[] data = new byte[bodyLength];
             readInputStream(inputStream, data);
-            Packet<T> packet = headParser.decodePacket(head, data);
+            Packet<?> packet = headParser.decodePacket(head, data);
             eventManager.publish(Events.ON_PACKET, packet);
         } else {
             throw new EasyException(ErrorCode.STREAM_SIZE, ErrorType.CONNECT,
