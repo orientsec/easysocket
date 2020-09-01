@@ -20,9 +20,21 @@ public class Logger {
         }
     }
 
+    public static void e(String msg, Throwable t) {
+        if (Options.isDebug()) {
+            Log.e(TAG, msg, t);
+        }
+    }
+
     public static void i(String msg) {
         if (Options.isDebug()) {
             Log.i(TAG, msg);
+        }
+    }
+
+    public static void i(String msg, Throwable t) {
+        if (Options.isDebug()) {
+            Log.i(TAG, msg, t);
         }
     }
 

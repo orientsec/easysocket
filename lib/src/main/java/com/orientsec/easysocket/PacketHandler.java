@@ -10,13 +10,14 @@ public interface PacketHandler {
      *
      * @param packet 消息体
      */
-    void handlePacket(@NonNull Packet<?> packet);
+    void handlePacket(@NonNull Packet packet);
 
-    class EmptyPacketHandler implements PacketHandler {
+}
 
-        @Override
-        public void handlePacket(@NonNull Packet<?> packet) {
-            Logger.i("Unhandled packet." + packet);
-        }
+class EmptyPacketHandler implements PacketHandler {
+
+    @Override
+    public void handlePacket(@NonNull Packet packet) {
+        Logger.i("Unhandled packet. " + packet);
     }
 }

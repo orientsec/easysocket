@@ -14,9 +14,9 @@ import com.orientsec.easysocket.inner.PacketType;
  * coding is art not science
  */
 
-public class Packet<T> {
+public class Packet {
 
-    public Packet(@NonNull PacketType packetType, int taskId, @NonNull T body) {
+    public Packet(@NonNull PacketType packetType, int taskId, @NonNull Object body) {
         this.taskId = taskId;
         this.packetType = packetType;
         this.body = body;
@@ -30,7 +30,7 @@ public class Packet<T> {
      * 包体
      */
     @NonNull
-    private T body;
+    private Object body;
 
     /**
      * 消息类型
@@ -50,13 +50,13 @@ public class Packet<T> {
 
     /**
      * 获取包体内容，类型可以自定义。
-     * 在业务层{@link Request#decode(Packet)}进行解码、反序列化。
+     * 在业务层{@link Request#decode(Packet)} (Object)}进行解码、反序列化。
      * 可以根据自定义协议，返回任意类型的结构。
      *
      * @return 协议消息体
      */
     @NonNull
-    public T getBody() {
+    public Object getBody() {
         return body;
     }
 

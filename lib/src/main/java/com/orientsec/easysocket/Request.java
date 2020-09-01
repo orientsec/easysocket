@@ -45,5 +45,5 @@ public abstract class Request<R> {
      * @throws Exception 异常
      */
     @NonNull
-    public abstract R decode(@NonNull Packet<?> data) throws Exception;
+    public abstract R decode(@NonNull Packet data) throws Exception;
 }

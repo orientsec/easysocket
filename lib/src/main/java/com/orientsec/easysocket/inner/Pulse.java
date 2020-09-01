@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * 心跳管理器
  */
-public class Pulser implements PacketHandler {
+public class Pulse implements PacketHandler {
     private final Connection connection;
 
     private final Options options;
@@ -39,7 +39,7 @@ public class Pulser implements PacketHandler {
 
     private final Executor codecExecutor;
 
-    Pulser(Connection connection, Options options, EventManager eventManager) {
+    Pulse(Connection connection, Options options, EventManager eventManager) {
         this.connection = connection;
         this.options = options;
         this.eventManager = eventManager;
@@ -81,7 +81,7 @@ public class Pulser implements PacketHandler {
     void pulse() {
         if (lostTimes.getAndAdd(1) > options.getPulseLostTimes()) {
             //心跳失败超过上限后断开连接
-            Logger.w("pulse failed times up, invalid connection!");
+            Logger.e("Pulse failed times up, connection invalid.");
             EasyException e = new EasyException(ErrorCode.PULSE_TIME_OUT,
                     ErrorType.CONNECT, "Pulse time out.");
             eventManager.publish(Events.STOP, e);
@@ -100,28 +100,28 @@ public class Pulser implements PacketHandler {
     }
 
     @Override
-    public void handlePacket(@NonNull Packet<?> packet) {
+    public void handlePacket(@NonNull Packet packet) {
         codecExecutor.execute(() -> feed(pulseHandler.onPulse(packet)));
     }
 
-    private static class PulseRequest extends Request<Boolean> {
-        private PulseHandler pulseHandler;
+}
 
-        PulseRequest(PulseHandler pulseHandler) {
-            this.pulseHandler = pulseHandler;
-        }
+class PulseRequest extends Request<Boolean> {
+    private PulseHandler pulseHandler;
 
-        @Override
-        @NonNull
-        public byte[] encode(int sequenceId) {
-            return pulseHandler.pulseData(sequenceId);
-        }
-
-        @Override
-        @NonNull
-        public Boolean decode(@NonNull Packet<?> packet) {
-            return pulseHandler.onPulse(packet);
-        }
+    PulseRequest(PulseHandler pulseHandler) {
+        this.pulseHandler = pulseHandler;
     }
 
+    @Override
+    @NonNull
+    public byte[] encode(int sequenceId) {
+        return pulseHandler.pulseData(sequenceId);
+    }
+
+    @Override
+    @NonNull
+    public Boolean decode(@NonNull Packet packet) {
+        return pulseHandler.onPulse(packet);
+    }
 }

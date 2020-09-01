@@ -55,23 +55,23 @@ public class BlockingWriter extends Looper implements Writer {
     }
 
     @Override
-    protected void loopFinish(Exception e) {
-        EasyException ee;
-        if (e != null) {
-            Logger.e("Blocking writer error, thread is dead with exception: " + e.getMessage());
-            if (e instanceof EasyException) {
-                ee = (EasyException) e;
-            } else if (e instanceof IOException) {
-                ee = new EasyException(ErrorCode.WRITE_IO, ErrorType.CONNECT, e);
+    protected void loopFinish(Throwable t) {
+        EasyException e;
+        if (t != null) {
+            Logger.e("Easy writer is dead.", t);
+            if (t instanceof EasyException) {
+                e = (EasyException) t;
+            } else if (t instanceof IOException) {
+                e = new EasyException(ErrorCode.WRITE_IO, ErrorType.CONNECT, t);
             } else {
-                ee = new EasyException(ErrorCode.WRIT_OTHER, ErrorType.CONNECT, e);
+                e = new EasyException(ErrorCode.WRIT_OTHER, ErrorType.CONNECT, t);
             }
         } else {
-            ee = new EasyException(ErrorCode.WRITE_EXIT, ErrorType.CONNECT, "Write looper exit.");
+            e = new EasyException(ErrorCode.WRITE_EXIT, ErrorType.CONNECT, "Write looper exit.");
         }
         synchronized (this) {
-            if (!isShutdown()) {
-                eventManager.publish(Events.STOP, ee);
+            if (isRunning()) {
+                eventManager.publish(Events.STOP, e);
             }
         }
     }

@@ -49,7 +49,7 @@ public interface HeadParser {
      * @return 消息体
      */
     @NonNull
-    Packet<?> decodePacket(@NonNull Head head, @NonNull byte[] bodyBytes)
+    Packet decodePacket(@NonNull Head head, @NonNull byte[] bodyBytes)
             throws EasyException;
 
 }

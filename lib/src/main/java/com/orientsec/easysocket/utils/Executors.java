@@ -12,7 +12,6 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-
 public interface Executors {
 
     ExecutorService connectExecutor

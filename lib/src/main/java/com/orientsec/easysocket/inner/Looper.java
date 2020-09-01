@@ -15,7 +15,7 @@ import java.io.IOException;
 public abstract class Looper implements Runnable {
     private Thread thread;
 
-    private volatile boolean isStop;
+    private volatile boolean stop;
 
     private long loopTimes = 0;
 
@@ -25,10 +25,10 @@ public abstract class Looper implements Runnable {
      * 启动
      */
     public synchronized void start() {
-        if (!isStop) {
+        if (!stop) {
             String threadName = getClass().getSimpleName();
             thread = new Thread(this, threadName);
-            isStop = false;
+            stop = false;
             loopTimes = 0;
             thread.start();
             Logger.i(threadName + " is starting");
@@ -39,7 +39,7 @@ public abstract class Looper implements Runnable {
     public final void run() {
         try {
             beforeLoop();
-            while (!isStop) {
+            while (!stop) {
                 this.runInLoopThread();
                 loopTimes++;
             }
@@ -61,11 +61,11 @@ public abstract class Looper implements Runnable {
 
     protected abstract void runInLoopThread() throws IOException, EasyException;
 
-    protected abstract void loopFinish(Exception e);
+    protected abstract void loopFinish(Throwable t);
 
     public synchronized void shutdown() {
-        if (thread != null && !isStop) {
-            isStop = true;
+        if (thread != null && !stop) {
+            stop = true;
             thread.interrupt();
             thread = null;
         }
@@ -76,7 +76,7 @@ public abstract class Looper implements Runnable {
         shutdown();
     }
 
-    public boolean isShutdown() {
-        return isStop;
+    public boolean isRunning() {
+        return !stop;
     }
 }

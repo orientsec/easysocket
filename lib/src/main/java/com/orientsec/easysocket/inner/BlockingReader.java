@@ -51,7 +51,7 @@ public class BlockingReader extends Looper implements Reader {
         } else if (bodyLength >= 0) {
             byte[] data = new byte[bodyLength];
             readInputStream(inputStream, data);
-            Packet<?> packet = headParser.decodePacket(head, data);
+            Packet packet = headParser.decodePacket(head, data);
             eventManager.publish(Events.ON_PACKET, packet);
         } else {
             throw new EasyException(ErrorCode.STREAM_SIZE, ErrorType.CONNECT,
@@ -82,24 +82,23 @@ public class BlockingReader extends Looper implements Reader {
     }
 
     @Override
-    protected void loopFinish(Exception e) {
-        EasyException ee;
-        if (e != null) {
-            Logger.e("Blocking reader error, thread is dead with exception: "
-                    + e.getMessage());
-            if (e instanceof EasyException) {
-                ee = (EasyException) e;
-            } else if (e instanceof IOException) {
-                ee = new EasyException(ErrorCode.READ_IO, ErrorType.CONNECT, e);
+    protected void loopFinish(Throwable t) {
+        EasyException e;
+        if (t != null) {
+            Logger.e("Easy reader is dead.", t);
+            if (t instanceof EasyException) {
+                e = (EasyException) t;
+            } else if (t instanceof IOException) {
+                e = new EasyException(ErrorCode.READ_IO, ErrorType.CONNECT, t);
             } else {
-                ee = new EasyException(ErrorCode.READ_OTHER, ErrorType.CONNECT, e);
+                e = new EasyException(ErrorCode.READ_OTHER, ErrorType.CONNECT, t);
             }
         } else {
-            ee = new EasyException(ErrorCode.READ_EXIT, ErrorType.CONNECT, "Read looper exit.");
+            e = new EasyException(ErrorCode.READ_EXIT, ErrorType.CONNECT, "Read looper exit.");
         }
         synchronized (this) {
-            if (!isShutdown()) {
-                eventManager.publish(Events.STOP, ee);
+            if (isRunning()) {
+                eventManager.publish(Events.STOP, e);
             }
         }
     }

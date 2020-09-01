@@ -18,8 +18,8 @@ import com.orientsec.easysocket.exception.EasyException;
 import com.orientsec.easysocket.exception.ErrorCode;
 import com.orientsec.easysocket.exception.ErrorType;
 import com.orientsec.easysocket.task.Task;
-import com.orientsec.easysocket.task.TaskManager;
 import com.orientsec.easysocket.task.TaskHolder;
+import com.orientsec.easysocket.task.TaskManager;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.HashMap;
@@ -38,6 +38,7 @@ import java.util.concurrent.Executor;
  * coding is art not science
  */
 public class EasyConnection implements Connection, EventListener, Initializer.Emitter {
+    private final String id;
 
     final EventManager eventManager;
 
@@ -53,7 +54,7 @@ public class EasyConnection implements Connection, EventListener, Initializer.Em
 
     private final Map<String, PacketHandler> messageHandlerMap;
 
-    protected final Pulser pulser;
+    protected final Pulse pulse;
 
     protected final Set<ConnectEventListener> connectEventListeners = new CopyOnWriteArraySet<>();
 
@@ -74,17 +75,18 @@ public class EasyConnection implements Connection, EventListener, Initializer.Em
 
     public EasyConnection(Options options) {
         this.options = options;
+        id = options.getId();
         eventManager = new EventManager();
         reConnector = new ReConnector(this);
         callbackExecutor = options.getCallbackExecutor();
         connectExecutor = options.getConnectExecutor();
         taskManager = new TaskHolder(this, eventManager, options);
-        pulser = new Pulser(this, options, eventManager);
+        pulse = new Pulse(this, options, eventManager);
         connectRunnable = new ConnectRunnable(this);
 
         messageHandlerMap = new HashMap<>();
         messageHandlerMap.put(PacketType.RESPONSE.getValue(), taskManager);
-        messageHandlerMap.put(PacketType.PULSE.getValue(), pulser);
+        messageHandlerMap.put(PacketType.PULSE.getValue(), pulse);
         messageHandlerMap.put(PacketType.PUSH.getValue(), options.getPushHandler());
 
         eventManager.addListener(this);
@@ -97,8 +99,8 @@ public class EasyConnection implements Connection, EventListener, Initializer.Em
 
     @Override
     public void fail(EasyException e) {
-        Logger.i("Connection initialize failed: " + e);
-        stop(e);
+        Logger.e(this + " initialize failed.", e);
+        eventManager.publish(Events.STOP, e);
     }
 
     @Override
@@ -118,10 +120,10 @@ public class EasyConnection implements Connection, EventListener, Initializer.Em
         return taskManager.buildTask(request, callback);
     }
 
-    private void dispatchPacket(@NonNull Packet<?> packet) {
+    private void dispatchPacket(@NonNull Packet packet) {
         PacketHandler packetHandler = messageHandlerMap.get(packet.getPacketType().getValue());
         if (packetHandler == null) {
-            Logger.e("No packet handler for type: " + packet.getPacketType());
+            Logger.w("No packet handler for type: " + packet.getPacketType());
         } else {
             packetHandler.handlePacket(packet);
         }
@@ -149,13 +151,13 @@ public class EasyConnection implements Connection, EventListener, Initializer.Em
     }
 
     private void onSessionCreate(@NonNull Session session) {
-        Logger.i("Connection is established, " + address);
         if (state == State.STARTING) {
+            Logger.i(this + " is connected.");
             state = State.CONNECT;
             this.session = session;
             session.active();
             //启动心跳及读写线程
-            pulser.start();
+            pulse.start();
             //连接后进行一些前置操作，例如资源初始化
             options.getInitializer().start(this, this);
             if (connectEventListeners.size() > 0) {
@@ -166,16 +168,17 @@ public class EasyConnection implements Connection, EventListener, Initializer.Em
                 });
             }
         } else {
-            session.close();
             //connection is shutdown
-            EasyException e = new EasyException(ErrorCode.SHUT_DOWN, ErrorType.SYSTEM, "Connection shut down.");
+            session.close();
+            EasyException e = new EasyException(ErrorCode.SHUT_DOWN, ErrorType.SYSTEM,
+                    "Connection shut down.");
             taskManager.reset(e);
         }
 
     }
 
     private void onSessionError(EasyException e) {
-        Logger.i("Fail to establish connection, " + address);
+        Logger.i(this + " connect failed.", e);
         if (state == State.STARTING) {
             state = State.IDLE;
         }
@@ -198,25 +201,29 @@ public class EasyConnection implements Connection, EventListener, Initializer.Em
 
     private void onShutdown() {
         if (state == State.SHUTDOWN) return;
+        Logger.w(this + " shut down.");
         reConnector.stopDisconnect();
         reConnector.stopReconnect();
         ConnectionManager.getInstance().removeConnection(this);
-        EasyException e = new EasyException(ErrorCode.SHUT_DOWN, ErrorType.SYSTEM, "Connection shut down.");
+        EasyException e = new EasyException(ErrorCode.SHUT_DOWN, ErrorType.SYSTEM,
+                "Connection shut down.");
         onStop(e);
         state = State.SHUTDOWN;
     }
 
-    public void stop(EasyException e) {
+    public void stop() {
+        EasyException e = new EasyException(ErrorCode.SHUT_DOWN, ErrorType.SYSTEM,
+                "Connection stop.");
         eventManager.publish(Events.STOP, e);
     }
 
     void onStop(@NonNull EasyException e) {
         if (state == State.CONNECT || state == State.AVAILABLE) {
-            Logger.i("Connection is disconnected, " + address);
+            Logger.i(this + " is disconnected.", e);
             state = State.IDLE;
             session.close();
             session = null;
-            pulser.stop();
+            pulse.stop();
             taskManager.reset(e);
             reConnector.reconnectDelay();
 
@@ -237,7 +244,7 @@ public class EasyConnection implements Connection, EventListener, Initializer.Em
 
     private void onAvailable() {
         if (state == State.CONNECT) {
-            Logger.i("Connection is available," + address);
+            Logger.i(this + " is available.");
             state = State.AVAILABLE;
             taskManager.start();
             reConnector.reset();
@@ -315,10 +322,10 @@ public class EasyConnection implements Connection, EventListener, Initializer.Em
                 break;
             case Events.ON_PACKET:
                 assert object != null;
-                dispatchPacket((Packet<?>) object);
+                dispatchPacket((Packet) object);
                 break;
             case Events.PULSE:
-                pulser.pulse();
+                pulse.pulse();
                 break;
             case Events.NET_AVAILABLE:
                 reConnector.reconnectDelay();
@@ -334,6 +341,12 @@ public class EasyConnection implements Connection, EventListener, Initializer.Em
         }
     }
 
+    @Override
+    @NonNull
+    public String toString() {
+        return "EasyConnection{id=" + id + ", address=" + address + '}';
+    }
+
     private static class ConnectRunnable implements Runnable {
         private final EventManager eventManager;
 
@@ -347,14 +360,13 @@ public class EasyConnection implements Connection, EventListener, Initializer.Em
         @Override
         public void run() {
             setAddressList();
-            Logger.i("begin socket connect, " + connection.address);
+            Logger.i(connection + " begin socket connect.");
             try {
                 Session session = new SocketSession(connection, connection.options,
                         eventManager, connection.taskManager.taskQueue());
                 session.open();
                 eventManager.publish(Events.CONNECT_SUCCESS, session);
             } catch (Exception e) {
-                Logger.e("Socket connect failed: " + e.getMessage());
                 eventManager.publish(Events.CONNECT_FAILED, e);
             }
         }

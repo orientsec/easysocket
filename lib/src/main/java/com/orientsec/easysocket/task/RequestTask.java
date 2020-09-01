@@ -197,7 +197,7 @@ public class RequestTask<R> implements Task<R> {
         }
     }
 
-    void onReceive(Packet<?> packet) {
+    void onReceive(Packet packet) {
         eventManager.remove(Events.TASK_TIME_OUT, this);
         codecExecutor.execute(() -> {
             try {

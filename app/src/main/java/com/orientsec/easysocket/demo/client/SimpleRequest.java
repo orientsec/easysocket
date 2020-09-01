@@ -52,7 +52,7 @@ public class SimpleRequest extends Request<String> {
 
     @Override
     @NonNull
-    public String decode(@NonNull Packet<?> packet) {
+    public String decode(@NonNull Packet packet) {
         return new String((byte[]) packet.getBody());
     }
 }

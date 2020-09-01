@@ -15,7 +15,7 @@ import com.orientsec.easysocket.exception.EasyException;
  */
 public interface PushManager<K, E> extends PacketHandler {
 
-    E parsePacket(Packet<?> packet) throws EasyException;
+    E parsePacket(Packet packet) throws EasyException;
 
     void registerPushListener(K key, PushListener<E> pushListener);
 

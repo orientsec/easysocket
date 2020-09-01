@@ -24,6 +24,8 @@ public class Options {
      */
     public static boolean debug;
 
+    private String id;
+
     private PulseHandler pulseHandler;
     /**
      * 站点信息
@@ -107,6 +109,7 @@ public class Options {
     private int connectInterval;
 
     private Options(Builder builder) {
+        id = builder.id;
         pulseHandler = builder.pulseHandler;
         addressSupplier = builder.addressSupplier;
         socketFactorySupplier = builder.socketFactorySupplier;
@@ -129,6 +132,10 @@ public class Options {
 
     public static boolean isDebug() {
         return debug;
+    }
+
+    public String getId() {
+        return id;
     }
 
     public PulseHandler getPulseHandler() {
@@ -204,6 +211,7 @@ public class Options {
     }
 
     public static final class Builder {
+        private String id = "";
         private PulseHandler pulseHandler;
         private Supplier<List<Address>> addressSupplier;
         private Supplier<SocketFactory> socketFactorySupplier;
@@ -224,6 +232,11 @@ public class Options {
         private int connectInterval = 3000;
 
         public Builder() {
+        }
+
+        public Builder id(@NonNull String val) {
+            id = val;
+            return this;
         }
 
         public Builder pulseHandler(@NonNull PulseHandler val) {
@@ -361,13 +374,13 @@ public class Options {
                 socketFactorySupplier = SocketFactory::getDefault;
             }
             if (pulseHandler == null) {
-                pulseHandler = new PulseHandler.EmptyPulseHandler();
+                pulseHandler = new EmptyPulseHandler();
             }
             if (pushHandler == null) {
-                pushHandler = new PacketHandler.EmptyPacketHandler();
+                pushHandler = new EmptyPacketHandler();
             }
             if (initializer == null) {
-                initializer = new Initializer.EmptyInitializer();
+                initializer = new EmptyInitializer();
             }
             if (callbackExecutor == null) {
                 callbackExecutor = Executors.mainThreadExecutor;

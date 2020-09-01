@@ -65,7 +65,7 @@ public class TaskHolder implements TaskManager, EventListener {
     }
 
     @Override
-    public void handlePacket(@NonNull Packet<?> packet) {
+    public void handlePacket(@NonNull Packet packet) {
         RequestTask<?> task = taskMap.get(packet.getTaskId());
         if (task != null) {
             task.onReceive(packet);

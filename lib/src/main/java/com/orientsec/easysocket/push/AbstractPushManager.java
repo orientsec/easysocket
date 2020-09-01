@@ -62,7 +62,7 @@ public abstract class AbstractPushManager<K, E> implements PushManager<K, E> {
     }
 
     @Override
-    public void handlePacket(@NonNull Packet<?> packet) {
+    public void handlePacket(@NonNull Packet packet) {
         codecExecutor.execute(() -> {
             try {
                 E event = parsePacket(packet);
@@ -76,7 +76,7 @@ public abstract class AbstractPushManager<K, E> implements PushManager<K, E> {
 
     protected abstract void onError(EasyException e);
 
-    protected abstract K eventKey(@NonNull Packet<?> packet, E event);
+    protected abstract K eventKey(@NonNull Packet packet, E event);
 
     protected synchronized void sendPushEvent(K key, E event) {
         Set<PushListener<E>> set = idListenerMap.get(key);
