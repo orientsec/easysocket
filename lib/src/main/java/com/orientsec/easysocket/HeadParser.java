@@ -2,7 +2,7 @@ package com.orientsec.easysocket;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.exception.EasyException;
+import com.orientsec.easysocket.error.EasyException;
 
 /**
  * Product: EasySocket

@@ -1,7 +1,7 @@
 package com.orientsec.easysocket.inner;
 
 import com.orientsec.easysocket.HeadParser;
-import com.orientsec.easysocket.exception.EasyException;
+import com.orientsec.easysocket.error.EasyException;
 
 import java.io.IOException;
 

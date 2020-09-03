@@ -1,21 +1,20 @@
 package com.orientsec.easysocket.inner;
 
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.ConnectionManager;
-
-import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 public class EventManager implements Handler.Callback {
-    private Set<EventListener> listeners = new HashSet<>();
+    private Set<EventListener> listeners = new CopyOnWriteArraySet<>();
     final Handler mHandler;
 
-    public EventManager() {
-        mHandler = new Handler(ConnectionManager.getInstance().getMainLooper(), this);
+    public EventManager(Looper looper) {
+        mHandler = new Handler(looper, this);
     }
 
     public void addListener(EventListener listener) {

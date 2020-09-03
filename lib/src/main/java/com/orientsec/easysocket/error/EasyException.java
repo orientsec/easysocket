@@ -1,4 +1,4 @@
-package com.orientsec.easysocket.exception;
+package com.orientsec.easysocket.error;
 
 import androidx.annotation.NonNull;
 

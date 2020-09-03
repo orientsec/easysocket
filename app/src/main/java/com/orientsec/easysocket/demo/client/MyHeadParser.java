@@ -33,8 +33,8 @@ public class MyHeadParser implements HeadParser {
 
     @Override
     @NonNull
-    public Packet<byte[]> decodePacket(@NonNull Head head, @NonNull byte[] bodyBytes) {
+    public Packet decodePacket(@NonNull Head head, @NonNull byte[] bodyBytes) {
         MyHead myHead = (MyHead) head;
-        return new Packet<>(myHead.getPacketType(), myHead.getTaskId(), bodyBytes);
+        return new Packet(myHead.getPacketType(), myHead.getTaskId(), bodyBytes);
     }
 }

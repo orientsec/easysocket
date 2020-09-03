@@ -2,9 +2,9 @@ package com.orientsec.easysocket.push;
 
 import androidx.annotation.NonNull;
 
+import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Packet;
-import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.utils.Executors;
+import com.orientsec.easysocket.error.EasyException;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.HashMap;
@@ -14,21 +14,18 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 
 public abstract class AbstractPushManager<K, E> implements PushManager<K, E> {
-    private Executor codecExecutor;
-    private Executor callbackExecutor;
+    private final Logger logger;
+    private final Executor codecExecutor;
+    private final Executor callbackExecutor;
 
-    private Map<K, Set<PushListener<E>>> idListenerMap = new HashMap<>();
+    private final Map<K, Set<PushListener<E>>> idListenerMap = new HashMap<>();
 
-    private Set<PushListener<E>> globalListenerSet = new HashSet<>();
+    private final Set<PushListener<E>> globalListenerSet = new HashSet<>();
 
-    public AbstractPushManager() {
-        codecExecutor = Executors.codecExecutor;
-        callbackExecutor = Executors.mainThreadExecutor;
-    }
-
-    public AbstractPushManager(Executor codecExecutor, Executor callbackExecutor) {
-        this.codecExecutor = codecExecutor;
-        this.callbackExecutor = callbackExecutor;
+    public AbstractPushManager(EasySocket easySocket) {
+        logger = easySocket.getLogger();
+        codecExecutor = easySocket.getCodecExecutor();
+        callbackExecutor = easySocket.getCallbackExecutor();
     }
 
     @Override
@@ -85,7 +82,7 @@ public abstract class AbstractPushManager<K, E> implements PushManager<K, E> {
                 listener.onPush(event);
             }
         } else {
-            Logger.w("No push lister registered for event: " + key);
+            logger.w("No push lister registered for event: " + key);
         }
         if (!globalListenerSet.isEmpty()) {
             for (PushListener<E> listener : globalListenerSet) {

@@ -71,4 +71,14 @@ public interface Connection extends TaskFactory {
     @Nullable
     Address getAddress();
 
+    @NonNull
+    PacketHandler getPushHandler();
+
+    /**
+     * 获取当前连接所属的EasySocket。
+     *
+     * @return EasySocket。
+     */
+    @NonNull
+    EasySocket getEasySocket();
 }

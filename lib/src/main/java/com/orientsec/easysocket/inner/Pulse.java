@@ -1,17 +1,16 @@
 package com.orientsec.easysocket.inner;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.orientsec.easysocket.Callback;
-import com.orientsec.easysocket.Connection;
-import com.orientsec.easysocket.Options;
+import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.PacketHandler;
 import com.orientsec.easysocket.PulseHandler;
 import com.orientsec.easysocket.Request;
-import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.exception.ErrorCode;
-import com.orientsec.easysocket.exception.ErrorType;
+import com.orientsec.easysocket.error.ErrorCode;
+import com.orientsec.easysocket.error.Errors;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.concurrent.Executor;
@@ -26,10 +25,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * 心跳管理器
  */
-public class Pulse implements PacketHandler {
-    private final Connection connection;
+public class Pulse implements PacketHandler, EventListener {
 
-    private final Options options;
+    private EasySocket easySocket;
 
     private final EventManager eventManager;
 
@@ -39,12 +37,14 @@ public class Pulse implements PacketHandler {
 
     private final Executor codecExecutor;
 
-    Pulse(Connection connection, Options options, EventManager eventManager) {
-        this.connection = connection;
-        this.options = options;
-        this.eventManager = eventManager;
-        this.pulseHandler = options.getPulseHandler();
-        this.codecExecutor = options.getCodecExecutor();
+    private final Logger logger;
+
+    Pulse(EasySocket easySocket) {
+        this.easySocket = easySocket;
+        eventManager = easySocket.getEventManager();
+        pulseHandler = easySocket.getPulseHandlerProvider().get(easySocket);
+        codecExecutor = easySocket.getCodecExecutor();
+        logger = easySocket.getLogger();
     }
 
     /**
@@ -54,7 +54,7 @@ public class Pulse implements PacketHandler {
         if (flag) {
             lostTimes.set(0);
         } else {
-            Logger.e("Pulse failed!");
+            logger.e("Pulse failed!");
         }
     }
 
@@ -62,7 +62,7 @@ public class Pulse implements PacketHandler {
      * 启动心跳，每一次连接建立成功后调用
      */
     void start() {
-        int rate = options.getPulseRate();
+        int rate = easySocket.getPulseRate();
         eventManager.remove(Events.PULSE);
         eventManager.publish(Events.PULSE, rate);
     }
@@ -78,13 +78,12 @@ public class Pulse implements PacketHandler {
     /**
      * 发送一次心跳, 应用从后台切换到前台，主动发送一次心跳
      */
-    void pulse() {
-        if (lostTimes.getAndAdd(1) > options.getPulseLostTimes()) {
+    private void pulse() {
+        if (lostTimes.getAndAdd(1) > easySocket.getPulseLostTimes()) {
             //心跳失败超过上限后断开连接
-            Logger.e("Pulse failed times up, connection invalid.");
-            EasyException e = new EasyException(ErrorCode.PULSE_TIME_OUT,
-                    ErrorType.CONNECT, "Pulse time out.");
-            eventManager.publish(Events.STOP, e);
+            logger.e("Pulse failed times up, connection invalid.");
+            eventManager.publish(Events.STOP,
+                    Errors.connectError(ErrorCode.PULSE_TIME_OUT, "Pulse time out."));
         } else {
             //发送心跳消息
             Callback<Boolean> callback = new Callback.EmptyCallback<Boolean>() {
@@ -93,7 +92,7 @@ public class Pulse implements PacketHandler {
                     feed(res);
                 }
             };
-            connection.buildTask(new PulseRequest(pulseHandler), callback)
+            easySocket.getConnection().buildTask(new PulseRequest(pulseHandler), callback)
                     .execute();
             start();
         }
@@ -104,6 +103,12 @@ public class Pulse implements PacketHandler {
         codecExecutor.execute(() -> feed(pulseHandler.onPulse(packet)));
     }
 
+    @Override
+    public void onEvent(int eventId, @Nullable Object object) {
+        if (eventId == Events.PULSE) {
+            pulse();
+        }
+    }
 }
 
 class PulseRequest extends Request<Boolean> {

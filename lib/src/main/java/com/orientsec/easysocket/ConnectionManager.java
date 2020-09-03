@@ -9,15 +9,17 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Bundle;
 import android.os.HandlerThread;
-import android.os.Looper;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
-import com.orientsec.easysocket.inner.EasyConnection;
-import com.orientsec.easysocket.utils.NetUtils;
+import com.orientsec.easysocket.inner.EventListener;
+import com.orientsec.easysocket.inner.EventManager;
+import com.orientsec.easysocket.inner.Events;
+import com.orientsec.easysocket.inner.RealConnection;
 
+import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
  * Product: EasySocket
@@ -28,60 +30,83 @@ import java.util.concurrent.CopyOnWriteArraySet;
  * <p>
  * 连接管理
  */
-public class ConnectionManager {
+public class ConnectionManager implements EventListener {
+    final Application application;
+    final HandlerThread handlerThread;
+    //ON_START的activity数量，大于0时应用处于前台。
     private int count;
 
-    private Application application;
+    private final Set<RealConnection> connections = new HashSet<>();
 
-    //fix ConcurrentModificationException when Iterator
-    private Set<EasyConnection> connections = new CopyOnWriteArraySet<>();
+    private final EventManager eventManager;
 
-    private final HandlerThread mHandlerThread;
-
-    private static class InstanceHolder {
-        static ConnectionManager INSTANCE = new ConnectionManager();
-    }
-
-    private ConnectionManager() {
-        mHandlerThread = new HandlerThread("EasyConnectionManager");
-        mHandlerThread.start();
-    }
-
-    @NonNull
-    public static ConnectionManager getInstance() {
-        return InstanceHolder.INSTANCE;
-    }
-
-    /**
-     * 初始化，注册Activity生命周期监听及网络状态监听
-     *
-     * @param application 应用
-     */
-    void init(@NonNull Application application) {
+    ConnectionManager(Application application) {
         this.application = application;
-        application.registerActivityLifecycleCallbacks(new EasySocketAppLifecycleListener());
-        NetworkRequest request = new NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .build();
-        ConnectivityManager cm = (ConnectivityManager) application.getSystemService(Context.CONNECTIVITY_SERVICE);
-        cm.registerNetworkCallback(request, new NetworkCallbackImpl());
-
+        handlerThread = new HandlerThread("EasyManager");
+        handlerThread.start();
+        eventManager = new EventManager(handlerThread.getLooper());
+        eventManager.addListener(this);
+        register(application);
     }
 
-    void addConnection(@NonNull EasyConnection connection) {
+    public void addConnection(@NonNull RealConnection connection) {
         connections.add(connection);
+        //应用在后台运行，将连接置于后台。
+        if (count == 0) connection.setBackground();
     }
 
-    public void removeConnection(@NonNull EasyConnection connection) {
+    public void removeConnection(@NonNull RealConnection connection) {
         connections.remove(connection);
     }
 
-    public boolean isNetworkAvailable() {
-        return NetUtils.isNetworkAvailable(application);
+    public void register(Application application) {
+        application.registerActivityLifecycleCallbacks(
+                new ConnectionManager.EasySocketAppLifecycleListener());
+        NetworkRequest request = new NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build();
+        ConnectivityManager cm
+                = (ConnectivityManager) application.getSystemService(Context.CONNECTIVITY_SERVICE);
+        cm.registerNetworkCallback(request, new ConnectionManager.NetworkCallbackImpl());
     }
 
-    public Looper getMainLooper() {
-        return mHandlerThread.getLooper();
+    @Override
+    public void onEvent(int eventId, @Nullable Object object) {
+        switch (eventId) {
+            case Events.FOREGROUND:
+                foreground();
+                break;
+            case Events.BACKGROUND:
+                background();
+                break;
+            case Events.NET_AVAILABLE:
+                networkAvailable();
+                break;
+        }
+    }
+
+    private void foreground() {
+        if (count == 0) {
+            for (RealConnection connection : connections) {
+                connection.setForeground();
+            }
+        }
+        count++;
+    }
+
+    private void background() {
+        count--;
+        if (count == 0) {
+            for (RealConnection connection : connections) {
+                connection.setBackground();
+            }
+        }
+    }
+
+    private void networkAvailable() {
+        for (RealConnection connection : connections) {
+            connection.onNetworkAvailable();
+        }
     }
 
     /**
@@ -96,12 +121,7 @@ public class ConnectionManager {
 
         @Override
         public void onActivityStarted(@NonNull Activity activity) {
-            if (count == 0) {
-                for (EasyConnection connection : connections) {
-                    connection.setForeground();
-                }
-            }
-            count++;
+            eventManager.publish(Events.FOREGROUND);
         }
 
         @Override
@@ -116,12 +136,7 @@ public class ConnectionManager {
 
         @Override
         public void onActivityStopped(@NonNull Activity activity) {
-            count--;
-            if (count == 0) {
-                for (EasyConnection connection : connections) {
-                    connection.setBackground();
-                }
-            }
+            eventManager.publish(Events.BACKGROUND);
         }
 
         @Override
@@ -145,9 +160,7 @@ public class ConnectionManager {
         @Override
         public void onAvailable(@NonNull Network network) {
             super.onAvailable(network);
-            for (EasyConnection connection : connections) {
-                connection.onNetworkAvailable();
-            }
+            eventManager.publish(Events.NET_AVAILABLE);
         }
     }
 

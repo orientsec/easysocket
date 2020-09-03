@@ -4,19 +4,19 @@ import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.Callback;
 import com.orientsec.easysocket.Connection;
-import com.orientsec.easysocket.Options;
+import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.Request;
-import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.exception.ErrorCode;
-import com.orientsec.easysocket.exception.ErrorType;
+import com.orientsec.easysocket.error.ErrorCode;
+import com.orientsec.easysocket.error.ErrorType;
+import com.orientsec.easysocket.error.Errors;
 import com.orientsec.easysocket.inner.EventManager;
 import com.orientsec.easysocket.inner.Events;
 
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -45,11 +45,10 @@ public class RequestTask<R> implements Task<R> {
     private final Executor callbackExecutor;
     private final Executor codecExecutor;
     private final EventManager eventManager;
-    private final Connection connection;
-    private final Options options;
+    private final EasySocket easySocket;
     private final Map<Integer, RequestTask<?>> taskMap;
 
-    private final LinkedBlockingQueue<Task<?>> writingQueue;
+    private final BlockingQueue<Task<?>> writingQueue;
 
     private final Queue<RequestTask<?>> waitingQueue;
     /**
@@ -70,23 +69,21 @@ public class RequestTask<R> implements Task<R> {
     RequestTask(int taskId,
                 Request<R> request,
                 Callback<R> callback,
-                Connection connection,
-                Options options,
-                EventManager eventManager,
                 Map<Integer, RequestTask<?>> taskMap,
-                LinkedBlockingQueue<Task<?>> writingQueue,
-                Queue<RequestTask<?>> waitingQueue) {
+                Queue<RequestTask<?>> waitingQueue,
+                BlockingQueue<Task<?>> writingQueue,
+                EasySocket easySocket) {
         this.request = request;
-        this.connection = connection;
-        this.eventManager = eventManager;
         this.callback = callback;
         this.taskId = taskId;
-        this.options = options;
-        this.taskMap = taskMap;
-        this.writingQueue = writingQueue;
         this.waitingQueue = waitingQueue;
-        callbackExecutor = options.getCallbackExecutor();
-        codecExecutor = options.getCodecExecutor();
+        this.writingQueue = writingQueue;
+        this.taskMap = taskMap;
+
+        this.easySocket = easySocket;
+        eventManager = easySocket.getEventManager();
+        callbackExecutor = easySocket.getCallbackExecutor();
+        codecExecutor = easySocket.getCodecExecutor();
     }
 
     @Override
@@ -141,10 +138,9 @@ public class RequestTask<R> implements Task<R> {
 
     void onStart() {
         if (isFinished()) return;
+        Connection connection = easySocket.getConnection();
         if (connection.isShutdown()) {
-            EasyException e = new EasyException(ErrorCode.SHUT_DOWN, ErrorType.SYSTEM,
-                    "Connection is show down.");
-            onError(e);
+            onError(Errors.shutdown());
         } else {
             connection.start();
             taskMap.put(taskId, this);
@@ -174,9 +170,8 @@ public class RequestTask<R> implements Task<R> {
     void onEnqueue() {
         if (!isFinished() && !writingQueue.offer(this)) {
             taskMap.remove(taskId);
-            EasyException e = new EasyException(ErrorCode.TASK_REFUSED,
-                    ErrorType.TASK, "Task queue refuse to accept task!");
-            onError(e);
+            onError(Errors.error(ErrorCode.TASK_REFUSED, ErrorType.TASK,
+                    "Task queue refuse to accept task!"));
         }
     }
 
@@ -192,7 +187,7 @@ public class RequestTask<R> implements Task<R> {
 
     void onSend() {
         if (!isFinished()) {
-            eventManager.publish(Events.TASK_TIME_OUT, this, options.getRequestTimeOut());
+            eventManager.publish(Events.TASK_TIME_OUT, this, easySocket.getRequestTimeOut());
             callbackExecutor.execute(callback::onStart);
         }
     }
@@ -235,9 +230,8 @@ public class RequestTask<R> implements Task<R> {
     void onTimeout() {
         if (!isFinished()) {
             taskMap.remove(taskId);
-            EasyException e = new EasyException(ErrorCode.RESPONSE_TIME_OUT,
-                    ErrorType.RESPONSE, "Response time out.");
-            onError(e);
+            onError(Errors.error(ErrorCode.RESPONSE_TIME_OUT,
+                    ErrorType.RESPONSE, "Response time out."));
         }
     }
 

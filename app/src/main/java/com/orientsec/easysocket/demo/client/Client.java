@@ -3,7 +3,6 @@ package com.orientsec.easysocket.demo.client;
 import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.Connection;
 import com.orientsec.easysocket.EasySocket;
-import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.demo.adapter.TaskAdapter;
 
 import java.util.ArrayList;
@@ -31,21 +30,19 @@ public class Client {
     }
 
     private Client() {
-        Options.debug = true;
         session = new Session();
         Address address = new Address("192.168.0.107", 10010);
         List<Address> addresses = new ArrayList<>();
         addresses.add(address);
-        Options options = new Options.Builder()
+        Connection connection = new EasySocket.Builder()
                 .addressList(addresses)
-                .headParser(new MyHeadParser())
-                .initializer(new MyInitializer(session))
+                .headParserProvider((it) -> new MyHeadParser())
+                .initializerProvider((it) -> new MyInitializer(it, session))
                 .requestTimeOut(6000)
                 .pulseRate(30000)
                 .connectInterval(3000)
                 .backgroundLiveTime(60000)
-                .build();
-        connection = EasySocket.open(options);
+                .open();
     }
 
     public Observable<String> request(String param) {

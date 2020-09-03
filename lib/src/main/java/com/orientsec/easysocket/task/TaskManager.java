@@ -1,7 +1,7 @@
 package com.orientsec.easysocket.task;
 
 import com.orientsec.easysocket.PacketHandler;
-import com.orientsec.easysocket.exception.EasyException;
+import com.orientsec.easysocket.error.EasyException;
 
 import java.util.concurrent.BlockingQueue;
 

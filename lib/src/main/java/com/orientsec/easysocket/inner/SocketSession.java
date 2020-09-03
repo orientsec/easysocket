@@ -1,16 +1,13 @@
 package com.orientsec.easysocket.inner;
 
 import com.orientsec.easysocket.Address;
-import com.orientsec.easysocket.Connection;
-import com.orientsec.easysocket.Options;
-import com.orientsec.easysocket.task.Task;
+import com.orientsec.easysocket.EasySocket;
+import com.orientsec.easysocket.task.TaskManager;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 
 /**
@@ -30,60 +27,33 @@ public class SocketSession implements Session {
 
     private final Executor connectExecutor;
 
-    private final BlockingQueue<Task<?>> taskQueue;
+    private final EasySocket easySocket;
 
-    private final Options options;
 
-    private final Connection connection;
+    private final Address address;
 
-    private final EventManager eventManager;
+    private final TaskManager taskManager;
 
-    SocketSession(Connection connection,
-                  Options options,
-                  EventManager eventManager,
-                  BlockingQueue<Task<?>> taskQueue) {
-        this.connection = connection;
-        this.options = options;
-        this.taskQueue = taskQueue;
-        this.eventManager = eventManager;
-        this.connectExecutor = options.getConnectExecutor();
-    }
-
-    public Address getAddress() {
-        if (!connection.isConnect()) {
-            return null;
-        }
-        Socket socket = this.socket;
-        if (socket == null) {
-            return null;
-        }
-        InetSocketAddress address = (InetSocketAddress) socket.getRemoteSocketAddress();
-        if (address == null) {
-            return null;
-        }
-        InetAddress inetAddress = address.getAddress();
-        if (inetAddress == null) {
-            return null;
-        }
-        return new Address(inetAddress.getHostAddress(), address.getPort());
-
+    SocketSession(EasySocket easySocket, RealConnection connection) {
+        this.easySocket = easySocket;
+        this.address = connection.getAddress();
+        taskManager = connection.taskManager;
+        this.connectExecutor = easySocket.getConnectExecutor();
     }
 
 
     @Override
     public void open() throws IOException {
-        Socket socket = options.getSocketFactorySupplier()
-                .get()
+        Socket socket = easySocket.getSocketFactoryProvider()
+                .get(easySocket)
                 .createSocket();
         //关闭Nagle算法,无论TCP数据报大小,立即发送
         socket.setTcpNoDelay(true);
         socket.setKeepAlive(true);
         socket.setPerformancePreferences(1, 2, 0);
-        Address address = connection.getAddress();
-        assert address != null;
         SocketAddress socketAddress
                 = new InetSocketAddress(address.getHost(), address.getPort());
-        socket.connect(socketAddress, options.getConnectTimeOut());
+        socket.connect(socketAddress, easySocket.getConnectTimeOut());
         this.socket = socket;
     }
 
@@ -106,8 +76,8 @@ public class SocketSession implements Session {
 
     @Override
     public void active() {
-        writer = new BlockingWriter(socket, eventManager, taskQueue);
-        reader = new BlockingReader(socket, options, eventManager);
+        writer = new BlockingWriter(socket, easySocket, taskManager);
+        reader = new BlockingReader(socket, easySocket);
         writer.start();
         reader.start();
     }

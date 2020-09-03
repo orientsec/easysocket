@@ -1,6 +1,6 @@
 package com.orientsec.easysocket.inner;
 
-import com.orientsec.easysocket.exception.EasyException;
+import com.orientsec.easysocket.error.EasyException;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.io.IOException;
@@ -19,19 +19,26 @@ public abstract class Looper implements Runnable {
 
     private long loopTimes = 0;
 
-    private Exception exception;
+    private String name;
+
+    private final Logger logger;
+
+    protected Looper(Logger logger) {
+        this.logger = logger;
+    }
 
     /**
      * 启动
      */
     public synchronized void start() {
         if (!stop) {
-            String threadName = getClass().getSimpleName();
-            thread = new Thread(this, threadName);
+            String name = getClass().getSimpleName();
+            this.name = name;
+            thread = new Thread(this, name);
             stop = false;
             loopTimes = 0;
             thread.start();
-            Logger.i(threadName + " is starting");
+            logger.i(name + " is starting.");
         }
     }
 
@@ -45,11 +52,10 @@ public abstract class Looper implements Runnable {
             }
         } catch (Exception e) {
             //e.printStackTrace();
-            exception = e;
+            logger.i(name + " error.", e);
         } finally {
-            this.loopFinish(exception);
-            exception = null;
-            Logger.i("Looper " + Thread.currentThread().getName() + " is shutting down");
+            logger.i(name + " is shutting down.");
+            loopFinish();
         }
     }
 
@@ -61,7 +67,7 @@ public abstract class Looper implements Runnable {
 
     protected abstract void runInLoopThread() throws IOException, EasyException;
 
-    protected abstract void loopFinish(Throwable t);
+    protected abstract void loopFinish();
 
     public synchronized void shutdown() {
         if (thread != null && !stop) {
@@ -69,11 +75,6 @@ public abstract class Looper implements Runnable {
             thread.interrupt();
             thread = null;
         }
-    }
-
-    protected synchronized void shutdownWithException(Exception e) {
-        this.exception = e;
-        shutdown();
     }
 
     public boolean isRunning() {

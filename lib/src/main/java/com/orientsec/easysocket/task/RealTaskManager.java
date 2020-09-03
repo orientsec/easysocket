@@ -4,12 +4,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.orientsec.easysocket.Callback;
-import com.orientsec.easysocket.Connection;
-import com.orientsec.easysocket.Options;
+import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.Request;
-import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.inner.EasyConnection;
+import com.orientsec.easysocket.error.EasyException;
 import com.orientsec.easysocket.inner.EventListener;
 import com.orientsec.easysocket.inner.EventManager;
 import com.orientsec.easysocket.inner.Events;
@@ -29,39 +27,36 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Author: Fredric
  * coding is art not science
  */
-public class TaskHolder implements TaskManager, EventListener {
+public class RealTaskManager implements TaskManager, EventListener {
 
     private final AtomicInteger uniqueId = new AtomicInteger(1);
 
     private final Map<Integer, RequestTask<?>> taskMap = new HashMap<>();
 
-    private final LinkedBlockingQueue<Task<?>> writingQueue = new LinkedBlockingQueue<>();
-
     private final Queue<RequestTask<?>> waitingQueue = new LinkedList<>();
 
-    private final Connection connection;
+    private final BlockingQueue<Task<?>> writingQueue = new LinkedBlockingQueue<>();
 
     private final EventManager eventManager;
 
-    private final Options options;
+    private final EasySocket easySocket;
 
-    public TaskHolder(EasyConnection connection, EventManager eventManager, Options options) {
-        this.connection = connection;
-        this.eventManager = eventManager;
-        this.options = options;
+    public RealTaskManager(EasySocket easySocket) {
+        this.easySocket = easySocket;
+        eventManager = easySocket.getEventManager();
         eventManager.addListener(this);
-    }
-
-    @Override
-    public BlockingQueue<Task<?>> taskQueue() {
-        return writingQueue;
     }
 
     @NonNull
     @Override
     public <R> Task<R> buildTask(@NonNull Request<R> request, @NonNull Callback<R> callback) {
-        return new RequestTask<>(uniqueId.getAndIncrement(), request, callback, connection,
-                options, eventManager, taskMap, writingQueue, waitingQueue);
+        return new RequestTask<>(uniqueId.getAndIncrement(), request, callback, taskMap,
+                waitingQueue, writingQueue, easySocket);
+    }
+
+    @Override
+    public BlockingQueue<Task<?>> taskQueue() {
+        return writingQueue;
     }
 
     @Override

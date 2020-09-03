@@ -1,10 +1,10 @@
 package com.orientsec.easysocket.inner;
 
-import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.exception.ErrorCode;
-import com.orientsec.easysocket.exception.ErrorType;
+import com.orientsec.easysocket.EasySocket;
+import com.orientsec.easysocket.error.ErrorCode;
+import com.orientsec.easysocket.error.Errors;
 import com.orientsec.easysocket.task.Task;
-import com.orientsec.easysocket.utils.Logger;
+import com.orientsec.easysocket.task.TaskManager;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -20,16 +20,15 @@ import java.util.concurrent.BlockingQueue;
  */
 public class BlockingWriter extends Looper implements Writer {
     private OutputStream mOutputStream;
-    private BlockingQueue<Task<?>> taskQueue;
+    private final BlockingQueue<Task<?>> taskQueue;
     private final Socket socket;
     private final EventManager eventManager;
 
-    BlockingWriter(Socket socket,
-                   EventManager eventManager,
-                   BlockingQueue<Task<?>> taskQueue) {
+    BlockingWriter(Socket socket, EasySocket easySocket, TaskManager taskManager) {
+        super(easySocket.getLogger());
         this.socket = socket;
-        this.eventManager = eventManager;
-        this.taskQueue = taskQueue;
+        this.eventManager = easySocket.getEventManager();
+        this.taskQueue = taskManager.taskQueue();
     }
 
     @Override
@@ -55,24 +54,10 @@ public class BlockingWriter extends Looper implements Writer {
     }
 
     @Override
-    protected void loopFinish(Throwable t) {
-        EasyException e;
-        if (t != null) {
-            Logger.e("Easy writer is dead.", t);
-            if (t instanceof EasyException) {
-                e = (EasyException) t;
-            } else if (t instanceof IOException) {
-                e = new EasyException(ErrorCode.WRITE_IO, ErrorType.CONNECT, t);
-            } else {
-                e = new EasyException(ErrorCode.WRIT_OTHER, ErrorType.CONNECT, t);
-            }
-        } else {
-            e = new EasyException(ErrorCode.WRITE_EXIT, ErrorType.CONNECT, "Write looper exit.");
-        }
-        synchronized (this) {
-            if (isRunning()) {
-                eventManager.publish(Events.STOP, e);
-            }
+    protected synchronized void loopFinish() {
+        if (isRunning()) {
+            eventManager.publish(Events.STOP,
+                    Errors.connectError(ErrorCode.WRITE_EXIT, "Blocking writer exit."));
         }
     }
 }

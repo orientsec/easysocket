@@ -1,12 +1,11 @@
 package com.orientsec.easysocket.inner;
 
+import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.HeadParser;
-import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
-import com.orientsec.easysocket.exception.EasyException;
-import com.orientsec.easysocket.exception.ErrorCode;
-import com.orientsec.easysocket.exception.ErrorType;
-import com.orientsec.easysocket.utils.Logger;
+import com.orientsec.easysocket.error.EasyException;
+import com.orientsec.easysocket.error.ErrorCode;
+import com.orientsec.easysocket.error.Errors;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,19 +21,19 @@ import java.net.Socket;
 public class BlockingReader extends Looper implements Reader {
     private InputStream inputStream;
 
-    private final HeadParser headParser;
+    private HeadParser headParser;
 
     private final Socket socket;
 
     private final EventManager eventManager;
 
-    private final Options options;
+    private final EasySocket easySocket;
 
-    BlockingReader(Socket socket, Options options, EventManager eventManager) {
+    BlockingReader(Socket socket, EasySocket easySocket) {
+        super(easySocket.getLogger());
         this.socket = socket;
-        this.options = options;
-        this.eventManager = eventManager;
-        this.headParser = options.getHeadParser();
+        this.easySocket = easySocket;
+        this.eventManager = easySocket.getEventManager();
     }
 
     @Override
@@ -44,18 +43,15 @@ public class BlockingReader extends Looper implements Reader {
         readInputStream(inputStream, headBytes);
         HeadParser.Head head = headParser.parseHead(headBytes);
         int bodyLength = head.getPacketSize();
-        //Logger.i("need read body length: " + bodyLength);
-        if (bodyLength > options.getMaxReadDataKB() * 1024) {
-            throw new EasyException(ErrorCode.STREAM_SIZE, ErrorType.CONNECT,
-                    "InputStream length too long:" + bodyLength);
+        if (bodyLength > easySocket.getMaxReadDataKB() * 1024) {
+            throw new IllegalStateException("Packet size too large: " + bodyLength);
         } else if (bodyLength >= 0) {
             byte[] data = new byte[bodyLength];
             readInputStream(inputStream, data);
             Packet packet = headParser.decodePacket(head, data);
             eventManager.publish(Events.ON_PACKET, packet);
         } else {
-            throw new EasyException(ErrorCode.STREAM_SIZE, ErrorType.CONNECT,
-                    "Wrong body length " + bodyLength);
+            throw new IllegalStateException("Negative packet size : " + bodyLength);
         }
     }
 
@@ -74,6 +70,7 @@ public class BlockingReader extends Looper implements Reader {
     @Override
     protected void beforeLoop() throws IOException {
         inputStream = socket.getInputStream();
+        headParser = easySocket.getHeadParserProvider().get(easySocket);
     }
 
     @Override
@@ -82,24 +79,10 @@ public class BlockingReader extends Looper implements Reader {
     }
 
     @Override
-    protected void loopFinish(Throwable t) {
-        EasyException e;
-        if (t != null) {
-            Logger.e("Easy reader is dead.", t);
-            if (t instanceof EasyException) {
-                e = (EasyException) t;
-            } else if (t instanceof IOException) {
-                e = new EasyException(ErrorCode.READ_IO, ErrorType.CONNECT, t);
-            } else {
-                e = new EasyException(ErrorCode.READ_OTHER, ErrorType.CONNECT, t);
-            }
-        } else {
-            e = new EasyException(ErrorCode.READ_EXIT, ErrorType.CONNECT, "Read looper exit.");
-        }
-        synchronized (this) {
-            if (isRunning()) {
-                eventManager.publish(Events.STOP, e);
-            }
+    protected synchronized void loopFinish() {
+        if (isRunning()) {
+            eventManager.publish(Events.STOP,
+                    Errors.connectError(ErrorCode.READ_EXIT, "Blocking reader exit."));
         }
     }
 }

@@ -2,7 +2,7 @@ package com.orientsec.easysocket.push;
 
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.PacketHandler;
-import com.orientsec.easysocket.exception.EasyException;
+import com.orientsec.easysocket.error.EasyException;
 
 /**
  * Product: EasySocket

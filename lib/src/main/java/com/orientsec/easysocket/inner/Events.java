@@ -8,14 +8,14 @@ public interface Events {
     int CONNECT_FAILED = 5;
     int AVAILABLE = 6;
 
-    int START_DELAY = 7;
-    int STOP_DELAY = 8;
+    int RESTART = 7;
+    int AUTO_STOP = 8;
 
     int ON_PACKET = 9;
 
     int NET_AVAILABLE = 10;
-    int WAKEUP = 11;
-    int SLEEP = 12;
+    int FOREGROUND = 11;
+    int BACKGROUND = 12;
 
     int PULSE = 13;
 

@@ -1,8 +1,6 @@
-package com.orientsec.easysocket.exception;
+package com.orientsec.easysocket.error;
 
 public class ErrorType {
-    //未分类错误
-    public static final String UNCLASSIFIED = "unclassified";
     /**
      * 系统断开连接。
      * app进入后台超过设置的休眠时间，连接会断开，或者主动调用shutdown

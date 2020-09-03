@@ -41,9 +41,12 @@ public enum LivePolicy {
      */
     STRONG((byte) 3);
 
+    //休眠自动断开连接
     private static final byte MASK_AUTO_DISCONNECT = 4;
-    private static final byte MASK_AUTO_CONNECT_FOR_GROUND = 1;
-    private static final byte MASK_AUTO_CONNECT_BACK_GROUND = 2;
+    //活动时自动连接
+    private static final byte MASK_AUTO_CONNECT_LIVE = 1;
+    //休眠时自动连接
+    private static final byte MASK_AUTO_CONNECT_SLEEP = 2;
 
     /**
      * 连接标识位，使用最后3位做标识。
@@ -60,15 +63,15 @@ public enum LivePolicy {
     /**
      * 是否自动连接
      *
-     * @param foreground 应用是否在前台。
+     * @param sleep 应用是否进入休眠。
      * @return 是否自动连接。
      */
-    public boolean autoConnect(boolean foreground) {
+    public boolean autoConnect(boolean sleep) {
         byte mask;
-        if (foreground) {
-            mask = MASK_AUTO_CONNECT_FOR_GROUND;
+        if (sleep) {
+            mask = MASK_AUTO_CONNECT_SLEEP;
         } else {
-            mask = MASK_AUTO_CONNECT_BACK_GROUND;
+            mask = MASK_AUTO_CONNECT_LIVE;
         }
         return (mask & flag) == mask;
     }
