@@ -2,22 +2,20 @@ package com.orientsec.easysocket.inner;
 
 public interface Events {
     int START = 1;
-    int STOP = 2;
-    int SHUTDOWN = 3;
+    int SHUTDOWN = 2;
+    int CONNECT_ERROR = 3;
     int CONNECT_SUCCESS = 4;
     int CONNECT_FAILED = 5;
     int AVAILABLE = 6;
+    int INIT_FAILED = 7;
 
-    int RESTART = 7;
-    int AUTO_STOP = 8;
+    int RESTART = 8;
 
-    int ON_PACKET = 9;
+    int ON_PACKET = 10;
 
-    int NET_AVAILABLE = 10;
-    int FOREGROUND = 11;
-    int BACKGROUND = 12;
+    int NET_AVAILABLE = 11;
 
-    int PULSE = 13;
+    int PULSE = 14;
 
     int TASK_START = -1;
     int TASK_ENQUEUE = -2;

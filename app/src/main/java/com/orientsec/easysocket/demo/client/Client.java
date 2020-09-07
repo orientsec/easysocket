@@ -18,8 +18,8 @@ import io.reactivex.Observable;
  * coding is art not science
  */
 public class Client {
-    private Connection connection;
-    private Session session;
+    final Connection connection;
+    final Session session;
 
     private static class ClientHolder {
         private static Client client = new Client();
@@ -34,14 +34,14 @@ public class Client {
         Address address = new Address("192.168.0.107", 10010);
         List<Address> addresses = new ArrayList<>();
         addresses.add(address);
-        Connection connection = new EasySocket.Builder()
+        connection = new EasySocket.Builder()
                 .addressList(addresses)
-                .headParserProvider((it) -> new MyHeadParser())
-                .initializerProvider((it) -> new MyInitializer(it, session))
+                .headParserProvider(MyHeadParser::new)
+                .initializerProvider(() -> new MyInitializer(this))
                 .requestTimeOut(6000)
                 .pulseRate(30000)
                 .connectInterval(3000)
-                .backgroundLiveTime(60000)
+                .liveTime(60000)
                 .open();
     }
 

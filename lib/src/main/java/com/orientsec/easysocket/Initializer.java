@@ -11,11 +11,3 @@ public interface Initializer {
         void fail();
     }
 }
-
-
-final class EmptyInitializer implements Initializer {
-    @Override
-    public void start(@NonNull Emitter emitter) {
-        emitter.success();
-    }
-}

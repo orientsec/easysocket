@@ -1,6 +1,9 @@
-package com.orientsec.easysocket;
+package com.orientsec.easysocket.request;
 
 import androidx.annotation.NonNull;
+
+import com.orientsec.easysocket.HeadParser;
+import com.orientsec.easysocket.Packet;
 
 /**
  * Product: EasySocket
@@ -13,7 +16,7 @@ import androidx.annotation.NonNull;
  *
  * @param <R> 返回类型
  */
-public abstract class Request<R> {
+public abstract class Request<R> implements Encoder, Decoder<R> {
     /**
      * 初始化任务。
      * 在连接可用之前，非初始化请求会进入等待状态，直到连接可用之后，
@@ -24,12 +27,22 @@ public abstract class Request<R> {
     }
 
     /**
+     * 进发送，无响应的请求。
+     *
+     * @return 是否仅发送。
+     */
+    public boolean isSendOnly() {
+        return false;
+    }
+
+    /**
      * handle output data here.
      * 对请求数据进行处理，可以进行统一的业务数据填充、校验，数据编码等。
      *
      * @return 发送的字节数组
      * @throws Exception 数据处理中的异常
      */
+    @Override
     @NonNull
     public abstract byte[] encode(int sequenceId) throws Exception;
 
@@ -42,6 +55,7 @@ public abstract class Request<R> {
      * @return 接码后的响应结果
      * @throws Exception 异常
      */
+    @Override
     @NonNull
     public abstract R decode(@NonNull Packet data) throws Exception;
 }

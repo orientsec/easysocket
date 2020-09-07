@@ -70,7 +70,7 @@ public class BlockingReader extends Looper implements Reader {
     @Override
     protected void beforeLoop() throws IOException {
         inputStream = socket.getInputStream();
-        headParser = easySocket.getHeadParserProvider().get(easySocket);
+        headParser = easySocket.getHeadParserProvider().get();
     }
 
     @Override
@@ -81,7 +81,7 @@ public class BlockingReader extends Looper implements Reader {
     @Override
     protected synchronized void loopFinish() {
         if (isRunning()) {
-            eventManager.publish(Events.STOP,
+            eventManager.publish(Events.CONNECT_ERROR,
                     Errors.connectError(ErrorCode.READ_EXIT, "Blocking reader exit."));
         }
     }

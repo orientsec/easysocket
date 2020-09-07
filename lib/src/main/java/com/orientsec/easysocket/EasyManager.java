@@ -13,13 +13,13 @@ import android.os.HandlerThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.orientsec.easysocket.inner.AbstractConnection;
 import com.orientsec.easysocket.inner.EventListener;
 import com.orientsec.easysocket.inner.EventManager;
 import com.orientsec.easysocket.inner.Events;
-import com.orientsec.easysocket.inner.RealConnection;
 
-import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
  * Product: EasySocket
@@ -30,17 +30,19 @@ import java.util.Set;
  * <p>
  * 连接管理
  */
-public class ConnectionManager implements EventListener {
+public class EasyManager implements EventListener {
     final Application application;
     final HandlerThread handlerThread;
     //ON_START的activity数量，大于0时应用处于前台。
     private int count;
 
-    private final Set<RealConnection> connections = new HashSet<>();
+    private final Set<AbstractConnection> connections = new CopyOnWriteArraySet<>();
 
     private final EventManager eventManager;
 
-    ConnectionManager(Application application) {
+    private volatile long backgroundTimestamp;
+
+    EasyManager(Application application) {
         this.application = application;
         handlerThread = new HandlerThread("EasyManager");
         handlerThread.start();
@@ -49,47 +51,35 @@ public class ConnectionManager implements EventListener {
         register(application);
     }
 
-    public void addConnection(@NonNull RealConnection connection) {
+    public void addConnection(@NonNull AbstractConnection connection) {
         connections.add(connection);
-        //应用在后台运行，将连接置于后台。
-        if (count == 0) connection.setBackground();
     }
 
-    public void removeConnection(@NonNull RealConnection connection) {
+    public void removeConnection(@NonNull AbstractConnection connection) {
         connections.remove(connection);
     }
 
     public void register(Application application) {
         application.registerActivityLifecycleCallbacks(
-                new ConnectionManager.EasySocketAppLifecycleListener());
+                new EasyManager.EasySocketAppLifecycleListener());
         NetworkRequest request = new NetworkRequest.Builder()
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 .build();
         ConnectivityManager cm
                 = (ConnectivityManager) application.getSystemService(Context.CONNECTIVITY_SERVICE);
-        cm.registerNetworkCallback(request, new ConnectionManager.NetworkCallbackImpl());
+        cm.registerNetworkCallback(request, new EasyManager.NetworkCallbackImpl());
     }
 
     @Override
     public void onEvent(int eventId, @Nullable Object object) {
-        switch (eventId) {
-            case Events.FOREGROUND:
-                foreground();
-                break;
-            case Events.BACKGROUND:
-                background();
-                break;
-            case Events.NET_AVAILABLE:
-                networkAvailable();
-                break;
+        if (eventId == Events.NET_AVAILABLE) {
+            networkAvailable();
         }
     }
 
     private void foreground() {
         if (count == 0) {
-            for (RealConnection connection : connections) {
-                connection.setForeground();
-            }
+            backgroundTimestamp = 0;
         }
         count++;
     }
@@ -97,14 +87,16 @@ public class ConnectionManager implements EventListener {
     private void background() {
         count--;
         if (count == 0) {
-            for (RealConnection connection : connections) {
-                connection.setBackground();
-            }
+            backgroundTimestamp = System.currentTimeMillis();
         }
     }
 
+    public long getBackgroundTimestamp() {
+        return backgroundTimestamp;
+    }
+
     private void networkAvailable() {
-        for (RealConnection connection : connections) {
+        for (AbstractConnection connection : connections) {
             connection.onNetworkAvailable();
         }
     }
@@ -121,22 +113,20 @@ public class ConnectionManager implements EventListener {
 
         @Override
         public void onActivityStarted(@NonNull Activity activity) {
-            eventManager.publish(Events.FOREGROUND);
+            foreground();
         }
 
         @Override
         public void onActivityResumed(@NonNull Activity activity) {
-
         }
 
         @Override
         public void onActivityPaused(@NonNull Activity activity) {
-
         }
 
         @Override
         public void onActivityStopped(@NonNull Activity activity) {
-            eventManager.publish(Events.BACKGROUND);
+            background();
         }
 
         @Override
@@ -148,9 +138,7 @@ public class ConnectionManager implements EventListener {
         public void onActivityDestroyed(@NonNull Activity activity) {
 
         }
-
     }
-
 
     /**
      * 网络状态的广播监听

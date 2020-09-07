@@ -3,6 +3,7 @@ package com.orientsec.easysocket;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.orientsec.easysocket.push.PushManager;
 import com.orientsec.easysocket.task.TaskFactory;
 
 /**
@@ -14,14 +15,9 @@ import com.orientsec.easysocket.task.TaskFactory;
  */
 public interface Connection extends TaskFactory {
     /**
-     * 启动连接, 如果连接以经启动，无效果。
+     * 启动连接, 如果连接已经启动，无效果。
      */
     void start();
-
-    /**
-     * 停止当前连接。
-     */
-    void stop();
 
     /**
      * 关闭连接, 连接关闭之后不再可用。
@@ -50,6 +46,14 @@ public interface Connection extends TaskFactory {
     boolean isAvailable();
 
     /**
+     * 获取当前连接站点信息
+     *
+     * @return 当前连接站点信息
+     */
+    @Nullable
+    Address getAddress();
+
+    /**
      * 添加连接事件监听器
      *
      * @param listener 监听器
@@ -64,15 +68,12 @@ public interface Connection extends TaskFactory {
     void removeConnectEventListener(@NonNull ConnectEventListener listener);
 
     /**
-     * 获取当前连接站点信息
+     * 获取推送管理器
      *
-     * @return 当前连接站点信息
+     * @return 推送管理器。
      */
-    @Nullable
-    Address getAddress();
-
     @NonNull
-    PacketHandler getPushHandler();
+    PushManager<?, ?> getPushManager();
 
     /**
      * 获取当前连接所属的EasySocket。

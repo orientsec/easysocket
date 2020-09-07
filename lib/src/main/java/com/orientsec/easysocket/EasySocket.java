@@ -7,6 +7,9 @@ import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.inner.EventManager;
 import com.orientsec.easysocket.inner.RealConnection;
+import com.orientsec.easysocket.push.PushManager;
+import com.orientsec.easysocket.request.Decoder;
+import com.orientsec.easysocket.request.Request;
 import com.orientsec.easysocket.utils.AndroidLogger;
 import com.orientsec.easysocket.utils.Executors;
 import com.orientsec.easysocket.utils.Logger;
@@ -28,7 +31,7 @@ import javax.net.SocketFactory;
 
 public class EasySocket {
 
-    private static ConnectionManager connectionManager;
+    private static EasyManager easyManager;
 
 
     /**
@@ -38,8 +41,8 @@ public class EasySocket {
      * @param application 应用上下文
      */
     public synchronized static void init(@NonNull Application application) {
-        if (connectionManager == null) {
-            connectionManager = new ConnectionManager(application);
+        if (easyManager == null) {
+            easyManager = new EasyManager(application);
         }
     }
 
@@ -51,9 +54,13 @@ public class EasySocket {
     private String name;
 
     /**
-     * 心跳处理器
+     * 心跳解码器
      */
-    private Provider<PulseHandler> pulseHandlerProvider;
+    private Provider<Decoder<?>> pulseDecoderProvider;
+    /**
+     * 心跳请求
+     */
+    private Provider<Request<?>> pulseRequestProvider;
     /**
      * 站点信息
      */
@@ -69,7 +76,7 @@ public class EasySocket {
     /**
      * 推送消息处理器
      */
-    private Provider<PacketHandler> pushHandlerProvider;
+    private Provider<PushManager<?, ?>> pushManagerProvider;
     /**
      * 连接初始化
      */
@@ -118,7 +125,7 @@ public class EasySocket {
     /**
      * 后台存活时间
      */
-    private int backgroundLiveTime;
+    private int liveTime;
 
     /**
      * 后台策略
@@ -152,18 +159,19 @@ public class EasySocket {
         connectTimeOut = builder.connectTimeOut;
         pulseRate = builder.pulseRate;
         pulseLostTimes = builder.pulseLostTimes;
-        backgroundLiveTime = builder.backgroundLiveTime;
+        liveTime = builder.liveTime;
         livePolicy = builder.livePolicy;
         retryTimes = builder.retryTimes;
         connectInterval = builder.connectInterval;
         addressProvider = builder.addressProvider;
         headParserProvider = builder.headParserProvider;
         initializerProvider = builder.initializerProvider;
-        pulseHandlerProvider = builder.pulseHandlerProvider;
-        pushHandlerProvider = builder.pushHandlerProvider;
+        pulseRequestProvider = builder.pulseRequestProvider;
+        pulseDecoderProvider = builder.pulseDecoderProvider;
+        pushManagerProvider = builder.pushManagerProvider;
         socketFactoryProvider = builder.socketFactoryProvider;
 
-        eventManager = new EventManager(connectionManager.handlerThread.getLooper());
+        eventManager = new EventManager(easyManager.handlerThread.getLooper());
         if (debug) {
             logger = new AndroidLogger(name);
         } else {
@@ -207,8 +215,8 @@ public class EasySocket {
         return pulseLostTimes;
     }
 
-    public int getBackgroundLiveTime() {
-        return backgroundLiveTime;
+    public int getLiveTime() {
+        return liveTime;
     }
 
     public LivePolicy getLivePolicy() {
@@ -227,8 +235,12 @@ public class EasySocket {
         return connectInterval;
     }
 
-    public Provider<PulseHandler> getPulseHandlerProvider() {
-        return pulseHandlerProvider;
+    public Provider<Request<?>> getPulseRequestProvider() {
+        return pulseRequestProvider;
+    }
+
+    public Provider<Decoder<?>> getPulseDecoderProvider() {
+        return pulseDecoderProvider;
     }
 
     public Provider<List<Address>> getAddressProvider() {
@@ -243,29 +255,28 @@ public class EasySocket {
         return headParserProvider;
     }
 
-    public Provider<PacketHandler> getPushHandlerProvider() {
-        return pushHandlerProvider;
+    public Provider<PushManager<?, ?>> getPushManagerProvider() {
+        return pushManagerProvider;
     }
 
     public Provider<Initializer> getInitializerProvider() {
         return initializerProvider;
     }
 
-
     public Logger getLogger() {
         return logger;
     }
 
     public Context getContext() {
-        return connectionManager.application;
+        return easyManager.application;
     }
 
     public EventManager getEventManager() {
         return eventManager;
     }
 
-    public ConnectionManager getConnectionManager() {
-        return connectionManager;
+    public EasyManager getEasyManager() {
+        return easyManager;
     }
 
     /**
@@ -293,11 +304,12 @@ public class EasySocket {
     public static final class Builder {
         private String name = "";
         private boolean debug;
-        private Provider<PulseHandler> pulseHandlerProvider;
+        private Provider<Request<?>> pulseRequestProvider;
+        private Provider<Decoder<?>> pulseDecoderProvider;
         private Provider<List<Address>> addressProvider;
         private Provider<SocketFactory> socketFactoryProvider;
         private Provider<HeadParser> headParserProvider;
-        private Provider<PacketHandler> pushHandlerProvider;
+        private Provider<PushManager<?, ?>> pushManagerProvider;
         private Provider<Initializer> initializerProvider;
         private Executor callbackExecutor;
         private Executor connectExecutor;
@@ -307,7 +319,7 @@ public class EasySocket {
         private int connectTimeOut = 5000;
         private int pulseRate = 60 * 1000;
         private int pulseLostTimes = 2;
-        private int backgroundLiveTime = 30 * 1000;
+        private int liveTime = 30 * 1000;
         private LivePolicy livePolicy = LivePolicy.DEFAULT;
         private int retryTimes;
         private int connectInterval = 3000;
@@ -325,8 +337,13 @@ public class EasySocket {
             return this;
         }
 
-        public Builder pulseHandlerProvider(@NonNull Provider<PulseHandler> val) {
-            pulseHandlerProvider = val;
+        public Builder pulseRequestProvider(@NonNull Provider<Request<?>> val) {
+            pulseRequestProvider = val;
+            return this;
+        }
+
+        public Builder pulseDecoderProvider(@NonNull Provider<Decoder<?>> val) {
+            pulseDecoderProvider = val;
             return this;
         }
 
@@ -345,8 +362,8 @@ public class EasySocket {
             return this;
         }
 
-        public Builder pushHandlerProvider(@NonNull Provider<PacketHandler> val) {
-            pushHandlerProvider = val;
+        public Builder pushManagerProvider(@NonNull Provider<PushManager<?, ?>> val) {
+            pushManagerProvider = val;
             return this;
         }
 
@@ -400,8 +417,8 @@ public class EasySocket {
             return this;
         }
 
-        public Builder backgroundLiveTime(int val) {
-            backgroundLiveTime = val;
+        public Builder liveTime(int val) {
+            liveTime = val;
             return this;
         }
 
@@ -422,7 +439,7 @@ public class EasySocket {
 
         @NonNull
         public EasySocket build() {
-            if (connectionManager == null) {
+            if (easyManager == null) {
                 throw new IllegalStateException("EasySocket is not initialize.");
             }
             String error = checkParams();
@@ -459,8 +476,8 @@ public class EasySocket {
             if (pulseLostTimes < 0) {
                 return "Pulse lost time is negative.";
             }
-            if (backgroundLiveTime <= 15 * 1000) {
-                return "Background live time must big than 15s.";
+            if (liveTime < 0) {
+                return "Live time must be positive.";
             }
             if (retryTimes < 0) {
                 return "Retry time is negative.";
@@ -471,11 +488,14 @@ public class EasySocket {
             if (socketFactoryProvider == null) {
                 socketFactoryProvider = new DefaultSocketFactoryProvider();
             }
-            if (pulseHandlerProvider == null) {
-                pulseHandlerProvider = new DefaultPulseHandlerProvider();
+            if (pulseRequestProvider == null) {
+                pulseRequestProvider = new DefaultPulseRequestProvider();
             }
-            if (pushHandlerProvider == null) {
-                pushHandlerProvider = new DefaultPacketHandlerProvider();
+            if (pulseDecoderProvider == null) {
+                pulseDecoderProvider = new DefaultPulseDecoderProvider();
+            }
+            if (pushManagerProvider == null) {
+                pushManagerProvider = new DefaultPushManagerProvider();
             }
             if (initializerProvider == null) {
                 initializerProvider = new DefaultInitializerProvider();

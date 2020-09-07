@@ -56,7 +56,7 @@ public class BlockingWriter extends Looper implements Writer {
     @Override
     protected synchronized void loopFinish() {
         if (isRunning()) {
-            eventManager.publish(Events.STOP,
+            eventManager.publish(Events.CONNECT_ERROR,
                     Errors.connectError(ErrorCode.WRITE_EXIT, "Blocking writer exit."));
         }
     }

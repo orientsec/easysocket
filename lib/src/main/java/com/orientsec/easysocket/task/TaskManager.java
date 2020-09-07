@@ -31,6 +31,6 @@ public interface TaskManager extends PacketHandler, TaskFactory {
     /**
      * 启动任务管理器。在完成资源初始化、登录之后，连接连接准备就绪，进入可用状态。
      */
-    void start();
+    void ready();
 
 }

@@ -4,7 +4,7 @@ package com.orientsec.easysocket.demo.client;
 import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.Packet;
-import com.orientsec.easysocket.Request;
+import com.orientsec.easysocket.request.Request;
 
 import java.nio.ByteBuffer;
 

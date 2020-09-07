@@ -1,4 +1,4 @@
-package com.orientsec.easysocket;
+package com.orientsec.easysocket.request;
 
 import androidx.annotation.NonNull;
 
@@ -16,7 +16,7 @@ public interface Callback<R> {
     /**
      * 请求开始执行回调
      */
-    void onStart();
+    void onSend();
 
     /**
      * 成功回调
@@ -40,7 +40,7 @@ public interface Callback<R> {
     class EmptyCallback<R> implements Callback<R> {
 
         @Override
-        public void onStart() {
+        public void onSend() {
 
         }
 

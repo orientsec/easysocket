@@ -1,7 +1,7 @@
 package com.orientsec.easysocket.demo.adapter;
 
 import com.orientsec.easysocket.Connection;
-import com.orientsec.easysocket.Request;
+import com.orientsec.easysocket.request.Request;
 import com.orientsec.easysocket.task.Task;
 
 import io.reactivex.Observable;

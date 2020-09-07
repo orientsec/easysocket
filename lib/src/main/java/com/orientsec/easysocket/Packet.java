@@ -4,6 +4,7 @@ package com.orientsec.easysocket;
 import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.inner.PacketType;
+import com.orientsec.easysocket.request.Request;
 
 
 /**

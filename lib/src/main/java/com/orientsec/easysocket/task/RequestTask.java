@@ -2,16 +2,17 @@ package com.orientsec.easysocket.task;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.Callback;
 import com.orientsec.easysocket.Connection;
 import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Packet;
-import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.error.ErrorCode;
 import com.orientsec.easysocket.error.ErrorType;
 import com.orientsec.easysocket.error.Errors;
 import com.orientsec.easysocket.inner.EventManager;
 import com.orientsec.easysocket.inner.Events;
+import com.orientsec.easysocket.request.Callback;
+import com.orientsec.easysocket.request.PulseRequest;
+import com.orientsec.easysocket.request.Request;
 
 import java.util.Map;
 import java.util.Queue;
@@ -27,7 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * coding is art not science
  */
 
-public class RequestTask<R> implements Task<R> {
+public class RequestTask<R extends T, T> implements Task<R> {
     protected enum State {
         //收到响应
         SUCCESS,
@@ -41,16 +42,16 @@ public class RequestTask<R> implements Task<R> {
     private final AtomicBoolean executed = new AtomicBoolean();
     private volatile State state;
     private final Request<R> request;
-    private final Callback<R> callback;
+    private final Callback<T> callback;
     private final Executor callbackExecutor;
     private final Executor codecExecutor;
     private final EventManager eventManager;
     private final EasySocket easySocket;
-    private final Map<Integer, RequestTask<?>> taskMap;
+    private final Map<Integer, RequestTask<?, ?>> taskMap;
 
     private final BlockingQueue<Task<?>> writingQueue;
 
-    private final Queue<RequestTask<?>> waitingQueue;
+    private final Queue<RequestTask<?, ?>> waitingQueue;
     /**
      * 每一个任务的id是唯一的，通过taskId，客户端可以匹配每个请求的返回
      */
@@ -68,9 +69,9 @@ public class RequestTask<R> implements Task<R> {
 
     RequestTask(int taskId,
                 Request<R> request,
-                Callback<R> callback,
-                Map<Integer, RequestTask<?>> taskMap,
-                Queue<RequestTask<?>> waitingQueue,
+                Callback<T> callback,
+                Map<Integer, RequestTask<?, ?>> taskMap,
+                Queue<RequestTask<?, ?>> waitingQueue,
                 BlockingQueue<Task<?>> writingQueue,
                 EasySocket easySocket) {
         this.request = request;
@@ -141,6 +142,11 @@ public class RequestTask<R> implements Task<R> {
         Connection connection = easySocket.getConnection();
         if (connection.isShutdown()) {
             onError(Errors.shutdown());
+        } else if (request instanceof PulseRequest) {
+            if (connection.isAvailable()) {
+                taskMap.put(taskId, this);
+                onEncode();
+            }
         } else {
             connection.start();
             taskMap.put(taskId, this);
@@ -187,8 +193,14 @@ public class RequestTask<R> implements Task<R> {
 
     void onSend() {
         if (!isFinished()) {
-            eventManager.publish(Events.TASK_TIME_OUT, this, easySocket.getRequestTimeOut());
-            callbackExecutor.execute(callback::onStart);
+            if (request.isSendOnly()) {
+                //仅发送请求，发送成功后直接进入SUCCESS状态。
+                taskMap.remove(taskId);
+                state = State.SUCCESS;
+            } else {
+                eventManager.publish(Events.TASK_TIME_OUT, this, easySocket.getRequestTimeOut());
+            }
+            callbackExecutor.execute(callback::onSend);
         }
     }
 

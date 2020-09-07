@@ -1,16 +1,16 @@
 package com.orientsec.easysocket.inner;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
-import com.orientsec.easysocket.Callback;
 import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.PacketHandler;
-import com.orientsec.easysocket.PulseHandler;
-import com.orientsec.easysocket.Request;
 import com.orientsec.easysocket.error.ErrorCode;
 import com.orientsec.easysocket.error.Errors;
+import com.orientsec.easysocket.request.Callback;
+import com.orientsec.easysocket.request.Decoder;
+import com.orientsec.easysocket.request.PulseRequest;
+import com.orientsec.easysocket.request.Request;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.concurrent.Executor;
@@ -25,13 +25,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * 心跳管理器
  */
-public class Pulse implements PacketHandler, EventListener {
+public class Pulse implements PacketHandler {
 
     private EasySocket easySocket;
 
     private final EventManager eventManager;
-
-    private final PulseHandler pulseHandler;
 
     private final AtomicInteger lostTimes = new AtomicInteger();
 
@@ -42,7 +40,6 @@ public class Pulse implements PacketHandler, EventListener {
     Pulse(EasySocket easySocket) {
         this.easySocket = easySocket;
         eventManager = easySocket.getEventManager();
-        pulseHandler = easySocket.getPulseHandlerProvider().get(easySocket);
         codecExecutor = easySocket.getCodecExecutor();
         logger = easySocket.getLogger();
     }
@@ -50,12 +47,8 @@ public class Pulse implements PacketHandler, EventListener {
     /**
      * 喂狗
      */
-    private void feed(boolean flag) {
-        if (flag) {
-            lostTimes.set(0);
-        } else {
-            logger.e("Pulse failed!");
-        }
+    private void feed() {
+        lostTimes.set(0);
     }
 
     /**
@@ -76,57 +69,48 @@ public class Pulse implements PacketHandler, EventListener {
     }
 
     /**
-     * 发送一次心跳, 应用从后台切换到前台，主动发送一次心跳
+     * 发送一次心跳。
      */
-    private void pulse() {
+    void pulse() {
         if (lostTimes.getAndAdd(1) > easySocket.getPulseLostTimes()) {
             //心跳失败超过上限后断开连接
             logger.e("Pulse failed times up, connection invalid.");
-            eventManager.publish(Events.STOP,
+            eventManager.publish(Events.CONNECT_ERROR,
                     Errors.connectError(ErrorCode.PULSE_TIME_OUT, "Pulse time out."));
         } else {
-            //发送心跳消息
-            Callback<Boolean> callback = new Callback.EmptyCallback<Boolean>() {
-                @Override
-                public void onSuccess(@NonNull Boolean res) {
-                    feed(res);
-                }
-            };
-            easySocket.getConnection().buildTask(new PulseRequest(pulseHandler), callback)
+            Request<?> request = easySocket.getPulseRequestProvider().get();
+            Request<?> pulseRequest = new PulseRequest<>(request);
+            easySocket.getConnection()
+                    .buildTask(pulseRequest, callback)
                     .execute();
             start();
         }
     }
 
+    //发送心跳消息
+    Callback<Object> callback = new Callback.EmptyCallback<Object>() {
+        @Override
+        public void onSuccess(@NonNull Object res) {
+            feed();
+        }
+
+        @Override
+        public void onError(@NonNull Exception e) {
+            logger.e("Client pulse failed!", e);
+        }
+    };
+
     @Override
     public void handlePacket(@NonNull Packet packet) {
-        codecExecutor.execute(() -> feed(pulseHandler.onPulse(packet)));
+        codecExecutor.execute(() -> {
+            try {
+                Decoder<?> decoder = easySocket.getPulseDecoderProvider().get();
+                decoder.decode(packet);
+                feed();
+            } catch (Exception e) {
+                logger.e("Server pulse failed!", e);
+            }
+        });
     }
 
-    @Override
-    public void onEvent(int eventId, @Nullable Object object) {
-        if (eventId == Events.PULSE) {
-            pulse();
-        }
-    }
-}
-
-class PulseRequest extends Request<Boolean> {
-    private PulseHandler pulseHandler;
-
-    PulseRequest(PulseHandler pulseHandler) {
-        this.pulseHandler = pulseHandler;
-    }
-
-    @Override
-    @NonNull
-    public byte[] encode(int sequenceId) {
-        return pulseHandler.pulseData(sequenceId);
-    }
-
-    @Override
-    @NonNull
-    public Boolean decode(@NonNull Packet packet) {
-        return pulseHandler.onPulse(packet);
-    }
 }

@@ -2,7 +2,7 @@ package com.orientsec.easysocket.task;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.Request;
+import com.orientsec.easysocket.request.Request;
 
 /**
  * Product: EasySocket

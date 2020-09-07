@@ -30,7 +30,7 @@ public abstract class AbstractPushManager<K, E> implements PushManager<K, E> {
 
     @Override
     public synchronized void registerPushListener
-            (K key, PushListener<E> pushListener) {
+            (@NonNull K key, @NonNull PushListener<E> pushListener) {
         Set<PushListener<E>> set = idListenerMap.get(key);
         if (set == null) {
             set = new HashSet<>();
@@ -41,7 +41,7 @@ public abstract class AbstractPushManager<K, E> implements PushManager<K, E> {
 
     @Override
     public synchronized void unregisterPushListener
-            (K key, PushListener<E> pushListener) {
+            (@NonNull K key, @NonNull PushListener<E> pushListener) {
         Set<PushListener<E>> set = idListenerMap.get(key);
         if (set != null) {
             set.remove(pushListener);
@@ -49,12 +49,12 @@ public abstract class AbstractPushManager<K, E> implements PushManager<K, E> {
     }
 
     @Override
-    public void registerPushLister(PushListener<E> pushListener) {
+    public void registerPushLister(@NonNull PushListener<E> pushListener) {
         globalListenerSet.add(pushListener);
     }
 
     @Override
-    public void unregisterPushListener(PushListener<E> pushListener) {
+    public void unregisterPushListener(@NonNull PushListener<E> pushListener) {
         globalListenerSet.remove(pushListener);
     }
 

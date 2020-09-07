@@ -3,7 +3,7 @@ package com.orientsec.easysocket.demo.adapter;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.Callback;
+import com.orientsec.easysocket.request.Callback;
 import com.orientsec.easysocket.task.Task;
 
 import io.reactivex.Observable;
@@ -28,7 +28,7 @@ class TaskObservable<R> extends Observable<R> implements Callback<R> {
     }
 
     @Override
-    public void onStart() {
+    public void onSend() {
 
     }
 

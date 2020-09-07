@@ -2,7 +2,9 @@ package com.orientsec.easysocket.inner;
 
 import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.EasySocket;
+import com.orientsec.easysocket.Initializer;
 import com.orientsec.easysocket.task.TaskManager;
+import com.orientsec.easysocket.utils.Logger;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -17,7 +19,7 @@ import java.util.concurrent.Executor;
  * Author: Fredric
  * coding is art not science
  */
-public class SocketSession implements Session {
+public class SocketSession implements Session, Initializer.Emitter {
 
     private Socket socket;
 
@@ -29,23 +31,28 @@ public class SocketSession implements Session {
 
     private final EasySocket easySocket;
 
+    private final EventManager eventManager;
 
     private final Address address;
 
     private final TaskManager taskManager;
 
-    SocketSession(EasySocket easySocket, RealConnection connection) {
+    private final Logger logger;
+
+    SocketSession(EasySocket easySocket, Address address, TaskManager taskManager) {
         this.easySocket = easySocket;
-        this.address = connection.getAddress();
-        taskManager = connection.taskManager;
-        this.connectExecutor = easySocket.getConnectExecutor();
+        this.address = address;
+        this.taskManager = taskManager;
+        eventManager = easySocket.getEventManager();
+        connectExecutor = easySocket.getConnectExecutor();
+        logger = easySocket.getLogger();
     }
 
 
     @Override
     public void open() throws IOException {
         Socket socket = easySocket.getSocketFactoryProvider()
-                .get(easySocket)
+                .get()
                 .createSocket();
         //关闭Nagle算法,无论TCP数据报大小,立即发送
         socket.setTcpNoDelay(true);
@@ -75,7 +82,22 @@ public class SocketSession implements Session {
     }
 
     @Override
+    public void success() {
+        eventManager.publish(Events.AVAILABLE, this);
+    }
+
+    @Override
+    public void fail() {
+        logger.e("Initialize failed.");
+        eventManager.publish(Events.INIT_FAILED, this);
+    }
+
+    @Override
     public void active() {
+        //连接后进行一些前置操作，例如资源初始化
+        easySocket.getInitializerProvider()
+                .get()
+                .start(this);
         writer = new BlockingWriter(socket, easySocket, taskManager);
         reader = new BlockingReader(socket, easySocket);
         writer.start();

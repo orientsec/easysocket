@@ -2,8 +2,8 @@ package com.orientsec.easysocket.task;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.Callback;
-import com.orientsec.easysocket.Request;
+import com.orientsec.easysocket.request.Callback;
+import com.orientsec.easysocket.request.Request;
 
 public interface TaskFactory {
     /**
@@ -14,5 +14,5 @@ public interface TaskFactory {
      * @return 可执行任务。
      */
     @NonNull
-    <R> Task<R> buildTask(@NonNull Request<R> request, @NonNull Callback<R> callback);
+    <R extends T, T> Task<R> buildTask(@NonNull Request<R> request, @NonNull Callback<T> callback);
 }

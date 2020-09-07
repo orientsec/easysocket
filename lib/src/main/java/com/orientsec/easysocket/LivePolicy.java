@@ -10,39 +10,26 @@ package com.orientsec.easysocket;
 public enum LivePolicy {
 
     /**
-     * 弱连接策略。二进制位（0000 0100）
-     * 1.前台无自动重连；
-     * 2.后台无自动重连；
-     * 3.进入休眠，自动断开连接。
+     * 弱连接策略。二进制位（0000 0000）
+     * 1.活动无自动重连；
+     * 2.休眠无自动重连。
      */
     WEAK((byte) 4),
 
     /**
-     * 软连接策略。二进制位（0000 0101）
-     * 1.前台自动重连；
-     * 2.后台无自动重连；
-     * 3.进入休眠，自动断开连接。
-     */
-    SOFT((byte) 5),
-
-    /**
      * 默认策略。二进制位（0000 0001）
-     * 1.前台自动重连；
-     * 2.后台无自动重连；
-     * 3.进入休眠，不自动断开连接。
+     * 1.活动自动重连；
+     * 2.休眠无自动重连。
      */
     DEFAULT((byte) 1),
 
     /**
      * 强连接策略。二进制位（0000 0011）
-     * 1.前台自动重连；
-     * 2.后台自动重连；
-     * 3.进入休眠，不自动断开连接。
+     * 1.活动自动重连；
+     * 2.休眠自动重连。
      */
     STRONG((byte) 3);
 
-    //休眠自动断开连接
-    private static final byte MASK_AUTO_DISCONNECT = 4;
     //活动时自动连接
     private static final byte MASK_AUTO_CONNECT_LIVE = 1;
     //休眠时自动连接
@@ -50,9 +37,8 @@ public enum LivePolicy {
 
     /**
      * 连接标识位，使用最后3位做标识。
-     * 第一位标识前台是否自动重连；
-     * 第二位标识后台是否自动重连；
-     * 第三位标识休眠后是否自动断开连接。
+     * 第一位标识活动时是否自动重连；
+     * 第二位标识休眠时是否自动重连；
      */
     final byte flag;
 
@@ -63,25 +49,17 @@ public enum LivePolicy {
     /**
      * 是否自动连接
      *
-     * @param sleep 应用是否进入休眠。
+     * @param active 应用是否活跃。
      * @return 是否自动连接。
      */
-    public boolean autoConnect(boolean sleep) {
+    public boolean autoConnect(boolean active) {
         byte mask;
-        if (sleep) {
-            mask = MASK_AUTO_CONNECT_SLEEP;
-        } else {
+        if (active) {
             mask = MASK_AUTO_CONNECT_LIVE;
+        } else {
+            mask = MASK_AUTO_CONNECT_SLEEP;
         }
         return (mask & flag) == mask;
     }
 
-    /**
-     * 是否自动断开连接
-     *
-     * @return 是否自动断开连接。
-     */
-    public boolean autoDisconnect() {
-        return (MASK_AUTO_DISCONNECT & flag) == MASK_AUTO_DISCONNECT;
-    }
 }

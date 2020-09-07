@@ -1,8 +1,6 @@
 package com.orientsec.easysocket.error;
 
 public class ErrorCode {
-    //休眠
-    public static final int SLEEP = 1;
     //关闭
     public static final int SHUT_DOWN = 2;
     //心跳超时
@@ -17,8 +15,6 @@ public class ErrorCode {
     public static final int READ_EXIT = 7;
     //Writer exit
     public static final int WRITE_EXIT = 8;
-    //断开连接
-    public static final int MANUAL_STOP = 9;
     //初始化失败
     public static final int INIT_FAILED = 10;
 }
