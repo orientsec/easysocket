@@ -17,8 +17,7 @@ package com.orientsec.easysocket.inner;
  * AVAILABLE 连接可用
  * AVAILABLE -> IDLE (连接断开)
  * <p>
- * SHUTDOWN 关闭，关闭之后连接不再可用。
  */
 enum State {
-    IDLE, STARTING, CONNECT, AVAILABLE, SHUTDOWN
+    IDLE, STARTING, CONNECT, AVAILABLE, DETACH
 }

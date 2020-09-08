@@ -73,6 +73,7 @@ public class RequestTask<R extends T, T> implements Task<R> {
                 Map<Integer, RequestTask<?, ?>> taskMap,
                 Queue<RequestTask<?, ?>> waitingQueue,
                 BlockingQueue<Task<?>> writingQueue,
+                EventManager eventManager,
                 EasySocket easySocket) {
         this.request = request;
         this.callback = callback;
@@ -81,8 +82,8 @@ public class RequestTask<R extends T, T> implements Task<R> {
         this.writingQueue = writingQueue;
         this.taskMap = taskMap;
 
+        this.eventManager = eventManager;
         this.easySocket = easySocket;
-        eventManager = easySocket.getEventManager();
         callbackExecutor = easySocket.getCallbackExecutor();
         codecExecutor = easySocket.getCodecExecutor();
     }

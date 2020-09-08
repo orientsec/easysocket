@@ -1,8 +1,10 @@
 package com.orientsec.easysocket.error;
 
 public class ErrorCode {
+    //停止
+    public static final int STOP = 1;
     //关闭
-    public static final int SHUT_DOWN = 2;
+    public static final int SHUTDOWN = 2;
     //心跳超时
     public static final int PULSE_TIME_OUT = 3;
     //socket连接

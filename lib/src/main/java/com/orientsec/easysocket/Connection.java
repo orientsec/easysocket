@@ -20,6 +20,11 @@ public interface Connection extends TaskFactory {
     void start();
 
     /**
+     * 停止当前连接。
+     */
+    void stop();
+
+    /**
      * 关闭连接, 连接关闭之后不再可用。
      */
     void shutdown();

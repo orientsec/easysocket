@@ -1,12 +1,24 @@
 package com.orientsec.easysocket.inner;
 
-import java.io.IOException;
+import com.orientsec.easysocket.error.EasyException;
 
 public interface Session {
 
-    void open() throws IOException;
+    void open();
 
-    void active();
+    void close(EasyException e);
 
-    void close();
+    /**
+     * 是否连接
+     *
+     * @return 是否连接
+     */
+    boolean isConnect();
+
+    /**
+     * 连接是否可达
+     *
+     * @return 是否可达
+     */
+    boolean isAvailable();
 }

@@ -46,9 +46,13 @@ public class EasyManager implements EventListener {
         this.application = application;
         handlerThread = new HandlerThread("EasyManager");
         handlerThread.start();
-        eventManager = new EventManager(handlerThread.getLooper());
+        eventManager = newEventManager();
         eventManager.addListener(this);
         register(application);
+    }
+
+    public EventManager newEventManager() {
+        return new EventManager(handlerThread.getLooper());
     }
 
     public void addConnection(@NonNull AbstractConnection connection) {

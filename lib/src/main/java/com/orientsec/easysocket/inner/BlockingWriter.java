@@ -24,10 +24,11 @@ public class BlockingWriter extends Looper implements Writer {
     private final Socket socket;
     private final EventManager eventManager;
 
-    BlockingWriter(Socket socket, EasySocket easySocket, TaskManager taskManager) {
+    BlockingWriter(Socket socket, EasySocket easySocket, TaskManager taskManager,
+                   EventManager eventManager) {
         super(easySocket.getLogger());
         this.socket = socket;
-        this.eventManager = easySocket.getEventManager();
+        this.eventManager = eventManager;
         this.taskQueue = taskManager.taskQueue();
     }
 

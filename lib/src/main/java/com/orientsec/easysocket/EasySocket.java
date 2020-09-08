@@ -5,7 +5,6 @@ import android.content.Context;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.inner.EventManager;
 import com.orientsec.easysocket.inner.RealConnection;
 import com.orientsec.easysocket.push.PushManager;
 import com.orientsec.easysocket.request.Decoder;
@@ -142,8 +141,6 @@ public class EasySocket {
      */
     private int connectInterval;
 
-    protected final EventManager eventManager;
-
     protected final Logger logger;
 
     private RealConnection connection;
@@ -171,7 +168,6 @@ public class EasySocket {
         pushManagerProvider = builder.pushManagerProvider;
         socketFactoryProvider = builder.socketFactoryProvider;
 
-        eventManager = new EventManager(easyManager.handlerThread.getLooper());
         if (debug) {
             logger = new AndroidLogger(name);
         } else {
@@ -269,10 +265,6 @@ public class EasySocket {
 
     public Context getContext() {
         return easyManager.application;
-    }
-
-    public EventManager getEventManager() {
-        return eventManager;
     }
 
     public EasyManager getEasyManager() {

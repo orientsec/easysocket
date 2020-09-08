@@ -3,14 +3,14 @@ package com.orientsec.easysocket.task;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.orientsec.easysocket.request.Callback;
 import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Packet;
-import com.orientsec.easysocket.request.Request;
 import com.orientsec.easysocket.error.EasyException;
 import com.orientsec.easysocket.inner.EventListener;
 import com.orientsec.easysocket.inner.EventManager;
 import com.orientsec.easysocket.inner.Events;
+import com.orientsec.easysocket.request.Callback;
+import com.orientsec.easysocket.request.Request;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -41,9 +41,9 @@ public class RealTaskManager implements TaskManager, EventListener {
 
     private final EasySocket easySocket;
 
-    public RealTaskManager(EasySocket easySocket) {
+    public RealTaskManager(EasySocket easySocket, EventManager eventManager) {
         this.easySocket = easySocket;
-        eventManager = easySocket.getEventManager();
+        this.eventManager = eventManager;
         eventManager.addListener(this);
     }
 
@@ -52,7 +52,7 @@ public class RealTaskManager implements TaskManager, EventListener {
     public <R extends T, T> Task<R> buildTask(@NonNull Request<R> request,
                                               @NonNull Callback<T> callback) {
         return new RequestTask<>(uniqueId.getAndIncrement(), request, callback, taskMap,
-                waitingQueue, writingQueue, easySocket);
+                waitingQueue, writingQueue, eventManager, easySocket);
     }
 
     @Override

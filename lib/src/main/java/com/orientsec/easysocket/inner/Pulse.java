@@ -37,9 +37,9 @@ public class Pulse implements PacketHandler {
 
     private final Logger logger;
 
-    Pulse(EasySocket easySocket) {
+    Pulse(EasySocket easySocket, EventManager eventManager) {
         this.easySocket = easySocket;
-        eventManager = easySocket.getEventManager();
+        this.eventManager = eventManager;
         codecExecutor = easySocket.getCodecExecutor();
         logger = easySocket.getLogger();
     }
@@ -55,9 +55,7 @@ public class Pulse implements PacketHandler {
      * 启动心跳，每一次连接建立成功后调用
      */
     void start() {
-        int rate = easySocket.getPulseRate();
-        eventManager.remove(Events.PULSE);
-        eventManager.publish(Events.PULSE, rate);
+        eventManager.publish(Events.PULSE, easySocket.getPulseRate());
     }
 
     /**
@@ -65,7 +63,6 @@ public class Pulse implements PacketHandler {
      */
     void stop() {
         eventManager.remove(Events.PULSE);
-        lostTimes.set(0);
     }
 
     /**

@@ -29,11 +29,11 @@ public class BlockingReader extends Looper implements Reader {
 
     private final EasySocket easySocket;
 
-    BlockingReader(Socket socket, EasySocket easySocket) {
+    BlockingReader(Socket socket, EasySocket easySocket, EventManager eventManager) {
         super(easySocket.getLogger());
         this.socket = socket;
         this.easySocket = easySocket;
-        this.eventManager = easySocket.getEventManager();
+        this.eventManager = eventManager;
     }
 
     @Override

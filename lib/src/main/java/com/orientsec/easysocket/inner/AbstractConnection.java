@@ -1,24 +1,23 @@
 package com.orientsec.easysocket.inner;
 
-import androidx.annotation.NonNull;
 
+import com.orientsec.easysocket.Address;
+import com.orientsec.easysocket.ConnectEventListener;
 import com.orientsec.easysocket.Connection;
-import com.orientsec.easysocket.error.EasyException;
+import com.orientsec.easysocket.task.TaskManager;
 
-public abstract class AbstractConnection implements Connection, EventListener {
+public abstract class AbstractConnection implements Connection, EventListener,
+        ConnectEventListener {
 
     protected abstract void onStart();
 
+    protected abstract void onStop();
+
     protected abstract void onShutdown();
-
-    protected abstract void onSuccess(@NonNull Session session);
-
-    protected abstract void onFailed(@NonNull EasyException e);
-
-    protected abstract void onError(@NonNull EasyException e);
-
-    protected abstract void onAvailable();
 
     public abstract void onNetworkAvailable();
 
+    public abstract TaskManager getTaskManager();
+
+    public abstract Address obtainAddress();
 }
