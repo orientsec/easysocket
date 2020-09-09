@@ -1,6 +1,6 @@
 package com.orientsec.easysocket.utils;
 
-public class NoLogger implements Logger {
+class NoLogger implements Logger {
     @Override
     public void e(String msg) {
 
@@ -23,6 +23,11 @@ public class NoLogger implements Logger {
 
     @Override
     public void w(String msg) {
+
+    }
+
+    @Override
+    public void w(String msg, Throwable t) {
 
     }
 

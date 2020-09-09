@@ -1,4 +1,4 @@
-package com.orientsec.easysocket.inner;
+package com.orientsec.easysocket.client;
 
 /**
  * 连接状态

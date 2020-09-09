@@ -1,4 +1,4 @@
-package com.orientsec.easysocket.inner;
+package com.orientsec.easysocket.client;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -6,8 +6,10 @@ import androidx.annotation.Nullable;
 import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Initializer;
+import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.PacketHandler;
+import com.orientsec.easysocket.PacketType;
 import com.orientsec.easysocket.error.EasyException;
 import com.orientsec.easysocket.error.ErrorCode;
 import com.orientsec.easysocket.error.Errors;
@@ -29,8 +31,13 @@ import java.util.concurrent.Executor;
  * Author: Fredric
  * coding is art not science
  */
-public class SocketSession implements Session, Initializer.Emitter, Runnable,
-        EventListener, PacketHandler {
+public class SocketSession implements Session, Initializer.Emitter, Runnable, EventListener {
+    static final int ERROR = 202;
+    static final int START_SUCCESS = 203;
+    static final int START_FAILED = 204;
+    static final int AVAILABLE = 205;
+    static final int INIT_FAILED = 206;
+    static final int ON_PACKET = 207;
 
     private Socket socket;
 
@@ -40,15 +47,13 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable,
 
     private final Executor connectExecutor;
 
-    private final EasySocket easySocket;
+    private final Options options;
 
     private final EventManager eventManager;
 
-    private final TaskManager taskManager;
-
     private final Logger logger;
 
-    private AbstractConnection connection;
+    private AbstractSocketClient socketClient;
 
     private State state = State.IDLE;
 
@@ -56,21 +61,23 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable,
 
     private final Map<String, PacketHandler> messageHandlerMap = new HashMap<>();
 
-    SocketSession(AbstractConnection connection) {
-        this.connection = connection;
-        this.easySocket = connection.getEasySocket();
-        this.taskManager = connection.getTaskManager();
+    SocketSession(AbstractSocketClient socketClient) {
+        this.socketClient = socketClient;
+        this.options = socketClient.getOptions();
 
-        connectExecutor = easySocket.getConnectExecutor();
-        logger = easySocket.getLogger();
+        connectExecutor = options.getConnectExecutor();
+        logger = options.getLogger();
 
-        eventManager = easySocket.getEasyManager().newEventManager();
+        eventManager = EasySocket.getInstance().newEventManager();
         eventManager.addListener(this);
-
     }
 
     @Override
     public void handlePacket(@NonNull Packet packet) {
+        eventManager.publish(ON_PACKET, packet);
+    }
+
+    private void onPacket(@NonNull Packet packet) {
         if (state == State.DETACH) return;
         PacketHandler packetHandler = messageHandlerMap.get(packet.getPacketType().getValue());
         if (packetHandler == null) {
@@ -93,7 +100,7 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable,
     public void close(EasyException e) {
         if (state == State.IDLE || state == State.STARTING) {
             state = State.DETACH;
-            connection.onConnectFailed(e);
+            socketClient.onConnectFailed(e);
         } else {
             onError(e);
         }
@@ -101,36 +108,42 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable,
 
     @Override
     public void success() {
-        eventManager.publish(Events.AVAILABLE, this);
+        eventManager.publish(AVAILABLE, this);
     }
 
     @Override
     public void fail() {
-        logger.e("Initialize failed.");
-        eventManager.publish(Events.INIT_FAILED, this);
+        logger.e("Session initialize failed.");
+        eventManager.publish(INIT_FAILED, this);
     }
 
-    private void onConnect(Socket socket) {
+    @Override
+    public void postError(EasyException e) {
+        eventManager.publish(ERROR, e);
+    }
+
+    private void onStart(Socket socket) {
         if (state == State.STARTING) {
             state = State.CONNECT;
             this.socket = socket;
             //连接后进行一些前置操作，例如资源初始化
-            easySocket.getInitializerProvider()
-                    .get()
-                    .start(this);
+            socketClient.getInitializer().start(this);
             //启动心跳及读写线程
-            writer = new BlockingWriter(socket, easySocket, taskManager, eventManager);
-            reader = new BlockingReader(socket, easySocket, eventManager);
+            TaskManager taskManager = socketClient.getTaskManager();
+            writer = new BlockingWriter(this, socket, options, taskManager);
+            reader = new BlockingReader(this, socket, options, socketClient.getHeadParser());
             writer.start();
             reader.start();
-            pulse = new Pulse(easySocket, eventManager);
+            pulse = new Pulse(socketClient, this, eventManager);
             pulse.start();
 
             messageHandlerMap.put(PacketType.RESPONSE.getValue(), taskManager);
             messageHandlerMap.put(PacketType.PULSE.getValue(), pulse);
-            messageHandlerMap.put(PacketType.PUSH.getValue(), connection.getPushManager());
+            messageHandlerMap.put(PacketType.PUSH.getValue(), socketClient.getPushManager());
 
-            connection.onConnect();
+            socketClient.onConnect();
+
+            logger.i("Session start success.");
         } else {
             connectExecutor.execute(() -> {
                 try {
@@ -147,14 +160,18 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable,
             state = State.DETACH;
             EasyException e = Errors.connectError(ErrorCode.SOCKET_CONNECT,
                     "Socket connect failed.");
-            connection.onConnectFailed(e);
+            socketClient.onConnectFailed(e);
+
+            logger.i("Session start failed.");
         }
     }
 
     private void onAvailable() {
         if (state == State.CONNECT) {
             state = State.AVAILABLE;
-            connection.onAvailable();
+            socketClient.onAvailable();
+
+            logger.i("Session available.");
         }
     }
 
@@ -171,29 +188,29 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable,
                     e1.printStackTrace();
                 }
             });
-            connection.onDisconnect(e);
+            socketClient.onDisconnect(e);
+
+            logger.w("Session end.", e);
         }
     }
 
     @Override
     public void run() {
-        Address address = connection.obtainAddress();
+        Address address = socketClient.obtainAddress();
         logger.i("Begin socket connect.");
         try {
-            Socket socket = easySocket.getSocketFactoryProvider()
-                    .get()
-                    .createSocket();
+            Socket socket = socketClient.getSocketFactory().createSocket();
             //关闭Nagle算法,无论TCP数据报大小,立即发送
             socket.setTcpNoDelay(true);
             socket.setKeepAlive(true);
             socket.setPerformancePreferences(1, 2, 0);
             SocketAddress socketAddress
                     = new InetSocketAddress(address.getHost(), address.getPort());
-            socket.connect(socketAddress, easySocket.getConnectTimeOut());
-            eventManager.publish(Events.CONNECT_SUCCESS, socket);
+            socket.connect(socketAddress, options.getConnectTimeOut());
+            eventManager.publish(START_SUCCESS, socket);
         } catch (Exception e) {
             logger.i("Socket connect failed.", e);
-            eventManager.publish(Events.CONNECT_FAILED);
+            eventManager.publish(START_FAILED);
         }
     }
 
@@ -209,31 +226,30 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable,
 
     @Override
     public void onEvent(int eventId, @Nullable Object object) {
-        if (eventId < 0) return;
         switch (eventId) {
-            case Events.CONNECT_ERROR:
+            case ERROR:
                 assert object != null;
                 onError((EasyException) object);
                 break;
-            case Events.AVAILABLE:
+            case AVAILABLE:
                 onAvailable();
                 break;
-            case Events.INIT_FAILED:
+            case INIT_FAILED:
                 onError(Errors.connectError(ErrorCode.INIT_FAILED,
-                        "Connection initialize failed."));
+                        "Session initialize failed."));
                 break;
-            case Events.CONNECT_SUCCESS:
+            case START_SUCCESS:
                 assert object != null;
-                onConnect((Socket) object);
+                onStart((Socket) object);
                 break;
-            case Events.CONNECT_FAILED:
+            case START_FAILED:
                 onConnectFailed();
                 break;
-            case Events.ON_PACKET:
+            case ON_PACKET:
                 assert object != null;
-                handlePacket((Packet) object);
+                onPacket((Packet) object);
                 break;
-            case Events.PULSE:
+            case Pulse.PULSE:
                 pulse.pulse();
                 break;
         }

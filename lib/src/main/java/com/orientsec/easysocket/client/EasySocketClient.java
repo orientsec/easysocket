@@ -1,17 +1,16 @@
-package com.orientsec.easysocket.inner;
+package com.orientsec.easysocket.client;
 
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.orientsec.easysocket.Address;
-import com.orientsec.easysocket.ConnectEventListener;
-import com.orientsec.easysocket.EasyManager;
+import com.orientsec.easysocket.ConnectListener;
 import com.orientsec.easysocket.EasySocket;
+import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.error.EasyException;
 import com.orientsec.easysocket.error.ErrorCode;
 import com.orientsec.easysocket.error.Errors;
-import com.orientsec.easysocket.push.PushManager;
 import com.orientsec.easysocket.request.Callback;
 import com.orientsec.easysocket.request.Request;
 import com.orientsec.easysocket.task.RealTaskManager;
@@ -32,19 +31,22 @@ import java.util.concurrent.Executor;
  * Author: Fredric
  * coding is art not science
  */
-public class RealConnection extends AbstractConnection {
+public class EasySocketClient extends AbstractSocketClient {
+    static final int START = 101;
+    static final int STOP = 102;
+    static final int SHUTDOWN = 103;
+    static final int RESTART = 104;
+
     private final Logger logger;
     private final String name;
-    private final EasySocket easySocket;
-    private final EasyManager easyManager;
     private final Connector connector;
     private final Executor callbackExecutor;
     private final TaskManager taskManager;
-    private PushManager<?, ?> pushManager;
     final EventManager eventManager;
-    private final Set<ConnectEventListener> connectEventListeners = new CopyOnWriteArraySet<>();
+    private final Set<ConnectListener> connectListeners = new CopyOnWriteArraySet<>();
+
     //激活时间戳。
-    private volatile long timestamp;
+    private long timestamp;
 
     Session session;
 
@@ -60,19 +62,16 @@ public class RealConnection extends AbstractConnection {
      */
     private int backUpIndex = -1;
 
-    public RealConnection(EasySocket easySocket) {
-        this.easySocket = easySocket;
-        easyManager = easySocket.getEasyManager();
-        logger = easySocket.getLogger();
-        name = easySocket.getName();
-        callbackExecutor = easySocket.getCallbackExecutor();
-        eventManager = easySocket.getEasyManager().newEventManager();
-        taskManager = new RealTaskManager(easySocket, eventManager);
-
+    public EasySocketClient(Options options) {
+        super(options);
+        logger = options.getLogger();
+        name = options.getName();
+        callbackExecutor = options.getCallbackExecutor();
+        eventManager = EasySocket.getInstance().newEventManager();
+        taskManager = new RealTaskManager(this, eventManager);
         connector = new Connector(this);
-
         eventManager.addListener(this);
-        easyManager.addConnection(this);
+        EasySocket.getInstance().addSocketClient(this);
     }
 
     @NonNull
@@ -83,28 +82,19 @@ public class RealConnection extends AbstractConnection {
     }
 
     @Override
-    public void addConnectEventListener(@NonNull ConnectEventListener listener) {
-        connectEventListeners.add(listener);
+    public void addConnectListener(@NonNull ConnectListener listener) {
+        connectListeners.add(listener);
     }
 
     @Override
-    public void removeConnectEventListener(@NonNull ConnectEventListener listener) {
-        connectEventListeners.remove(listener);
-    }
-
-    @NonNull
-    @Override
-    public synchronized PushManager<?, ?> getPushManager() {
-        if (pushManager == null) {
-            pushManager = easySocket.getPushManagerProvider().get();
-        }
-        return pushManager;
+    public void removeConnectListener(@NonNull ConnectListener listener) {
+        connectListeners.remove(listener);
     }
 
     @Override
     @NonNull
-    public EasySocket getEasySocket() {
-        return easySocket;
+    public Options getOptions() {
+        return options;
     }
 
     @Override
@@ -121,8 +111,14 @@ public class RealConnection extends AbstractConnection {
 
     @Override
     protected void onStart() {
+        onStart(true);
+    }
+
+    void onStart(boolean active) {
         if (isShutdown()) return;
-        timestamp = System.currentTimeMillis();
+        if (active) {
+            timestamp = System.currentTimeMillis();
+        }
         if (session == null) {
             session = new SocketSession(this);
             session.open();
@@ -147,15 +143,14 @@ public class RealConnection extends AbstractConnection {
         if (session != null) {
             session.close(Errors.shutdown());
         }
-        easyManager.removeConnection(this);
+        EasySocket.getInstance().removeSocketClient(this);
     }
 
     @Override
     public void onConnect() {
-        logger.i("Connect success.");
-        if (connectEventListeners.size() > 0) {
+        if (connectListeners.size() > 0) {
             callbackExecutor.execute(() -> {
-                for (ConnectEventListener listener : connectEventListeners) {
+                for (ConnectListener listener : connectListeners) {
                     listener.onConnect();
                 }
             });
@@ -164,13 +159,12 @@ public class RealConnection extends AbstractConnection {
 
     @Override
     public void onConnectFailed(@NonNull EasyException e) {
-        logger.i("Connect failed.", e);
         session = null;
         taskManager.reset(e);
 
-        if (connectEventListeners.size() > 0) {
+        if (connectListeners.size() > 0) {
             callbackExecutor.execute(() -> {
-                for (ConnectEventListener listener : connectEventListeners) {
+                for (ConnectListener listener : connectListeners) {
                     listener.onConnectFailed(e);
                 }
             });
@@ -182,13 +176,12 @@ public class RealConnection extends AbstractConnection {
 
     @Override
     public void onDisconnect(@NonNull EasyException e) {
-        logger.i("Connect error.", e);
         session = null;
         taskManager.reset(e);
 
-        if (connectEventListeners.size() > 0) {
+        if (connectListeners.size() > 0) {
             callbackExecutor.execute(() -> {
-                for (ConnectEventListener listener : connectEventListeners) {
+                for (ConnectListener listener : connectListeners) {
                     listener.onDisconnect(e);
                 }
             });
@@ -201,12 +194,11 @@ public class RealConnection extends AbstractConnection {
 
     @Override
     public void onAvailable() {
-        logger.i("Connect available.");
         failedTimes = 0;
         taskManager.ready();
-        if (connectEventListeners.size() > 0) {
+        if (connectListeners.size() > 0) {
             callbackExecutor.execute(() -> {
-                for (ConnectEventListener listener : connectEventListeners) {
+                for (ConnectListener listener : connectListeners) {
                     listener.onAvailable();
                 }
             });
@@ -217,19 +209,19 @@ public class RealConnection extends AbstractConnection {
     @Override
     public void start() {
         if (isShutdown()) return;
-        eventManager.publish(Events.START);
+        eventManager.publish(START);
     }
 
     @Override
     public void stop() {
         if (isShutdown()) return;
-        eventManager.publish(Events.STOP);
+        eventManager.publish(STOP);
     }
 
     @Override
     public void shutdown() {
         if (isShutdown()) return;
-        eventManager.publish(Events.SHUTDOWN);
+        eventManager.publish(SHUTDOWN);
     }
 
     @Override
@@ -239,11 +231,13 @@ public class RealConnection extends AbstractConnection {
 
     @Override
     public boolean isConnect() {
+        Session session = this.session;
         return session != null && session.isConnect();
     }
 
     @Override
     public boolean isAvailable() {
+        Session session = this.session;
         return session != null && session.isAvailable();
     }
 
@@ -261,10 +255,10 @@ public class RealConnection extends AbstractConnection {
     }
 
     @Override
-    public Address obtainAddress() {
+    public synchronized Address obtainAddress() {
         if (addressList == null) {
-            List<Address> addressList = easySocket.getAddressProvider()
-                    .get();
+            List<Address> addressList = options.getAddressProvider()
+                    .get(this);
             if (addressList.isEmpty()) {
                 throw new IllegalArgumentException("Address list is empty");
             }
@@ -277,14 +271,15 @@ public class RealConnection extends AbstractConnection {
     /**
      * 切换服务器
      */
-    private void switchServer(int code) {
+    private synchronized void switchServer(int code) {
         if (code == ErrorCode.PULSE_TIME_OUT
                 || code == ErrorCode.STOP
-                || code == ErrorCode.SHUTDOWN) {
+                || code == ErrorCode.SHUTDOWN
+                || addressList == null) {
             return;
         }
         //连接失败达到阈值,需要切换备用线路
-        if (++failedTimes >= easySocket.getRetryTimes()) {
+        if (++failedTimes >= options.getRetryTimes()) {
             failedTimes = 0;
 
             if (++backUpIndex >= addressList.size()) {
@@ -298,27 +293,26 @@ public class RealConnection extends AbstractConnection {
 
     boolean isActive() {
         long mills = System.currentTimeMillis();
-        long backgroundTimestamp = easyManager.getBackgroundTimestamp();
+        long backgroundTimestamp = EasySocket.getInstance().getBackgroundTimestamp();
         return timestamp > 0 &&
-                (mills - timestamp <= easySocket.getLiveTime()
+                (mills - timestamp <= options.getLiveTime()
                         || backgroundTimestamp == 0
-                        || mills - backgroundTimestamp <= easySocket.getLiveTime());
+                        || mills - backgroundTimestamp <= options.getLiveTime());
     }
 
     @Override
     public void onEvent(int eventId, @Nullable Object object) {
-        if (eventId < 0) return;
         switch (eventId) {
-            case Events.START:
+            case START:
                 onStart();
                 break;
-            case Events.STOP:
+            case STOP:
                 onStop();
                 break;
-            case Events.SHUTDOWN:
+            case SHUTDOWN:
                 onShutdown();
                 break;
-            case Events.RESTART:
+            case RESTART:
                 connector.restart();
                 break;
         }

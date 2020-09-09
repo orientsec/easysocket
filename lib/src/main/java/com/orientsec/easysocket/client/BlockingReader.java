@@ -1,7 +1,7 @@
-package com.orientsec.easysocket.inner;
+package com.orientsec.easysocket.client;
 
-import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.HeadParser;
+import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.error.EasyException;
 import com.orientsec.easysocket.error.ErrorCode;
@@ -21,19 +21,20 @@ import java.net.Socket;
 public class BlockingReader extends Looper implements Reader {
     private InputStream inputStream;
 
-    private HeadParser headParser;
+    private final HeadParser headParser;
+
+    private final Session session;
 
     private final Socket socket;
 
-    private final EventManager eventManager;
+    private final Options options;
 
-    private final EasySocket easySocket;
-
-    BlockingReader(Socket socket, EasySocket easySocket, EventManager eventManager) {
-        super(easySocket.getLogger());
+    BlockingReader(Session session, Socket socket, Options options, HeadParser headParser) {
+        super(options.getLogger());
+        this.session = session;
         this.socket = socket;
-        this.easySocket = easySocket;
-        this.eventManager = eventManager;
+        this.options = options;
+        this.headParser = headParser;
     }
 
     @Override
@@ -43,13 +44,13 @@ public class BlockingReader extends Looper implements Reader {
         readInputStream(inputStream, headBytes);
         HeadParser.Head head = headParser.parseHead(headBytes);
         int bodyLength = head.getPacketSize();
-        if (bodyLength > easySocket.getMaxReadDataKB() * 1024) {
+        if (bodyLength > options.getMaxReadDataKB() * 1024) {
             throw new IllegalStateException("Packet size too large: " + bodyLength);
         } else if (bodyLength >= 0) {
             byte[] data = new byte[bodyLength];
             readInputStream(inputStream, data);
             Packet packet = headParser.decodePacket(head, data);
-            eventManager.publish(Events.ON_PACKET, packet);
+            session.handlePacket(packet);
         } else {
             throw new IllegalStateException("Negative packet size : " + bodyLength);
         }
@@ -70,7 +71,6 @@ public class BlockingReader extends Looper implements Reader {
     @Override
     protected void beforeLoop() throws IOException {
         inputStream = socket.getInputStream();
-        headParser = easySocket.getHeadParserProvider().get();
     }
 
     @Override
@@ -81,8 +81,8 @@ public class BlockingReader extends Looper implements Reader {
     @Override
     protected synchronized void loopFinish() {
         if (isRunning()) {
-            eventManager.publish(Events.CONNECT_ERROR,
-                    Errors.connectError(ErrorCode.READ_EXIT, "Blocking reader exit."));
+            session.postError(Errors.connectError(ErrorCode.READ_EXIT,
+                    "Blocking reader exit."));
         }
     }
 }

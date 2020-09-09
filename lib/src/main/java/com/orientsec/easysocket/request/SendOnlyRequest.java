@@ -4,7 +4,7 @@ import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.Packet;
 
-public class SendOnlyRequest extends Request<Void> {
+public class SendOnlyRequest<R> extends Request<R> {
     private final Encoder encoder;
 
     public SendOnlyRequest(Encoder encoder) {
@@ -32,7 +32,7 @@ public class SendOnlyRequest extends Request<Void> {
 
     @NonNull
     @Override
-    public final Void decode(@NonNull Packet data) {
+    public final R decode(@NonNull Packet data) {
         throw new IllegalStateException("SendOnlyRequest not support decode action.");
     }
 }

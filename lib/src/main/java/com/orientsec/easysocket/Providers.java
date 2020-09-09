@@ -16,25 +16,25 @@ class DefaultSocketFactoryProvider implements Provider<SocketFactory> {
 
     @NonNull
     @Override
-    public SocketFactory get() {
+    public SocketFactory get(SocketClient socketClient) {
         return SocketFactory.getDefault();
     }
 }
 
-class DefaultPulseRequestProvider implements Provider<Request<?>> {
+class DefaultPulseRequestProvider implements Provider<Request<Boolean>> {
 
     @NonNull
     @Override
-    public Request<?> get() {
-        return new SendOnlyRequest();
+    public Request<Boolean> get(SocketClient socketClient) {
+        return new SendOnlyRequest<>();
     }
 }
 
-class DefaultPulseDecoderProvider implements Provider<Decoder<?>> {
+class DefaultPulseDecoderProvider implements Provider<Decoder<Boolean>> {
 
     @NonNull
     @Override
-    public Decoder<?> get() {
+    public Decoder<Boolean> get(SocketClient socketClient) {
         return new DefaultPulseDecoder();
     }
 }
@@ -42,6 +42,7 @@ class DefaultPulseDecoderProvider implements Provider<Decoder<?>> {
 class DefaultPulseDecoder implements Decoder<Boolean> {
 
     @Override
+    @NonNull
     public Boolean decode(@NonNull Packet data) {
         return true;
     }
@@ -51,7 +52,7 @@ class DefaultPushManagerProvider implements Provider<PushManager<?, ?>> {
 
     @NonNull
     @Override
-    public PushManager<?, ?> get() {
+    public PushManager<?, ?> get(SocketClient socketClient) {
         return new EmptyPushManager();
     }
 }
@@ -96,7 +97,7 @@ class DefaultInitializerProvider implements Provider<Initializer> {
 
     @NonNull
     @Override
-    public Initializer get() {
+    public Initializer get(SocketClient socketClient) {
         return new DefaultInitializer();
     }
 }
@@ -125,7 +126,7 @@ class StaticAddressProvider implements Provider<List<Address>> {
 
     @NonNull
     @Override
-    public List<Address> get() {
+    public List<Address> get(SocketClient socketClient) {
         return addressList;
     }
 }

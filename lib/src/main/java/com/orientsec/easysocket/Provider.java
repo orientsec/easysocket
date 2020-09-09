@@ -4,5 +4,5 @@ import androidx.annotation.NonNull;
 
 public interface Provider<T> {
     @NonNull
-    T get();
+    T get(SocketClient socketClient);
 }

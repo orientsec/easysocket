@@ -2,14 +2,14 @@ package com.orientsec.easysocket.task;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.Connection;
-import com.orientsec.easysocket.EasySocket;
+import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
+import com.orientsec.easysocket.SocketClient;
+import com.orientsec.easysocket.client.AbstractSocketClient;
+import com.orientsec.easysocket.client.EventManager;
 import com.orientsec.easysocket.error.ErrorCode;
 import com.orientsec.easysocket.error.ErrorType;
 import com.orientsec.easysocket.error.Errors;
-import com.orientsec.easysocket.inner.EventManager;
-import com.orientsec.easysocket.inner.Events;
 import com.orientsec.easysocket.request.Callback;
 import com.orientsec.easysocket.request.PulseRequest;
 import com.orientsec.easysocket.request.Request;
@@ -38,15 +38,23 @@ public class RequestTask<R extends T, T> implements Task<R> {
         CANCELED,
     }
 
+    static final int TASK_START = 301;
+    static final int TASK_ENQUEUE = 302;
+    static final int TASK_SEND = 303;
+    static final int TASK_SUCCESS = 304;
+    static final int TASK_ERROR = 305;
+    static final int TASK_CANCEL = 306;
+    static final int TASK_TIME_OUT = 307;
+
     // Guarded by this.
     private final AtomicBoolean executed = new AtomicBoolean();
-    private volatile State state;
+    private final AbstractSocketClient socketClient;
     private final Request<R> request;
     private final Callback<T> callback;
     private final Executor callbackExecutor;
     private final Executor codecExecutor;
     private final EventManager eventManager;
-    private final EasySocket easySocket;
+    private final Options options;
     private final Map<Integer, RequestTask<?, ?>> taskMap;
 
     private final BlockingQueue<Task<?>> writingQueue;
@@ -56,6 +64,8 @@ public class RequestTask<R extends T, T> implements Task<R> {
      * 每一个任务的id是唯一的，通过taskId，客户端可以匹配每个请求的返回
      */
     final int taskId;
+
+    private volatile State state;
     /**
      * 编码后的请求数据
      *
@@ -74,18 +84,18 @@ public class RequestTask<R extends T, T> implements Task<R> {
                 Queue<RequestTask<?, ?>> waitingQueue,
                 BlockingQueue<Task<?>> writingQueue,
                 EventManager eventManager,
-                EasySocket easySocket) {
+                AbstractSocketClient socketClient) {
         this.request = request;
         this.callback = callback;
         this.taskId = taskId;
         this.waitingQueue = waitingQueue;
         this.writingQueue = writingQueue;
         this.taskMap = taskMap;
-
         this.eventManager = eventManager;
-        this.easySocket = easySocket;
-        callbackExecutor = easySocket.getCallbackExecutor();
-        codecExecutor = easySocket.getCodecExecutor();
+        this.socketClient = socketClient;
+        this.options = socketClient.getOptions();
+        callbackExecutor = options.getCallbackExecutor();
+        codecExecutor = options.getCodecExecutor();
     }
 
     @Override
@@ -111,7 +121,7 @@ public class RequestTask<R extends T, T> implements Task<R> {
     @Override
     public void execute() {
         if (executed.compareAndSet(false, true)) {
-            eventManager.publish(Events.TASK_START, this);
+            eventManager.publish(TASK_START, this);
         } else {
             throw new IllegalStateException("Already Executed");
         }
@@ -130,7 +140,7 @@ public class RequestTask<R extends T, T> implements Task<R> {
     @Override
     public void cancel() {
         if (isFinished()) return;
-        eventManager.publish(Events.TASK_CANCEL, this);
+        eventManager.publish(TASK_CANCEL, this);
     }
 
     @Override
@@ -140,18 +150,18 @@ public class RequestTask<R extends T, T> implements Task<R> {
 
     void onStart() {
         if (isFinished()) return;
-        Connection connection = easySocket.getConnection();
-        if (connection.isShutdown()) {
+        SocketClient socketClient = this.socketClient;
+        if (socketClient.isShutdown()) {
             onError(Errors.shutdown());
-        } else if (request instanceof PulseRequest) {
-            if (connection.isAvailable()) {
+        } else if (request.getClass() == PulseRequest.class) {
+            if (socketClient.isAvailable()) {
                 taskMap.put(taskId, this);
                 onEncode();
             }
         } else {
-            connection.start();
+            socketClient.start();
             taskMap.put(taskId, this);
-            if (connection.isAvailable() || isInitialize()) {
+            if (socketClient.isAvailable() || isInitialize()) {
                 onEncode();
             } else {
                 waitingQueue.add(this);
@@ -166,10 +176,10 @@ public class RequestTask<R extends T, T> implements Task<R> {
         codecExecutor.execute(() -> {
             try {
                 data = request.encode(taskId);
-                eventManager.publish(Events.TASK_ENQUEUE, this);
+                eventManager.publish(TASK_ENQUEUE, this);
             } catch (Exception e) {
                 exception = e;
-                eventManager.publish(Events.TASK_ERROR, this);
+                eventManager.publish(TASK_ERROR, this);
             }
         });
     }
@@ -199,21 +209,21 @@ public class RequestTask<R extends T, T> implements Task<R> {
                 taskMap.remove(taskId);
                 state = State.SUCCESS;
             } else {
-                eventManager.publish(Events.TASK_TIME_OUT, this, easySocket.getRequestTimeOut());
+                eventManager.publish(TASK_TIME_OUT, this, options.getRequestTimeOut());
             }
             callbackExecutor.execute(callback::onSend);
         }
     }
 
     void onReceive(Packet packet) {
-        eventManager.remove(Events.TASK_TIME_OUT, this);
+        eventManager.remove(TASK_TIME_OUT, this);
         codecExecutor.execute(() -> {
             try {
                 response = request.decode(packet);
-                eventManager.publish(Events.TASK_SUCCESS, this);
+                eventManager.publish(TASK_SUCCESS, this);
             } catch (Exception e) {
                 exception = e;
-                eventManager.publish(Events.TASK_ERROR, this);
+                eventManager.publish(TASK_ERROR, this);
             }
         });
     }

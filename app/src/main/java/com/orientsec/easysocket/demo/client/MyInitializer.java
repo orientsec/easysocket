@@ -29,7 +29,7 @@ public class MyInitializer implements Initializer {
                 emitter.fail();
             }
         };
-        Task<String> task = client.connection.buildTask(authRequest, callback);
+        Task<String> task = client.socketClient.buildTask(authRequest, callback);
         task.execute();
     }
 }

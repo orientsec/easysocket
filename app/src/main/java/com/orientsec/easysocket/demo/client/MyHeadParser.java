@@ -4,7 +4,7 @@ import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.HeadParser;
 import com.orientsec.easysocket.Packet;
-import com.orientsec.easysocket.inner.PacketType;
+import com.orientsec.easysocket.PacketType;
 
 import java.nio.ByteBuffer;
 

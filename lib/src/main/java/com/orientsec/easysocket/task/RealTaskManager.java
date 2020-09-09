@@ -3,12 +3,11 @@ package com.orientsec.easysocket.task;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Packet;
+import com.orientsec.easysocket.client.AbstractSocketClient;
+import com.orientsec.easysocket.client.EventListener;
+import com.orientsec.easysocket.client.EventManager;
 import com.orientsec.easysocket.error.EasyException;
-import com.orientsec.easysocket.inner.EventListener;
-import com.orientsec.easysocket.inner.EventManager;
-import com.orientsec.easysocket.inner.Events;
 import com.orientsec.easysocket.request.Callback;
 import com.orientsec.easysocket.request.Request;
 
@@ -39,10 +38,10 @@ public class RealTaskManager implements TaskManager, EventListener {
 
     private final EventManager eventManager;
 
-    private final EasySocket easySocket;
+    private final AbstractSocketClient socketClient;
 
-    public RealTaskManager(EasySocket easySocket, EventManager eventManager) {
-        this.easySocket = easySocket;
+    public RealTaskManager(AbstractSocketClient socketClient, EventManager eventManager) {
+        this.socketClient = socketClient;
         this.eventManager = eventManager;
         eventManager.addListener(this);
     }
@@ -52,7 +51,7 @@ public class RealTaskManager implements TaskManager, EventListener {
     public <R extends T, T> Task<R> buildTask(@NonNull Request<R> request,
                                               @NonNull Callback<T> callback) {
         return new RequestTask<>(uniqueId.getAndIncrement(), request, callback, taskMap,
-                waitingQueue, writingQueue, eventManager, easySocket);
+                waitingQueue, writingQueue, eventManager, socketClient);
     }
 
     @Override
@@ -69,8 +68,8 @@ public class RealTaskManager implements TaskManager, EventListener {
     }
 
     @Override
-    public void reset(EasyException e) {
-        eventManager.remove(Events.TASK_TIME_OUT);
+    public void reset(@NonNull EasyException e) {
+        eventManager.remove(RequestTask.TASK_TIME_OUT);
         for (RequestTask<?, ?> task : taskMap.values()) {
             task.onError(e);
         }
@@ -87,32 +86,36 @@ public class RealTaskManager implements TaskManager, EventListener {
         waitingQueue.clear();
     }
 
+    @Override
+    public void onTaskSend(@NonNull Task<?> task) {
+        eventManager.publish(RequestTask.TASK_SEND, task);
+    }
 
     @Override
     public void onEvent(int eventId, @Nullable Object object) {
-        if (eventId > 0) return;
+        if (eventId < 300 || eventId > 400) return;
         RequestTask<?, ?> task = (RequestTask<?, ?>) object;
         assert task != null;
         switch (eventId) {
-            case Events.TASK_START:
+            case RequestTask.TASK_START:
                 task.onStart();
                 break;
-            case Events.TASK_ENQUEUE:
+            case RequestTask.TASK_ENQUEUE:
                 task.onEnqueue();
                 break;
-            case Events.TASK_SEND:
+            case RequestTask.TASK_SEND:
                 task.onSend();
                 break;
-            case Events.TASK_SUCCESS:
+            case RequestTask.TASK_SUCCESS:
                 task.onSuccess();
                 break;
-            case Events.TASK_ERROR:
+            case RequestTask.TASK_ERROR:
                 task.onError();
                 break;
-            case Events.TASK_CANCEL:
+            case RequestTask.TASK_CANCEL:
                 task.onCancel();
                 break;
-            case Events.TASK_TIME_OUT:
+            case RequestTask.TASK_TIME_OUT:
                 task.onTimeout();
                 break;
             default:

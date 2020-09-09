@@ -4,10 +4,10 @@ import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.Packet;
 
-public class PulseRequest<R> extends Request<R> {
-    private final Request<R> request;
+public class PulseRequest extends Request<Boolean> {
+    private final Request<Boolean> request;
 
-    public PulseRequest(Request<R> request) {
+    public PulseRequest(Request<Boolean> request) {
         this.request = request;
     }
 
@@ -24,7 +24,7 @@ public class PulseRequest<R> extends Request<R> {
 
     @NonNull
     @Override
-    public R decode(@NonNull Packet data) throws Exception {
+    public Boolean decode(@NonNull Packet data) throws Exception {
         return request.decode(data);
     }
 }

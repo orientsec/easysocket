@@ -13,7 +13,8 @@ public class NetUtils {
      * @return 网络是否可用
      */
     public static boolean isNetworkAvailable(Context context) {
-        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        ConnectivityManager cm =
+                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         if (cm == null) return false;
         // 获取当前网络状态信息
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {

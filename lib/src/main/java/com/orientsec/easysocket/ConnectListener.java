@@ -13,7 +13,7 @@ import com.orientsec.easysocket.error.EasyException;
  * <p>
  * 连接事件监听
  */
-public interface ConnectEventListener {
+public interface ConnectListener {
     /**
      * 连接连接建立成功后的回调
      */

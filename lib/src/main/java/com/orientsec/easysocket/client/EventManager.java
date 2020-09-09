@@ -1,4 +1,4 @@
-package com.orientsec.easysocket.inner;
+package com.orientsec.easysocket.client;
 
 import android.os.Handler;
 import android.os.Looper;

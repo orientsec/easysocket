@@ -1,4 +1,4 @@
-package com.orientsec.easysocket.inner;
+package com.orientsec.easysocket;
 
 /**
  * Product: EasySocket
@@ -12,7 +12,7 @@ public enum PacketType {
     /**
      * 请求消息
      */
-    RESPONSE("OUT"),
+    RESPONSE("response"),
 
     /**
      * 推送消息

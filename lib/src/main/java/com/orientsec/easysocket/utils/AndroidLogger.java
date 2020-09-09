@@ -9,11 +9,11 @@ import android.util.Log;
  * Author: Fredric
  * coding is art not science
  */
-public class AndroidLogger implements Logger {
+class AndroidLogger implements Logger {
     private static final String TAG = "EasySocket";
     private final String tag;
 
-    public AndroidLogger(String name) {
+    AndroidLogger(String name) {
         tag = TAG + '[' + name + ']';
     }
 
@@ -40,6 +40,11 @@ public class AndroidLogger implements Logger {
     @Override
     public void w(String msg) {
         Log.w(tag, msg);
+    }
+
+    @Override
+    public void w(String msg, Throwable t) {
+        Log.w(tag, msg, t);
     }
 
     @Override

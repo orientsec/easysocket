@@ -2,7 +2,7 @@ package com.orientsec.easysocket.push;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.EasySocket;
+import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.error.EasyException;
 import com.orientsec.easysocket.utils.Logger;
@@ -22,10 +22,10 @@ public abstract class AbstractPushManager<K, E> implements PushManager<K, E> {
 
     private final Set<PushListener<E>> globalListenerSet = new HashSet<>();
 
-    public AbstractPushManager(EasySocket easySocket) {
-        logger = easySocket.getLogger();
-        codecExecutor = easySocket.getCodecExecutor();
-        callbackExecutor = easySocket.getCallbackExecutor();
+    public AbstractPushManager(Options options) {
+        logger = options.getLogger();
+        codecExecutor = options.getCodecExecutor();
+        callbackExecutor = options.getCallbackExecutor();
     }
 
     @Override

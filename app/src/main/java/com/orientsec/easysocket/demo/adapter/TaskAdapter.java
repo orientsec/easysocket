@@ -1,6 +1,6 @@
 package com.orientsec.easysocket.demo.adapter;
 
-import com.orientsec.easysocket.Connection;
+import com.orientsec.easysocket.SocketClient;
 import com.orientsec.easysocket.request.Request;
 import com.orientsec.easysocket.task.Task;
 
@@ -24,9 +24,9 @@ public class TaskAdapter {
      * @return Observable
      */
     public static <R> Observable<R>
-    buildObservable(Connection connection, Request<R> request) {
+    buildObservable(SocketClient socketClient, Request<R> request) {
         TaskObservable<R> observable = new TaskObservable<>();
-        Task<R> task = connection.buildTask(request, observable);
+        Task<R> task = socketClient.buildTask(request, observable);
         observable.setTask(task);
         return observable;
     }

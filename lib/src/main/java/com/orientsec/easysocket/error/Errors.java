@@ -14,10 +14,10 @@ public class Errors {
     }
 
     public static EasyException shutdown() {
-        return systemError(ErrorCode.SHUTDOWN, "Connection shut down.");
+        return systemError(ErrorCode.SHUTDOWN, "Socket client shut down.");
     }
 
     public static EasyException stop() {
-        return systemError(ErrorCode.STOP, "Connection stop.");
+        return systemError(ErrorCode.STOP, "Socket client stop.");
     }
 }

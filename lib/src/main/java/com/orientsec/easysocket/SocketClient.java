@@ -13,7 +13,7 @@ import com.orientsec.easysocket.task.TaskFactory;
  * Author: Fredric
  * coding is art not science
  */
-public interface Connection extends TaskFactory {
+public interface SocketClient extends TaskFactory {
     /**
      * 启动连接, 如果连接已经启动，无效果。
      */
@@ -63,14 +63,14 @@ public interface Connection extends TaskFactory {
      *
      * @param listener 监听器
      */
-    void addConnectEventListener(@NonNull ConnectEventListener listener);
+    void addConnectListener(@NonNull ConnectListener listener);
 
     /**
      * 移除连接事件监听器
      *
      * @param listener 监听器
      */
-    void removeConnectEventListener(@NonNull ConnectEventListener listener);
+    void removeConnectListener(@NonNull ConnectListener listener);
 
     /**
      * 获取推送管理器
@@ -86,5 +86,5 @@ public interface Connection extends TaskFactory {
      * @return EasySocket。
      */
     @NonNull
-    EasySocket getEasySocket();
+    Options getOptions();
 }

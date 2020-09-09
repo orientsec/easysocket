@@ -1,6 +1,6 @@
-package com.orientsec.easysocket.inner;
+package com.orientsec.easysocket.client;
 
-import com.orientsec.easysocket.EasySocket;
+import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.error.ErrorCode;
 import com.orientsec.easysocket.error.Errors;
 import com.orientsec.easysocket.task.Task;
@@ -20,16 +20,17 @@ import java.util.concurrent.BlockingQueue;
  */
 public class BlockingWriter extends Looper implements Writer {
     private OutputStream mOutputStream;
-    private final BlockingQueue<Task<?>> taskQueue;
+    private final Session session;
     private final Socket socket;
-    private final EventManager eventManager;
+    private final TaskManager taskManager;
+    private final BlockingQueue<Task<?>> taskQueue;
 
-    BlockingWriter(Socket socket, EasySocket easySocket, TaskManager taskManager,
-                   EventManager eventManager) {
-        super(easySocket.getLogger());
+    BlockingWriter(Session session, Socket socket, Options options, TaskManager taskManager) {
+        super(options.getLogger());
+        this.session = session;
         this.socket = socket;
-        this.eventManager = eventManager;
-        this.taskQueue = taskManager.taskQueue();
+        this.taskManager = taskManager;
+        taskQueue = taskManager.taskQueue();
     }
 
     @Override
@@ -38,7 +39,7 @@ public class BlockingWriter extends Looper implements Writer {
             Task<?> task = taskQueue.take();
             mOutputStream.write(task.data());
             mOutputStream.flush();
-            eventManager.publish(Events.TASK_SEND, task);
+            taskManager.onTaskSend(task);
         } catch (InterruptedException e) {
             //ignore;
         }
@@ -57,8 +58,8 @@ public class BlockingWriter extends Looper implements Writer {
     @Override
     protected synchronized void loopFinish() {
         if (isRunning()) {
-            eventManager.publish(Events.CONNECT_ERROR,
-                    Errors.connectError(ErrorCode.WRITE_EXIT, "Blocking writer exit."));
+            session.postError(Errors.connectError(ErrorCode.WRITE_EXIT,
+                    "Blocking writer exit."));
         }
     }
 }

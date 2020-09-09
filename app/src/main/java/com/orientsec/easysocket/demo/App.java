@@ -15,6 +15,6 @@ public class App extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        EasySocket.init(this);
+        EasySocket.getInstance().initialize(this);
     }
 }
