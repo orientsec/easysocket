@@ -284,10 +284,10 @@ public class EasySocketClient extends AbstractSocketClient {
 
             if (++backUpIndex >= addressList.size()) {
                 backUpIndex = 0;
-                Address address = addressList.get(backUpIndex);
-                this.address = address;
-                logger.i("Switch to server: " + address);
             }
+            Address address = addressList.get(backUpIndex);
+            this.address = address;
+            logger.i("Switch to server: " + address);
         }
     }
 
