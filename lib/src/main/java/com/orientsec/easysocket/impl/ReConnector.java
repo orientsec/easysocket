@@ -77,10 +77,10 @@ public class ReConnector<T> implements ConnectEventListener {
 
             if (++backUpIndex >= addressList.size()) {
                 backUpIndex = 0;
-                Address address = addressList.get(backUpIndex);
-                connection.address = address;
-                Logger.i("Switch to server, " + address);
             }
+            Address address = addressList.get(backUpIndex);
+            connection.address = address;
+            Logger.i("Switch to server, " + address);
         }
     }
 
