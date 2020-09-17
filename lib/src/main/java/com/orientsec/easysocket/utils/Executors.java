@@ -14,13 +14,11 @@ import java.util.concurrent.TimeUnit;
 
 public interface Executors {
 
-    ExecutorService connectExecutor
-            = new ThreadPoolExecutor(0, 4,
+    ExecutorService connectExecutor = new ThreadPoolExecutor(0, 16,
             30L, TimeUnit.SECONDS,
-            new SynchronousQueue<>());
+            new LinkedBlockingQueue<>());
 
-    ExecutorService codecExecutor
-            = new ThreadPoolExecutor(0, 4,
+    ExecutorService codecExecutor = new ThreadPoolExecutor(0, 8,
             60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>());
 
