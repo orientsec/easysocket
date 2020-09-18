@@ -25,6 +25,7 @@ public class ReConnector<T> implements ConnectEventListener {
 
     private ScheduledExecutorService scheduler;
 
+    private boolean siteAvailable = false;
     /**
      * 连接失败次数,不包括断开异常
      */
@@ -32,7 +33,7 @@ public class ReConnector<T> implements ConnectEventListener {
     /**
      * 备用站点下标
      */
-    private int backUpIndex = -1;
+    private int siteIndex = -1;
 
     private Future<?> reconnectTask;
 
@@ -51,17 +52,29 @@ public class ReConnector<T> implements ConnectEventListener {
 
     @Override
     public void onDisconnect(@NonNull EasyException e) {
-        reconnectDelay();
+        if (ConnectionManager.getInstance().isNetworkAvailable()) {
+            boolean reconnect = reconnectDelay();
+            if (reconnect && !siteAvailable) {
+                switchServer();
+            }
+        }
     }
 
     @Override
     public void onConnectFailed() {
-        reconnectDelay();
+        if (ConnectionManager.getInstance().isNetworkAvailable()) {
+            siteAvailable = false;
+            boolean reconnect = reconnectDelay();
+            if (reconnect) {
+                switchServer();
+            }
+        }
     }
 
     @Override
     public void onAvailable() {
         failedTimes = 0;
+        siteAvailable = true;
         if (connection.isSleep()) {
             disconnectDelay();
         }
@@ -70,15 +83,15 @@ public class ReConnector<T> implements ConnectEventListener {
     /**
      * 切换服务器
      */
-    private void switchServer(List<Address> addressList) {
+    private void switchServer() {
         //连接失败达到阈值,需要切换备用线路
         if (++failedTimes >= options.getRetryTimes()) {
             failedTimes = 0;
-
-            if (++backUpIndex >= addressList.size()) {
-                backUpIndex = 0;
+            List<Address> addressList = connection.addressList;
+            if (++siteIndex >= addressList.size()) {
+                siteIndex = 0;
             }
-            Address address = addressList.get(backUpIndex);
+            Address address = addressList.get(siteIndex);
             connection.address = address;
             Logger.i("Switch to server, " + address);
         }
@@ -104,16 +117,13 @@ public class ReConnector<T> implements ConnectEventListener {
         }
     }
 
-    void reconnectDelay() {
-        List<Address> addressList = connection.addressList;
+    boolean reconnectDelay() {
         if (connection.state != AbstractConnection.State.IDLE
-                || connection.isSleep()
-                || addressList == null
-                || !ConnectionManager.getInstance().isNetworkAvailable()) {
-            return;
+                || connection.addressList == null
+                || connection.isSleep()) {
+            return false;
         }
         stopReconnect();
-        switchServer(addressList);
         long delay = options.getConnectInterval();
         Logger.i("Reconnect after " + delay + " mill seconds...");
         Runnable reconnect = () -> {
@@ -125,6 +135,7 @@ public class ReConnector<T> implements ConnectEventListener {
             }
         };
         reconnectTask = scheduler.schedule(reconnect, delay, TimeUnit.MILLISECONDS);
+        return true;
     }
 
     void disconnectDelay() {
