@@ -1,5 +1,9 @@
 package com.orientsec.easysocket.utils;
 
+import androidx.annotation.NonNull;
+
+import com.orientsec.easysocket.SocketClient;
+
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket.utils
@@ -22,4 +26,6 @@ public interface Logger {
     void w(String msg, Throwable t);
 
     void d(String msg);
+
+    void attach(@NonNull SocketClient socketClient);
 }

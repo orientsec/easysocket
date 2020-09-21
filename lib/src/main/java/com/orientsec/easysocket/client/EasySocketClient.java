@@ -17,6 +17,7 @@ import com.orientsec.easysocket.task.RealTaskManager;
 import com.orientsec.easysocket.task.Task;
 import com.orientsec.easysocket.task.TaskManager;
 import com.orientsec.easysocket.utils.Logger;
+import com.orientsec.easysocket.utils.NetUtils;
 
 import java.util.List;
 import java.util.Set;
@@ -65,6 +66,7 @@ public class EasySocketClient extends AbstractSocketClient {
     public EasySocketClient(Options options) {
         super(options);
         logger = options.getLogger();
+        logger.attach(this);
         name = options.getName();
         callbackExecutor = options.getCallbackExecutor();
         eventManager = EasySocket.getInstance().newEventManager();
@@ -159,7 +161,6 @@ public class EasySocketClient extends AbstractSocketClient {
 
     @Override
     public void onConnectFailed(@NonNull EasyException e) {
-        session = null;
         taskManager.reset(e);
 
         if (connectListeners.size() > 0) {
@@ -170,13 +171,15 @@ public class EasySocketClient extends AbstractSocketClient {
             });
         }
 
-        switchServer(e.getCode());
-        connector.prepareRestart();
+        if (NetUtils.isNetworkAvailable(EasySocket.getInstance().getContext())) {
+            switchServer(e.getCode());
+            connector.prepareRestart();
+        }
+        session = null;
     }
 
     @Override
     public void onDisconnect(@NonNull EasyException e) {
-        session = null;
         taskManager.reset(e);
 
         if (connectListeners.size() > 0) {
@@ -187,9 +190,13 @@ public class EasySocketClient extends AbstractSocketClient {
             });
         }
 
-
-        switchServer(e.getCode());
-        connector.prepareRestart();
+        if (NetUtils.isNetworkAvailable(EasySocket.getInstance().getContext())) {
+            if (!isAvailable()) {
+                switchServer(e.getCode());
+            }
+            connector.prepareRestart();
+        }
+        session = null;
     }
 
     @Override
@@ -249,7 +256,7 @@ public class EasySocketClient extends AbstractSocketClient {
 
     @Override
     public void onNetworkAvailable() {
-        if (timestamp > 0) {
+        if (timestamp > 0 && session == null) {
             connector.prepareRestart();
         }
     }
@@ -272,10 +279,7 @@ public class EasySocketClient extends AbstractSocketClient {
      * 切换服务器
      */
     private synchronized void switchServer(int code) {
-        if (code == ErrorCode.PULSE_TIME_OUT
-                || code == ErrorCode.STOP
-                || code == ErrorCode.SHUTDOWN
-                || addressList == null) {
+        if (code == ErrorCode.STOP || code == ErrorCode.SHUTDOWN) {
             return;
         }
         //连接失败达到阈值,需要切换备用线路
@@ -292,12 +296,15 @@ public class EasySocketClient extends AbstractSocketClient {
     }
 
     boolean isActive() {
-        long mills = System.currentTimeMillis();
+        //stop or shutdown.
+        if (timestamp <= 0) return false;
+
         long backgroundTimestamp = EasySocket.getInstance().getBackgroundTimestamp();
-        return timestamp > 0 &&
-                (mills - timestamp <= options.getLiveTime()
-                        || backgroundTimestamp == 0
-                        || mills - backgroundTimestamp <= options.getLiveTime());
+        if (backgroundTimestamp == 0) return true;
+
+        long mills = System.currentTimeMillis();
+        long liveMills = options.getLiveTime();
+        return mills - backgroundTimestamp <= liveMills && mills - timestamp <= liveMills;
     }
 
     @Override

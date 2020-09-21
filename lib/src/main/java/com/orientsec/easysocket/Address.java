@@ -62,6 +62,6 @@ public final class Address implements Serializable, Cloneable {
 
     @Override
     public String toString() {
-        return '[' + host + ":" + port + ']';
+        return host + ":" + port;
     }
 }

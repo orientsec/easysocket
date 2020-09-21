@@ -35,7 +35,6 @@ public abstract class Looper implements Runnable {
             String name = getClass().getSimpleName();
             this.name = name;
             thread = new Thread(this, name);
-            stop = false;
             loopTimes = 0;
             thread.start();
             logger.i(name + " is starting.");

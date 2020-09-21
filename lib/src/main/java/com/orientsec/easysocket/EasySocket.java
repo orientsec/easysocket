@@ -65,7 +65,7 @@ public class EasySocket implements EventListener {
         if (this.application != null)
             throw new IllegalStateException("EasySocket has already initialized.");
         this.application = application;
-        handlerThread = new HandlerThread("EasyManager");
+        handlerThread = new HandlerThread("EasyMain");
         handlerThread.start();
         eventManager = newEventManager();
         eventManager.addListener(this);

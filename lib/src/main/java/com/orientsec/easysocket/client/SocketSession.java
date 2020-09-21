@@ -91,16 +91,16 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
     @Override
     public void open() {
         if (state == State.IDLE) {
-            state = State.STARTING;
             connectExecutor.execute(this);
+            state = State.STARTING;
         }
     }
 
     @Override
     public void close(EasyException e) {
         if (state == State.IDLE || state == State.STARTING) {
-            state = State.DETACH;
             socketClient.onConnectFailed(e);
+            state = State.DETACH;
         } else {
             onError(e);
         }
@@ -124,7 +124,6 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
 
     private void onStart(Socket socket) {
         if (state == State.STARTING) {
-            state = State.CONNECT;
             this.socket = socket;
             //连接后进行一些前置操作，例如资源初始化
             socketClient.getInitializer().start(this);
@@ -134,15 +133,12 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
             reader = new BlockingReader(this, socket, options, socketClient.getHeadParser());
             writer.start();
             reader.start();
-            pulse = new Pulse(socketClient, this, eventManager);
-            pulse.start();
 
             messageHandlerMap.put(PacketType.RESPONSE.getValue(), taskManager);
-            messageHandlerMap.put(PacketType.PULSE.getValue(), pulse);
-            messageHandlerMap.put(PacketType.PUSH.getValue(), socketClient.getPushManager());
 
             socketClient.onConnect();
 
+            state = State.CONNECT;
             logger.i("Session start success.");
         } else {
             connectExecutor.execute(() -> {
@@ -157,28 +153,36 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
 
     private void onConnectFailed() {
         if (state == State.STARTING) {
-            state = State.DETACH;
             EasyException e = Errors.connectError(ErrorCode.SOCKET_CONNECT,
                     "Socket connect failed.");
             socketClient.onConnectFailed(e);
 
+            state = State.DETACH;
             logger.i("Session start failed.");
         }
     }
 
     private void onAvailable() {
         if (state == State.CONNECT) {
-            state = State.AVAILABLE;
+            //开启心跳
+            pulse = new Pulse(socketClient, this, eventManager);
+            pulse.start();
+            //注册主动心跳及推送消息处理器
+            messageHandlerMap.put(PacketType.PULSE.getValue(), pulse);
+            messageHandlerMap.put(PacketType.PUSH.getValue(), socketClient.getPushManager());
+
             socketClient.onAvailable();
 
+            state = State.AVAILABLE;
             logger.i("Session available.");
         }
     }
 
     private void onError(EasyException e) {
         if (state == State.CONNECT || state == State.AVAILABLE) {
-            state = State.DETACH;
-            pulse.stop();
+            if (pulse != null) {
+                pulse.stop();
+            }
             reader.shutdown();
             writer.shutdown();
             connectExecutor.execute(() -> {
@@ -190,6 +194,7 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
             });
             socketClient.onDisconnect(e);
 
+            state = State.DETACH;
             logger.w("Session end.", e);
         }
     }

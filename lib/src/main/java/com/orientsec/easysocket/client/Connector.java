@@ -1,9 +1,7 @@
 package com.orientsec.easysocket.client;
 
-import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.utils.Logger;
-import com.orientsec.easysocket.utils.NetUtils;
 
 import static com.orientsec.easysocket.client.EasySocketClient.RESTART;
 
@@ -26,16 +24,11 @@ class Connector {
 
 
     /**
-     * 停止重连任务
+     * 重连
      */
-    void stopRestart() {
-        eventManager.remove(RESTART);
-    }
-
     void prepareRestart() {
-        if (needConnect() &&
-                NetUtils.isNetworkAvailable(EasySocket.getInstance().getContext())) {
-            stopRestart();
+        if (options.getLivePolicy().autoConnect(socketClient.isActive())) {
+            eventManager.remove(RESTART);
 
             long delay = options.getConnectInterval();
             eventManager.publish(RESTART, delay);
@@ -45,16 +38,12 @@ class Connector {
 
 
     void restart() {
-        if (needConnect()) {
+        if (socketClient.session == null
+                && options.getLivePolicy().autoConnect(socketClient.isActive())) {
             socketClient.onStart(false);
         } else {
             logger.i("Restart abandon.");
         }
-    }
-
-    private boolean needConnect() {
-        return socketClient.session == null
-                && options.getLivePolicy().autoConnect(socketClient.isActive());
     }
 
 }

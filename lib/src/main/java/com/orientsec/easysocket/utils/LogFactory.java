@@ -1,15 +1,12 @@
 package com.orientsec.easysocket.utils;
 
-import com.orientsec.easysocket.BuildConfig;
+import com.orientsec.easysocket.Options;
 
 public class LogFactory {
-    public static Logger getLogger(String name) {
-        return getLogger(name, BuildConfig.DEBUG);
-    }
 
-    public static Logger getLogger(String name, boolean debuggable) {
-        if (debuggable) {
-            return new AndroidLogger(name);
+    public static Logger getLogger(Options options) {
+        if (options.isDebug()) {
+            return new AndroidLogger(options);
         } else {
             return new NoLogger();
         }

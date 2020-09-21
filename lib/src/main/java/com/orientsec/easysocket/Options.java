@@ -32,6 +32,8 @@ public class Options {
 
     private String name;
 
+    private boolean detailLog;
+
     /**
      * 心跳解码器
      */
@@ -145,8 +147,8 @@ public class Options {
         pulseDecoderProvider = builder.pulseDecoderProvider;
         pushManagerProvider = builder.pushManagerProvider;
         socketFactoryProvider = builder.socketFactoryProvider;
-
-        logger = LogFactory.getLogger(name, debug);
+        detailLog = builder.detailLog;
+        logger = LogFactory.getLogger(this);
     }
 
     public boolean isDebug() {
@@ -237,6 +239,10 @@ public class Options {
         return logger;
     }
 
+    public boolean isDetailLog() {
+        return detailLog;
+    }
+
     public static final class Builder {
         private String name = "";
         private boolean debug;
@@ -259,6 +265,7 @@ public class Options {
         private LivePolicy livePolicy = LivePolicy.DEFAULT;
         private int retryTimes;
         private int connectInterval = 3000;
+        private boolean detailLog = true;
 
         public Builder() {
         }
@@ -373,6 +380,11 @@ public class Options {
             return this;
         }
 
+        public Builder detailLog(boolean val) {
+            detailLog = val;
+            return this;
+        }
+
         @NonNull
         public Options build() {
             String error = checkParams();
@@ -434,13 +446,13 @@ public class Options {
                 initializerProvider = new DefaultInitializerProvider();
             }
             if (callbackExecutor == null) {
-                callbackExecutor = Executors.mainThreadExecutor;
+                callbackExecutor = Executors.defaultMainExecutor();
             }
             if (connectExecutor == null) {
-                connectExecutor = Executors.connectExecutor;
+                connectExecutor = Executors.defaultConnectExecutor();
             }
             if (codecExecutor == null) {
-                codecExecutor = Executors.codecExecutor;
+                codecExecutor = Executors.defaultCodecExecutor();
             }
 
             return "";
