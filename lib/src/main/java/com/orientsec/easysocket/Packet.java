@@ -22,21 +22,27 @@ public class Packet {
         this.body = body;
     }
 
+    public Packet(@NonNull PacketType packetType, @NonNull Object body) {
+        this.packetType = packetType;
+        this.body = body;
+        this.taskId = 0;
+    }
+
     /**
      * 消息id
      */
-    private int taskId;
+    private final int taskId;
     /**
      * 包体
      */
     @NonNull
-    private Object body;
+    private final Object body;
 
     /**
      * 消息类型
      */
     @NonNull
-    private PacketType packetType;
+    private final PacketType packetType;
 
     /**
      * 获取任务id

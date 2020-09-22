@@ -15,4 +15,5 @@ public interface TaskFactory {
      */
     @NonNull
     <R extends T, T> Task<R> buildTask(@NonNull Request<R> request, @NonNull Callback<T> callback);
+
 }

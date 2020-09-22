@@ -9,6 +9,7 @@ import com.orientsec.easysocket.error.ErrorCode;
 import com.orientsec.easysocket.error.Errors;
 import com.orientsec.easysocket.request.Callback;
 import com.orientsec.easysocket.request.PulseRequest;
+import com.orientsec.easysocket.request.Request;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.concurrent.Executor;
@@ -79,7 +80,10 @@ public class Pulse implements PacketHandler {
             logger.e("Pulse failed times up, session invalid.");
             session.close(Errors.connectError(ErrorCode.PULSE_TIME_OUT, "Pulse time out."));
         } else {
-            PulseRequest pulseRequest = new PulseRequest(socketClient.getPulseRequest());
+            Request<Boolean> pulseRequest = socketClient.getPulseRequest();
+            if (!pulseRequest.isPulse()) {
+                pulseRequest = new PulseRequest(pulseRequest);
+            }
             socketClient.buildTask(pulseRequest, callback).execute();
             start();
         }

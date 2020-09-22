@@ -18,21 +18,30 @@ import com.orientsec.easysocket.Packet;
  */
 public abstract class Request<R> implements Encoder, Decoder<R> {
     /**
-     * 初始化任务。
-     * 在连接可用之前，非初始化请求会进入等待状态，直到连接可用之后，
-     * 进行编码、发送。初始化请求在连接成功之后可以直接执行。
+     * 初始化请求。
      */
-    public boolean isInitialize() {
-        return false;
+    public static final int INITIALIZE = 1;
+    /**
+     * 无返回的请求。
+     */
+    public static final int NO_RESPONSE = 2;
+    /**
+     * 无任务id。
+     */
+    public static final int NO_TASK_ID = 4;
+    /**
+     * 心跳请求。
+     */
+    public static final int PULSE = 8;
+
+    public final int flag;
+
+    public Request() {
+        this.flag = 0;
     }
 
-    /**
-     * 进发送，无响应的请求。
-     *
-     * @return 是否仅发送。
-     */
-    public boolean isSendOnly() {
-        return false;
+    public Request(int flag) {
+        this.flag = flag;
     }
 
     /**
@@ -58,4 +67,35 @@ public abstract class Request<R> implements Encoder, Decoder<R> {
     @Override
     @NonNull
     public abstract R decode(@NonNull Packet data) throws Exception;
+
+    /**
+     * 请求是否无返回。
+     *
+     * @return 如果请求无返回，return true。
+     */
+    public final boolean isNoResponse() {
+        return (flag & NO_RESPONSE) == NO_RESPONSE;
+    }
+
+    /**
+     * 请求是否无需taskId。
+     *
+     * @return 如果请求无taskId，return true。
+     */
+    public final boolean isNoTaskId() {
+        return (flag & NO_TASK_ID) == NO_TASK_ID;
+    }
+
+    /**
+     * 初始化任务。
+     * 在连接可用之前，非初始化请求会进入等待状态，直到连接可用之后，
+     * 进行编码、发送。初始化请求在连接成功之后可以直接执行。
+     */
+    public final boolean isInitialize() {
+        return (flag & INITIALIZE) == INITIALIZE;
+    }
+
+    public final boolean isPulse() {
+        return (flag & PULSE) == PULSE;
+    }
 }

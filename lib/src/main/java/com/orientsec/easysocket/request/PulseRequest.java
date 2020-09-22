@@ -8,12 +8,8 @@ public class PulseRequest extends Request<Boolean> {
     private final Request<Boolean> request;
 
     public PulseRequest(Request<Boolean> request) {
+        super(request.flag | PULSE);
         this.request = request;
-    }
-
-    @Override
-    public boolean isSendOnly() {
-        return request.isSendOnly();
     }
 
     @NonNull

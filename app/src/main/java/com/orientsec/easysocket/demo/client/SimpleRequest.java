@@ -12,7 +12,6 @@ public class SimpleRequest extends Request<String> {
     private int cmd;
     private Session session;
     private String param;
-    private boolean init;
 
     SimpleRequest(String param, Session session) {
         this.cmd = 2;
@@ -27,15 +26,10 @@ public class SimpleRequest extends Request<String> {
     }
 
     public SimpleRequest(String param, int cmd, boolean init, Session session) {
+        super(init ? INITIALIZE : 0);
         this.cmd = cmd;
         this.session = session;
-        this.init = init;
         this.param = param;
-    }
-
-    @Override
-    public boolean isInitialize() {
-        return init;
     }
 
     @Override

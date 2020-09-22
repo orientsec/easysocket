@@ -11,7 +11,6 @@ import com.orientsec.easysocket.error.ErrorCode;
 import com.orientsec.easysocket.error.ErrorType;
 import com.orientsec.easysocket.error.Errors;
 import com.orientsec.easysocket.request.Callback;
-import com.orientsec.easysocket.request.PulseRequest;
 import com.orientsec.easysocket.request.Request;
 
 import java.util.Map;
@@ -114,10 +113,6 @@ public class RequestTask<R extends T, T> implements Task<R> {
         return data;
     }
 
-    boolean isInitialize() {
-        return request.isInitialize();
-    }
-
     @Override
     public void execute() {
         if (executed.compareAndSet(false, true)) {
@@ -153,7 +148,7 @@ public class RequestTask<R extends T, T> implements Task<R> {
         SocketClient socketClient = this.socketClient;
         if (socketClient.isShutdown()) {
             onError(Errors.shutdown());
-        } else if (request.getClass() == PulseRequest.class) {
+        } else if (request.isPulse()) {
             if (socketClient.isAvailable()) {
                 taskMap.put(taskId, this);
                 onEncode();
@@ -161,7 +156,7 @@ public class RequestTask<R extends T, T> implements Task<R> {
         } else {
             socketClient.start();
             taskMap.put(taskId, this);
-            if (socketClient.isAvailable() || isInitialize()) {
+            if (socketClient.isAvailable() || request.isInitialize()) {
                 onEncode();
             } else {
                 waitingQueue.add(this);
@@ -204,7 +199,7 @@ public class RequestTask<R extends T, T> implements Task<R> {
 
     void onSend() {
         if (!isFinished()) {
-            if (request.isSendOnly()) {
+            if (request.isNoResponse()) {
                 //仅发送请求，发送成功后直接进入SUCCESS状态。
                 taskMap.remove(taskId);
                 state = State.SUCCESS;

@@ -7,17 +7,24 @@ import com.orientsec.easysocket.Packet;
 public class SendOnlyRequest<R> extends Request<R> {
     private final Encoder encoder;
 
+    public SendOnlyRequest(int flag) {
+        super(flag | NO_RESPONSE);
+        encoder = null;
+    }
+
+    public SendOnlyRequest(int flag, Encoder encoder) {
+        super(flag | NO_RESPONSE);
+        this.encoder = encoder;
+    }
+
     public SendOnlyRequest(Encoder encoder) {
+        super(NO_RESPONSE);
         this.encoder = encoder;
     }
 
     public SendOnlyRequest() {
+        super(NO_RESPONSE);
         encoder = null;
-    }
-
-    @Override
-    public final boolean isSendOnly() {
-        return true;
     }
 
     @NonNull

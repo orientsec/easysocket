@@ -50,7 +50,13 @@ public class RealTaskManager implements TaskManager, EventListener {
     @Override
     public <R extends T, T> Task<R> buildTask(@NonNull Request<R> request,
                                               @NonNull Callback<T> callback) {
-        return new RequestTask<>(uniqueId.getAndIncrement(), request, callback, taskMap,
+        int id;
+        if (request.isNoTaskId()) {
+            id = 0;
+        } else {
+            id = uniqueId.getAndIncrement();
+        }
+        return new RequestTask<>(id, request, callback, taskMap,
                 waitingQueue, writingQueue, eventManager, socketClient);
     }
 
