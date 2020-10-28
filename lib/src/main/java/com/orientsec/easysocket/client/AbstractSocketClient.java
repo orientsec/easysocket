@@ -40,7 +40,7 @@ public abstract class AbstractSocketClient implements SocketClient, EventListene
 
     public abstract TaskManager getTaskManager();
 
-    public abstract Address obtainAddress();
+    protected abstract Address obtainAddress();
 
     @NonNull
     @Override

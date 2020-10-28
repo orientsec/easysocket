@@ -262,7 +262,7 @@ public class EasySocketClient extends AbstractSocketClient {
     }
 
     @Override
-    public synchronized Address obtainAddress() {
+    public Address obtainAddress() {
         if (addressList == null) {
             List<Address> addressList = options.getAddressProvider()
                     .get(this);
@@ -278,7 +278,7 @@ public class EasySocketClient extends AbstractSocketClient {
     /**
      * 切换服务器
      */
-    private synchronized void switchServer(int code) {
+    private void switchServer(int code) {
         if (code == ErrorCode.STOP || code == ErrorCode.SHUTDOWN) {
             return;
         }
@@ -289,8 +289,7 @@ public class EasySocketClient extends AbstractSocketClient {
             if (++backUpIndex >= addressList.size()) {
                 backUpIndex = 0;
             }
-            Address address = addressList.get(backUpIndex);
-            this.address = address;
+            this.address = addressList.get(backUpIndex);
             logger.i("Switch to server: " + address);
         }
     }

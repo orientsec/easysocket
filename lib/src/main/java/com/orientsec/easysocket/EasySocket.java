@@ -45,7 +45,7 @@ public class EasySocket implements EventListener {
     private volatile long backgroundTimestamp;
 
     private static class InstanceHolder {
-        private static EasySocket easySocket = new EasySocket();
+        private static final EasySocket easySocket = new EasySocket();
     }
 
     public static EasySocket getInstance() {
