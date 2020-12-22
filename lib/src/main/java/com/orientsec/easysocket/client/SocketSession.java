@@ -53,7 +53,7 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
 
     private final Logger logger;
 
-    private AbstractSocketClient socketClient;
+    private final AbstractSocketClient socketClient;
 
     private State state = State.IDLE;
 
@@ -70,6 +70,10 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
 
         eventManager = EasySocket.getInstance().newEventManager();
         eventManager.addListener(this);
+    }
+
+    public Socket getSocket() {
+        return socket;
     }
 
     @Override

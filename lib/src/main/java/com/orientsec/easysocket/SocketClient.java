@@ -6,6 +6,8 @@ import androidx.annotation.Nullable;
 import com.orientsec.easysocket.push.PushManager;
 import com.orientsec.easysocket.task.TaskFactory;
 
+import java.net.InetAddress;
+
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket
@@ -57,6 +59,9 @@ public interface SocketClient extends TaskFactory {
      */
     @Nullable
     Address getAddress();
+
+    @Nullable
+    InetAddress getInetAddress();
 
     /**
      * 添加连接事件监听器

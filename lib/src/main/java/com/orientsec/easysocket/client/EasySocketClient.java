@@ -19,6 +19,8 @@ import com.orientsec.easysocket.task.TaskManager;
 import com.orientsec.easysocket.utils.Logger;
 import com.orientsec.easysocket.utils.NetUtils;
 
+import java.net.InetAddress;
+import java.net.Socket;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -49,7 +51,7 @@ public class EasySocketClient extends AbstractSocketClient {
     //激活时间戳。
     private long timestamp;
 
-    Session session;
+    SocketSession session;
 
     private List<Address> addressList;
     private Address address;
@@ -252,6 +254,18 @@ public class EasySocketClient extends AbstractSocketClient {
     @Override
     public Address getAddress() {
         return address;
+    }
+
+    @Nullable
+    @Override
+    public InetAddress getInetAddress() {
+        if (session != null) {
+            Socket socket = session.getSocket();
+            if (socket != null) {
+                return socket.getInetAddress();
+            }
+        }
+        return null;
     }
 
     @Override

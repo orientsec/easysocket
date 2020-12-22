@@ -8,7 +8,7 @@ buildscript {
         maven { url 'http://maven.aliyun.com/nexus/content/groups/public/' }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.0.1'
+        classpath 'com.android.tools.build:gradle:4.1.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
 
 
@@ -35,7 +35,7 @@ ext {
     // 库的ID
     PROJ_ARTIFACTID = 'easysocket'
     // 库的版本
-    PROJ_VERSION = '2.0.1-alpha6'
+    PROJ_VERSION = '2.0.1-beta1'
     // 最后 gradle引用的形式就是 $PROJ_GROUP:$PROJ_ARTIFACTID:$PROJ_VERSION
     // 库的简单描述
     PROJ_DESCRIPTION = 'easysocket'
