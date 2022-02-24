@@ -38,7 +38,7 @@ public class BlockingReader extends Looper implements Reader {
     }
 
     @Override
-    public void read() throws IOException, EasyException {
+    public void read() throws Exception {
         int headLength = headParser.headSize();
         byte[] headBytes = new byte[headLength];
         readInputStream(inputStream, headBytes);
@@ -74,7 +74,7 @@ public class BlockingReader extends Looper implements Reader {
     }
 
     @Override
-    protected void runInLoopThread() throws IOException, EasyException {
+    protected void runInLoopThread() throws Exception {
         read();
     }
 
@@ -82,7 +82,7 @@ public class BlockingReader extends Looper implements Reader {
     protected synchronized void loopFinish() {
         if (isRunning()) {
             session.postError(Errors.connectError(ErrorCode.READ_EXIT,
-                    "Blocking reader exit."));
+                    "Blocking reader exit.", error));
         }
     }
 }

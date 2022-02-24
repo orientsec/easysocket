@@ -4,7 +4,7 @@ package com.orientsec.easysocket.client;
 import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.Address;
-import com.orientsec.easysocket.ConnectListener;
+import com.orientsec.easysocket.ConnectionListener;
 import com.orientsec.easysocket.HeadParser;
 import com.orientsec.easysocket.Initializer;
 import com.orientsec.easysocket.Options;
@@ -17,7 +17,7 @@ import com.orientsec.easysocket.task.TaskManager;
 import javax.net.SocketFactory;
 
 public abstract class AbstractSocketClient implements SocketClient, EventListener,
-        ConnectListener {
+        ConnectionListener {
     protected final Options options;
     private PushManager<?, ?> pushManager;
     private HeadParser headParser;

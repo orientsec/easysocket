@@ -10,7 +10,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 public class EventManager implements Handler.Callback {
-    private Set<EventListener> listeners = new CopyOnWriteArraySet<>();
+    private final Set<EventListener> listeners = new CopyOnWriteArraySet<>();
     final Handler mHandler;
 
     public EventManager(Looper looper) {

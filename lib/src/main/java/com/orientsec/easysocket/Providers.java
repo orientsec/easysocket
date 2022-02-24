@@ -118,7 +118,7 @@ class StaticAddressProvider implements Provider<List<Address>> {
         return new StaticAddressProvider(addressList);
     }
 
-    private List<Address> addressList;
+    private final List<Address> addressList;
 
     StaticAddressProvider(List<Address> addressList) {
         this.addressList = addressList;

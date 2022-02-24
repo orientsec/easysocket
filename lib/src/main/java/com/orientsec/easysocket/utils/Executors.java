@@ -50,7 +50,7 @@ public class Executors {
     public static synchronized Executor defaultMainExecutor() {
         if (mainExecutor == null) {
             mainExecutor = new Executor() {
-                private Handler handler = new Handler(Looper.getMainLooper());
+                private final Handler handler = new Handler(Looper.getMainLooper());
 
                 @Override
                 public void execute(@NonNull Runnable command) {

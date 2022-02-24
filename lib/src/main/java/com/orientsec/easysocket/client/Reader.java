@@ -20,5 +20,5 @@ public interface Reader {
      * @throws EasyException 读异常，发生在{@link HeadParser#decodePacket(HeadParser.Head, byte[])}
      *                       过程中
      */
-    void read() throws IOException, EasyException;
+    void read() throws Exception;
 }

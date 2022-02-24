@@ -4,7 +4,6 @@ import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
-import com.orientsec.easysocket.error.EasyException;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.HashMap;
@@ -65,13 +64,13 @@ public abstract class AbstractPushManager<K, E> implements PushManager<K, E> {
                 E event = parsePacket(packet);
                 K key = eventKey(packet, event);
                 callbackExecutor.execute(() -> sendPushEvent(key, event));
-            } catch (EasyException e) {
+            } catch (Exception e) {
                 onError(e);
             }
         });
     }
 
-    protected abstract void onError(EasyException e);
+    protected abstract void onError(Exception e);
 
     protected abstract K eventKey(@NonNull Packet packet, E event);
 

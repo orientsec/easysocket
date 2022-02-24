@@ -11,22 +11,22 @@ import androidx.annotation.NonNull;
  */
 
 public class EasyException extends Exception {
-    private int code;
-    private String type;
+    private final int code;
+    private final int type;
 
-    public EasyException(int code, String type, String message) {
+    public EasyException(int code, int type, String message) {
         super(message);
         this.code = code;
         this.type = type;
     }
 
-    public EasyException(int code, String type, String message, Throwable cause) {
+    public EasyException(int code, int type, String message, Throwable cause) {
         super(message, cause);
         this.code = code;
         this.type = type;
     }
 
-    public EasyException(int code, String type, Throwable cause) {
+    public EasyException(int code, int type, Throwable cause) {
         super(cause);
         this.code = code;
         this.type = type;
@@ -47,7 +47,7 @@ public class EasyException extends Exception {
         return code;
     }
 
-    public String getType() {
+    public int getType() {
         return type;
     }
 }

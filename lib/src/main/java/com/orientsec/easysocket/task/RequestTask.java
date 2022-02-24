@@ -182,7 +182,7 @@ public class RequestTask<R extends T, T> implements Task<R> {
     void onEnqueue() {
         if (!isFinished() && !writingQueue.offer(this)) {
             taskMap.remove(taskId);
-            onError(Errors.error(ErrorCode.TASK_REFUSED, ErrorType.TASK,
+            onError(Errors.error(ErrorCode.TASK_REFUSED, ErrorType.SYSTEM,
                     "Task queue refuse to accept task!"));
         }
     }

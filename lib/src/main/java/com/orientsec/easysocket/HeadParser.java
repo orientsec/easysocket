@@ -39,7 +39,7 @@ public interface HeadParser {
      * @return 包体大小
      */
     @NonNull
-    Head parseHead(@NonNull byte[] bytes) throws EasyException;
+    Head parseHead(@NonNull byte[] bytes) throws Exception;
 
     /**
      * 解析消息体

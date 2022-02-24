@@ -59,7 +59,7 @@ public class BlockingWriter extends Looper implements Writer {
     protected synchronized void loopFinish() {
         if (isRunning()) {
             session.postError(Errors.connectError(ErrorCode.WRITE_EXIT,
-                    "Blocking writer exit."));
+                    "Blocking writer exit.", error));
         }
     }
 }

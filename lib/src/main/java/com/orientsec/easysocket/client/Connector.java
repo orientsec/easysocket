@@ -13,7 +13,7 @@ class Connector {
 
     private final Logger logger;
 
-    private EasySocketClient socketClient;
+    private final EasySocketClient socketClient;
 
     Connector(EasySocketClient socketClient) {
         this.socketClient = socketClient;

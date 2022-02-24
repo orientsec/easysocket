@@ -28,100 +28,100 @@ public class Options {
     /**
      * 是否是调试模式
      */
-    private boolean debug;
+    private final boolean debug;
 
-    private String name;
+    private final String name;
 
-    private boolean detailLog;
+    private final boolean detailLog;
 
     /**
      * 心跳解码器
      */
-    private Provider<Decoder<Boolean>> pulseDecoderProvider;
+    private final Provider<Decoder<Boolean>> pulseDecoderProvider;
     /**
      * 心跳请求
      */
-    private Provider<Request<Boolean>> pulseRequestProvider;
+    private final Provider<Request<Boolean>> pulseRequestProvider;
     /**
      * 站点信息
      */
-    private Provider<List<Address>> addressProvider;
+    private final Provider<List<Address>> addressProvider;
     /**
      * Socket factory
      */
-    private Provider<SocketFactory> socketFactoryProvider;
+    private final Provider<SocketFactory> socketFactoryProvider;
     /**
      * 数据协议
      */
-    private Provider<HeadParser> headParserProvider;
+    private final Provider<HeadParser> headParserProvider;
     /**
      * 推送消息处理器
      */
-    private Provider<PushManager<?, ?>> pushManagerProvider;
+    private final Provider<PushManager<?, ?>> pushManagerProvider;
     /**
      * 连接初始化
      */
-    private Provider<Initializer> initializerProvider;
+    private final Provider<Initializer> initializerProvider;
     /**
      * 消息分发执行器
      * 连接状态监听回调，请求回调，都执行在Executor所在线程
      */
-    private Executor callbackExecutor;
+    private final Executor callbackExecutor;
 
     /**
      * 连接管理线程池
      * 启动连接、关闭连接的执行线程池
      */
-    private Executor connectExecutor;
+    private final Executor connectExecutor;
 
     /**
      * 编解码执行器
      */
-    private Executor codecExecutor;
+    private final Executor codecExecutor;
     /**
      * 最大读取数据的K数(KB)<br>
      * 防止服务器返回数据体过大的数据导致前端内存溢出.
      */
-    private int maxReadDataKB;
+    private final int maxReadDataKB;
 
     /**
      * 请求超时时间 单位秒
      */
-    private int requestTimeOut;
+    private final int requestTimeOut;
 
     /**
      * 连接超时时间 单位秒
      */
-    private int connectTimeOut;
+    private final int connectTimeOut;
 
     /**
      * 心跳频率 单位秒
      */
-    private int pulseRate;
+    private final int pulseRate;
     /**
      * 心跳失败次数
      */
-    private int pulseLostTimes;
+    private final int pulseLostTimes;
 
     /**
      * 后台存活时间
      */
-    private int liveTime;
+    private final int liveTime;
 
     /**
      * 后台策略
      */
-    private LivePolicy livePolicy;
+    private final LivePolicy livePolicy;
 
     /**
      * 失败重连尝试次数
      */
-    private int retryTimes;
+    private final int retryTimes;
 
     /**
      * 连接间隔
      */
-    private int connectInterval;
+    private final int connectInterval;
 
     protected final Logger logger;
 

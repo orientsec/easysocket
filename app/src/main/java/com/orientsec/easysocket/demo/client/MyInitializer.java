@@ -26,7 +26,7 @@ public class MyInitializer implements Initializer {
 
             @Override
             public void onError(@NonNull Exception e) {
-                emitter.fail();
+                emitter.fail(e);
             }
         };
         Task<String> task = client.socketClient.buildTask(authRequest, callback);

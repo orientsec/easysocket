@@ -5,11 +5,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.orientsec.easysocket.Address;
-import com.orientsec.easysocket.ConnectListener;
+import com.orientsec.easysocket.ConnectionListener;
 import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.error.EasyException;
-import com.orientsec.easysocket.error.ErrorCode;
 import com.orientsec.easysocket.error.Errors;
 import com.orientsec.easysocket.request.Callback;
 import com.orientsec.easysocket.request.Request;
@@ -46,9 +45,9 @@ public class EasySocketClient extends AbstractSocketClient {
     private final Executor callbackExecutor;
     private final TaskManager taskManager;
     final EventManager eventManager;
-    private final Set<ConnectListener> connectListeners = new CopyOnWriteArraySet<>();
+    private final Set<ConnectionListener> connectionListeners = new CopyOnWriteArraySet<>();
 
-    //激活时间戳。
+    //激活时间戳。主动发起请求即为一次激活。
     private long timestamp;
 
     SocketSession session;
@@ -86,13 +85,13 @@ public class EasySocketClient extends AbstractSocketClient {
     }
 
     @Override
-    public void addConnectListener(@NonNull ConnectListener listener) {
-        connectListeners.add(listener);
+    public void addConnectListener(@NonNull ConnectionListener listener) {
+        connectionListeners.add(listener);
     }
 
     @Override
-    public void removeConnectListener(@NonNull ConnectListener listener) {
-        connectListeners.remove(listener);
+    public void removeConnectListener(@NonNull ConnectionListener listener) {
+        connectionListeners.remove(listener);
     }
 
     @Override
@@ -126,6 +125,7 @@ public class EasySocketClient extends AbstractSocketClient {
         if (session == null) {
             session = new SocketSession(this);
             session.open();
+            onConnectionStart();
         }
     }
 
@@ -151,50 +151,62 @@ public class EasySocketClient extends AbstractSocketClient {
     }
 
     @Override
-    public void onConnect() {
-        if (connectListeners.size() > 0) {
+    public void onConnectionStart() {
+        if (connectionListeners.size() > 0) {
             callbackExecutor.execute(() -> {
-                for (ConnectListener listener : connectListeners) {
-                    listener.onConnect();
+                for (ConnectionListener listener : connectionListeners) {
+                    listener.onConnectionStart();
                 }
             });
         }
     }
 
     @Override
-    public void onConnectFailed(@NonNull EasyException e) {
+    public void onConnected() {
+        if (connectionListeners.size() > 0) {
+            callbackExecutor.execute(() -> {
+                for (ConnectionListener listener : connectionListeners) {
+                    listener.onConnected();
+                }
+            });
+        }
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull EasyException e) {
         taskManager.reset(e);
 
-        if (connectListeners.size() > 0) {
+        if (connectionListeners.size() > 0) {
             callbackExecutor.execute(() -> {
-                for (ConnectListener listener : connectListeners) {
-                    listener.onConnectFailed(e);
+                for (ConnectionListener listener : connectionListeners) {
+                    listener.onConnectionFailed(e);
                 }
             });
         }
 
         if (NetUtils.isNetworkAvailable(EasySocket.getInstance().getContext())) {
-            switchServer(e.getCode());
+            switchServer();
             connector.prepareRestart();
         }
         session = null;
     }
 
     @Override
-    public void onDisconnect(@NonNull EasyException e) {
+    public void onDisconnected(@NonNull EasyException e) {
         taskManager.reset(e);
 
-        if (connectListeners.size() > 0) {
+        if (connectionListeners.size() > 0) {
             callbackExecutor.execute(() -> {
-                for (ConnectListener listener : connectListeners) {
-                    listener.onDisconnect(e);
+                for (ConnectionListener listener : connectionListeners) {
+                    listener.onDisconnected(e);
                 }
             });
         }
 
         if (NetUtils.isNetworkAvailable(EasySocket.getInstance().getContext())) {
+            //当前连接不可用的情况下，需要切换到下一个站点。
             if (!isAvailable()) {
-                switchServer(e.getCode());
+                switchServer();
             }
             connector.prepareRestart();
         }
@@ -202,13 +214,13 @@ public class EasySocketClient extends AbstractSocketClient {
     }
 
     @Override
-    public void onAvailable() {
+    public void onConnectionAvailable() {
         failedTimes = 0;
         taskManager.ready();
-        if (connectListeners.size() > 0) {
+        if (connectionListeners.size() > 0) {
             callbackExecutor.execute(() -> {
-                for (ConnectListener listener : connectListeners) {
-                    listener.onAvailable();
+                for (ConnectionListener listener : connectionListeners) {
+                    listener.onConnectionAvailable();
                 }
             });
         }
@@ -292,10 +304,7 @@ public class EasySocketClient extends AbstractSocketClient {
     /**
      * 切换服务器
      */
-    private void switchServer(int code) {
-        if (code == ErrorCode.STOP || code == ErrorCode.SHUTDOWN) {
-            return;
-        }
+    private void switchServer() {
         //连接失败达到阈值,需要切换备用线路
         if (++failedTimes >= options.getRetryTimes()) {
             failedTimes = 0;

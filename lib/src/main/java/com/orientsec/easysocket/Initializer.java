@@ -8,6 +8,6 @@ public interface Initializer {
     interface Emitter {
         void success();
 
-        void fail();
+        void fail(Exception e);
     }
 }

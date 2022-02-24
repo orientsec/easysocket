@@ -68,14 +68,14 @@ public interface SocketClient extends TaskFactory {
      *
      * @param listener 监听器
      */
-    void addConnectListener(@NonNull ConnectListener listener);
+    void addConnectListener(@NonNull ConnectionListener listener);
 
     /**
      * 移除连接事件监听器
      *
      * @param listener 监听器
      */
-    void removeConnectListener(@NonNull ConnectListener listener);
+    void removeConnectListener(@NonNull ConnectionListener listener);
 
     /**
      * 获取推送管理器

@@ -10,11 +10,11 @@ public final class Address implements Serializable, Cloneable {
     /**
      * IPV4地址
      */
-    private String host;
+    private final String host;
     /**
      * 连接服务器端口号
      */
-    private int port;
+    private final int port;
 
     public Address(String host, int port) {
         this.host = host;

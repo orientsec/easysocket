@@ -24,7 +24,7 @@ public enum PacketType {
      */
     PULSE("pulse");
 
-    private String value;
+    private final String value;
 
     PacketType(String value) {
         this.value = value;

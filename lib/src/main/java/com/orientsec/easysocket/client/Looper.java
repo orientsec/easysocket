@@ -1,9 +1,7 @@
 package com.orientsec.easysocket.client;
 
-import com.orientsec.easysocket.error.EasyException;
 import com.orientsec.easysocket.utils.Logger;
 
-import java.io.IOException;
 
 /**
  * Product: EasySocket
@@ -22,6 +20,8 @@ public abstract class Looper implements Runnable {
     private String name;
 
     private final Logger logger;
+
+    protected Exception error;
 
     protected Looper(Logger logger) {
         this.logger = logger;
@@ -50,10 +50,9 @@ public abstract class Looper implements Runnable {
                 loopTimes++;
             }
         } catch (Exception e) {
-            //e.printStackTrace();
-            logger.i(name + " error.", e);
+            error = e;
+            logger.i(name + " is shutting down. error.", e);
         } finally {
-            logger.i(name + " is shutting down.");
             loopFinish();
         }
     }
@@ -62,9 +61,9 @@ public abstract class Looper implements Runnable {
         return loopTimes;
     }
 
-    protected abstract void beforeLoop() throws IOException, EasyException;
+    protected abstract void beforeLoop() throws Exception;
 
-    protected abstract void runInLoopThread() throws IOException, EasyException;
+    protected abstract void runInLoopThread() throws Exception;
 
     protected abstract void loopFinish();
 

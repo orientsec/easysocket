@@ -103,7 +103,7 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
     @Override
     public void close(EasyException e) {
         if (state == State.IDLE || state == State.STARTING) {
-            socketClient.onConnectFailed(e);
+            socketClient.onConnectionFailed(e);
             state = State.DETACH;
         } else {
             onError(e);
@@ -116,9 +116,9 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
     }
 
     @Override
-    public void fail() {
+    public void fail(Exception e) {
         logger.e("Session initialize failed.");
-        eventManager.publish(INIT_FAILED, this);
+        eventManager.publish(INIT_FAILED, e);
     }
 
     @Override
@@ -126,7 +126,7 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
         eventManager.publish(ERROR, e);
     }
 
-    private void onStart(Socket socket) {
+    private void onReady(Socket socket) {
         if (state == State.STARTING) {
             this.socket = socket;
             //连接后进行一些前置操作，例如资源初始化
@@ -140,7 +140,7 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
 
             messageHandlerMap.put(PacketType.RESPONSE.getValue(), taskManager);
 
-            socketClient.onConnect();
+            socketClient.onConnected();
 
             state = State.CONNECT;
             logger.i("Session start success.");
@@ -148,18 +148,18 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
             connectExecutor.execute(() -> {
                 try {
                     socket.close();
-                } catch (IOException e1) {
-                    e1.printStackTrace();
+                } catch (IOException e) {
+                    logger.e("Easy Socket closed.", e);
                 }
             });
         }
     }
 
-    private void onConnectFailed() {
+    private void onFailed(Exception ex) {
         if (state == State.STARTING) {
             EasyException e = Errors.connectError(ErrorCode.SOCKET_CONNECT,
-                    "Socket connect failed.");
-            socketClient.onConnectFailed(e);
+                    "Socket connect failed.", ex);
+            socketClient.onConnectionFailed(e);
 
             state = State.DETACH;
             logger.i("Session start failed.");
@@ -175,7 +175,7 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
             messageHandlerMap.put(PacketType.PULSE.getValue(), pulse);
             messageHandlerMap.put(PacketType.PUSH.getValue(), socketClient.getPushManager());
 
-            socketClient.onAvailable();
+            socketClient.onConnectionAvailable();
 
             state = State.AVAILABLE;
             logger.i("Session available.");
@@ -192,11 +192,11 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
             connectExecutor.execute(() -> {
                 try {
                     socket.close();
-                } catch (IOException e1) {
-                    e1.printStackTrace();
+                } catch (IOException ioe) {
+                    logger.e("Easy Socket closed.", ioe);
                 }
             });
-            socketClient.onDisconnect(e);
+            socketClient.onDisconnected(e);
 
             state = State.DETACH;
             logger.w("Session end.", e);
@@ -219,7 +219,7 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
             eventManager.publish(START_SUCCESS, socket);
         } catch (Exception e) {
             logger.i("Socket connect failed.", e);
-            eventManager.publish(START_FAILED);
+            eventManager.publish(START_FAILED, e);
         }
     }
 
@@ -244,15 +244,17 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
                 onAvailable();
                 break;
             case INIT_FAILED:
+                assert object != null;
                 onError(Errors.connectError(ErrorCode.INIT_FAILED,
-                        "Session initialize failed."));
+                        "Session initialize failed.", (Exception) object));
                 break;
             case START_SUCCESS:
                 assert object != null;
-                onStart((Socket) object);
+                onReady((Socket) object);
                 break;
             case START_FAILED:
-                onConnectFailed();
+                assert object != null;
+                onFailed((Exception) object);
                 break;
             case ON_PACKET:
                 assert object != null;
