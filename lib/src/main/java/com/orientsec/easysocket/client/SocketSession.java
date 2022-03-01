@@ -1,5 +1,7 @@
 package com.orientsec.easysocket.client;
 
+import android.net.TrafficStats;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -10,19 +12,25 @@ import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.PacketHandler;
 import com.orientsec.easysocket.PacketType;
+import com.orientsec.easysocket.Period;
 import com.orientsec.easysocket.error.EasyException;
+import com.orientsec.easysocket.error.ErrorBuilder;
 import com.orientsec.easysocket.error.ErrorCode;
-import com.orientsec.easysocket.error.Errors;
+import com.orientsec.easysocket.error.ErrorType;
 import com.orientsec.easysocket.task.TaskManager;
+import com.orientsec.easysocket.utils.LogFactory;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
+
+import javax.net.ssl.SSLSocket;
 
 /**
  * Product: EasySocket
@@ -31,7 +39,7 @@ import java.util.concurrent.Executor;
  * Author: Fredric
  * coding is art not science
  */
-public class SocketSession implements Session, Initializer.Emitter, Runnable, EventListener {
+public class SocketSession implements OperableSession, Initializer.Emitter, Runnable, EventListener {
     static final int ERROR = 202;
     static final int START_SUCCESS = 203;
     static final int START_FAILED = 204;
@@ -55,25 +63,49 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
 
     private final AbstractSocketClient socketClient;
 
+    private final Address address;
+
     private State state = State.IDLE;
+
+    private boolean serverAvailable = false;
 
     private Pulse pulse;
 
     private final Map<String, PacketHandler> messageHandlerMap = new HashMap<>();
 
-    SocketSession(AbstractSocketClient socketClient) {
+    private final long id;
+
+    private final ErrorBuilder errorBuilder;
+
+    /**
+     * 连接各阶段耗时。
+     */
+    private final Map<Period, Long> connectTimeMap = new HashMap<>();
+
+    SocketSession(AbstractSocketClient socketClient, Address address, long id) {
         this.socketClient = socketClient;
+        this.address = address;
         this.options = socketClient.getOptions();
+        this.id = id;
 
         connectExecutor = options.getConnectExecutor();
-        logger = options.getLogger();
 
         eventManager = EasySocket.getInstance().newEventManager();
         eventManager.addListener(this);
+
+        String suffix = " Session(" + id + ")[" + address.getHost() + ":"
+                + address.getPort() + "], Client[" + options.getName() + "]";
+        errorBuilder = new ErrorBuilder(suffix);
+        logger = LogFactory.getLogger(options, suffix);
     }
 
     public Socket getSocket() {
         return socket;
+    }
+
+    @Override
+    public Logger getLogger() {
+        return logger;
     }
 
     @Override
@@ -97,14 +129,19 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
         if (state == State.IDLE) {
             connectExecutor.execute(this);
             state = State.STARTING;
+            logger.i("Session is opening.");
+
+            socketClient.onConnectionStart(this);
         }
     }
 
     @Override
-    public void close(EasyException e) {
+    public void close(int code, int type, String message) {
+        EasyException e = errorBuilder.create(code, type, message);
         if (state == State.IDLE || state == State.STARTING) {
-            socketClient.onConnectionFailed(e);
             state = State.DETACH;
+            logger.e("Session is closed.", e);
+            socketClient.onConnectionFailed(this, e);
         } else {
             onError(e);
         }
@@ -116,14 +153,16 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
     }
 
     @Override
-    public void fail(Exception e) {
-        logger.e("Session initialize failed.");
-        eventManager.publish(INIT_FAILED, e);
+    public void fail(Exception cause) {
+        logger.e("Fail to initialize session.");
+        eventManager.publish(INIT_FAILED,
+                errorBuilder.create(ErrorCode.SESSION_INIT_FAILED, ErrorType.CONNECT,
+                        "Session initialize failed.", cause));
     }
 
     @Override
-    public void postError(EasyException e) {
-        eventManager.publish(ERROR, e);
+    public void postClose(int code, int type, String message, Exception cause) {
+        eventManager.publish(ERROR, errorBuilder.create(code, type, message, cause));
     }
 
     private void onReady(Socket socket) {
@@ -133,36 +172,35 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
             socketClient.getInitializer().start(this);
             //启动心跳及读写线程
             TaskManager taskManager = socketClient.getTaskManager();
-            writer = new BlockingWriter(this, socket, options, taskManager);
+            writer = new BlockingWriter(this, socket, taskManager);
             reader = new BlockingReader(this, socket, options, socketClient.getHeadParser());
             writer.start();
             reader.start();
 
             messageHandlerMap.put(PacketType.RESPONSE.getValue(), taskManager);
 
-            socketClient.onConnected();
-
             state = State.CONNECT;
             logger.i("Session start success.");
+
+            socketClient.onConnected(this);
         } else {
+            //Session已关闭。
             connectExecutor.execute(() -> {
                 try {
                     socket.close();
                 } catch (IOException e) {
-                    logger.e("Easy Socket closed.", e);
+                    logger.w("Socket is closed.", e);
                 }
             });
         }
     }
 
-    private void onFailed(Exception ex) {
+    private void onFailed(EasyException e) {
         if (state == State.STARTING) {
-            EasyException e = Errors.connectError(ErrorCode.SOCKET_CONNECT,
-                    "Socket connect failed.", ex);
-            socketClient.onConnectionFailed(e);
-
             state = State.DETACH;
-            logger.i("Session start failed.");
+            logger.e("Session start failed.");
+
+            socketClient.onConnectionFailed(this, e);
         }
     }
 
@@ -175,10 +213,11 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
             messageHandlerMap.put(PacketType.PULSE.getValue(), pulse);
             messageHandlerMap.put(PacketType.PUSH.getValue(), socketClient.getPushManager());
 
-            socketClient.onConnectionAvailable();
-
             state = State.AVAILABLE;
-            logger.i("Session available.");
+            serverAvailable = true;
+            logger.i("Session is available.");
+
+            socketClient.onConnectionAvailable(this);
         }
     }
 
@@ -193,33 +232,65 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
                 try {
                     socket.close();
                 } catch (IOException ioe) {
-                    logger.e("Easy Socket closed.", ioe);
+                    logger.w("Socket is closed.", ioe);
                 }
             });
-            socketClient.onDisconnected(e);
 
             state = State.DETACH;
-            logger.w("Session end.", e);
+            logger.e("Session is closed.", e);
+
+            socketClient.onDisconnected(this, e);
         }
     }
 
+    /**
+     * 启动socket连接。
+     */
     @Override
     public void run() {
-        Address address = socketClient.obtainAddress();
-        logger.i("Begin socket connect.");
+        logger.i("Socket connection is starting.");
+        TrafficStats.setThreadStatsTag((int) Thread.currentThread().getId());
         try {
             Socket socket = socketClient.getSocketFactory().createSocket();
             //关闭Nagle算法,无论TCP数据报大小,立即发送
             socket.setTcpNoDelay(true);
             socket.setKeepAlive(true);
             socket.setPerformancePreferences(1, 2, 0);
+
+            long startTimeMill = System.currentTimeMillis();
+            long timestamp = startTimeMill;
+            //STEP1:DNS
             SocketAddress socketAddress
                     = new InetSocketAddress(address.getHost(), address.getPort());
+            long currentTimeMillis = System.currentTimeMillis();
+            connectTimeMap.put(Period.DNS, currentTimeMillis - timestamp);
+            timestamp = currentTimeMillis;
+
+            //STEP2:CONNECT
             socket.connect(socketAddress, options.getConnectTimeOut());
+            currentTimeMillis = System.currentTimeMillis();
+            connectTimeMap.put(Period.CONNECT, currentTimeMillis - timestamp);
+            timestamp = currentTimeMillis;
+
+            //STEP3:SSL
+            if (socket instanceof SSLSocket) {
+                ((SSLSocket) socket).startHandshake();
+                currentTimeMillis = System.currentTimeMillis();
+                connectTimeMap.put(Period.SSL, currentTimeMillis - timestamp);
+                timestamp = currentTimeMillis;
+            }
+
+            //总时长
+            long connectTime = timestamp - startTimeMill;
+            connectTimeMap.put(Period.ALL, connectTime);
+
             eventManager.publish(START_SUCCESS, socket);
+            logger.i("Socket connected in " + connectTime + "ms");
         } catch (Exception e) {
-            logger.i("Socket connect failed.", e);
-            eventManager.publish(START_FAILED, e);
+            logger.e("Socket connection failed.", e);
+            eventManager.publish(START_FAILED,
+                    errorBuilder.create(ErrorCode.SOCKET_CONNECT, ErrorType.CONNECT,
+                            "Socket connection failed.", e));
         }
     }
 
@@ -234,6 +305,11 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
     }
 
     @Override
+    public boolean isServerAvailable() {
+        return serverAvailable;
+    }
+
+    @Override
     public void onEvent(int eventId, @Nullable Object object) {
         switch (eventId) {
             case ERROR:
@@ -244,9 +320,7 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
                 onAvailable();
                 break;
             case INIT_FAILED:
-                assert object != null;
-                onError(Errors.connectError(ErrorCode.INIT_FAILED,
-                        "Session initialize failed.", (Exception) object));
+                onError((EasyException) object);
                 break;
             case START_SUCCESS:
                 assert object != null;
@@ -254,7 +328,7 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
                 break;
             case START_FAILED:
                 assert object != null;
-                onFailed((Exception) object);
+                onFailed((EasyException) object);
                 break;
             case ON_PACKET:
                 assert object != null;
@@ -264,5 +338,49 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
                 pulse.pulse();
                 break;
         }
+    }
+
+    @NonNull
+    @Override
+    public Address getAddress() {
+        return address;
+    }
+
+    @Nullable
+    @Override
+    public InetAddress getInetAddress() {
+        if (socket != null) {
+            return socket.getInetAddress();
+        }
+        return null;
+    }
+
+    @Override
+    public long connectTime() {
+        Long time = connectTimeMap.get(Period.ALL);
+        if (time == null) {
+            return -1;
+        } else {
+            return time;
+        }
+    }
+
+    @Override
+    public long connectTime(Period period) {
+        Long time = connectTimeMap.get(period);
+        if (time == null) {
+            return -1;
+        } else {
+            return time;
+        }
+    }
+
+    @NonNull
+    @Override
+    public String toString() {
+        return "SocketSession[" +
+                "id=" + id +
+                "address=" + address +
+                ']';
     }
 }

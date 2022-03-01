@@ -2,8 +2,6 @@ package com.orientsec.easysocket;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.error.EasyException;
-
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket
@@ -50,6 +48,6 @@ public interface HeadParser {
      */
     @NonNull
     Packet decodePacket(@NonNull Head head, @NonNull byte[] bodyBytes)
-            throws EasyException;
+            throws Exception;
 
 }

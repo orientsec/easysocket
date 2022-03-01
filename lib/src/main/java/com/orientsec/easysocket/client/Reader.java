@@ -17,7 +17,7 @@ public interface Reader {
      * 消息写入
      *
      * @throws IOException   IOException
-     * @throws EasyException 读异常，发生在{@link HeadParser#decodePacket(HeadParser.Head, byte[])}
+     * @throws Exception 读异常，发生在{@link HeadParser#decodePacket(HeadParser.Head, byte[])}
      *                       过程中
      */
     void read() throws Exception;

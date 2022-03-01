@@ -1,31 +1,15 @@
 package com.orientsec.easysocket.client;
 
-import androidx.annotation.MainThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
+import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.PacketHandler;
-import com.orientsec.easysocket.error.EasyException;
+import com.orientsec.easysocket.Period;
+
+import java.net.InetAddress;
 
 public interface Session extends PacketHandler {
-    /**
-     * 打开session。
-     */
-    @MainThread
-    void open();
-
-    /**
-     * 关闭session。
-     *
-     * @param e 异常。
-     */
-    @MainThread
-    void close(EasyException e);
-
-    /**
-     * 向连接主线程post一个异常。
-     *
-     * @param e 异常。
-     */
-    void postError(EasyException e);
 
     /**
      * 是否连接
@@ -40,4 +24,36 @@ public interface Session extends PacketHandler {
      * @return 是否可达
      */
     boolean isAvailable();
+
+    /**
+     * 服务器是否可用。Session在网络可用的情况下，成功进入{@link State#AVAILABLE}，则认为服务器可用。
+     *
+     * @return 服务器是否可用。
+     */
+    boolean isServerAvailable();
+
+    /**
+     * 获取当前连接站点信息
+     *
+     * @return 当前连接站点信息
+     */
+    @NonNull
+    Address getAddress();
+
+    @Nullable
+    InetAddress getInetAddress();
+
+    /**
+     * 连接时间，单位ms。
+     *
+     * @return socket连接花费的时间。
+     */
+    long connectTime();
+
+    /**
+     * 各阶段连接时间，单位ms。
+     *
+     * @return socket连接花费的时间。
+     */
+    long connectTime(Period period);
 }

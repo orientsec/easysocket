@@ -3,9 +3,8 @@ package com.orientsec.easysocket.client;
 import com.orientsec.easysocket.HeadParser;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
-import com.orientsec.easysocket.error.EasyException;
 import com.orientsec.easysocket.error.ErrorCode;
-import com.orientsec.easysocket.error.Errors;
+import com.orientsec.easysocket.error.ErrorType;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,14 +22,14 @@ public class BlockingReader extends Looper implements Reader {
 
     private final HeadParser headParser;
 
-    private final Session session;
+    private final OperableSession session;
 
     private final Socket socket;
 
     private final Options options;
 
-    BlockingReader(Session session, Socket socket, Options options, HeadParser headParser) {
-        super(options.getLogger());
+    BlockingReader(OperableSession session, Socket socket, Options options, HeadParser headParser) {
+        super(session.getLogger());
         this.session = session;
         this.socket = socket;
         this.options = options;
@@ -81,8 +80,8 @@ public class BlockingReader extends Looper implements Reader {
     @Override
     protected synchronized void loopFinish() {
         if (isRunning()) {
-            session.postError(Errors.connectError(ErrorCode.READ_EXIT,
-                    "Blocking reader exit.", error));
+            session.postClose(ErrorCode.READ_EXIT, ErrorType.CONNECT,
+                    "Socket read aborted.", error);
         }
     }
 }

@@ -1,8 +1,7 @@
 package com.orientsec.easysocket.client;
 
-import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.error.ErrorCode;
-import com.orientsec.easysocket.error.Errors;
+import com.orientsec.easysocket.error.ErrorType;
 import com.orientsec.easysocket.task.Task;
 import com.orientsec.easysocket.task.TaskManager;
 
@@ -20,13 +19,13 @@ import java.util.concurrent.BlockingQueue;
  */
 public class BlockingWriter extends Looper implements Writer {
     private OutputStream mOutputStream;
-    private final Session session;
+    private final OperableSession session;
     private final Socket socket;
     private final TaskManager taskManager;
     private final BlockingQueue<Task<?>> taskQueue;
 
-    BlockingWriter(Session session, Socket socket, Options options, TaskManager taskManager) {
-        super(options.getLogger());
+    BlockingWriter(OperableSession session, Socket socket, TaskManager taskManager) {
+        super(session.getLogger());
         this.session = session;
         this.socket = socket;
         this.taskManager = taskManager;
@@ -58,8 +57,8 @@ public class BlockingWriter extends Looper implements Writer {
     @Override
     protected synchronized void loopFinish() {
         if (isRunning()) {
-            session.postError(Errors.connectError(ErrorCode.WRITE_EXIT,
-                    "Blocking writer exit.", error));
+            session.postClose(ErrorCode.WRITE_EXIT, ErrorType.CONNECT,
+                    "Socket write aborted.", error);
         }
     }
 }

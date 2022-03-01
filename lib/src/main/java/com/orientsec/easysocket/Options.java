@@ -6,8 +6,6 @@ import com.orientsec.easysocket.push.PushManager;
 import com.orientsec.easysocket.request.Decoder;
 import com.orientsec.easysocket.request.Request;
 import com.orientsec.easysocket.utils.Executors;
-import com.orientsec.easysocket.utils.LogFactory;
-import com.orientsec.easysocket.utils.Logger;
 
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -123,8 +121,6 @@ public class Options {
      */
     private final int connectInterval;
 
-    protected final Logger logger;
-
     private Options(Builder builder) {
         name = builder.name;
         debug = builder.debug;
@@ -148,7 +144,6 @@ public class Options {
         pushManagerProvider = builder.pushManagerProvider;
         socketFactoryProvider = builder.socketFactoryProvider;
         detailLog = builder.detailLog;
-        logger = LogFactory.getLogger(this);
     }
 
     public boolean isDebug() {
@@ -233,10 +228,6 @@ public class Options {
 
     public Provider<Initializer> getInitializerProvider() {
         return initializerProvider;
-    }
-
-    public Logger getLogger() {
-        return logger;
     }
 
     public boolean isDetailLog() {

@@ -26,6 +26,4 @@ public interface Logger {
     void w(String msg, Throwable t);
 
     void d(String msg);
-
-    void attach(@NonNull SocketClient socketClient);
 }

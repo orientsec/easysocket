@@ -11,8 +11,8 @@ import androidx.annotation.NonNull;
  */
 
 public class EasyException extends Exception {
-    private final int code;
-    private final int type;
+    public final int code;
+    public final int type;
 
     public EasyException(int code, int type, String message) {
         super(message);
@@ -26,13 +26,6 @@ public class EasyException extends Exception {
         this.type = type;
     }
 
-    public EasyException(int code, int type, Throwable cause) {
-        super(cause);
-        this.code = code;
-        this.type = type;
-    }
-
-
     @NonNull
     @Override
     public String toString() {
@@ -43,11 +36,4 @@ public class EasyException extends Exception {
                 '}';
     }
 
-    public int getCode() {
-        return code;
-    }
-
-    public int getType() {
-        return type;
-    }
 }

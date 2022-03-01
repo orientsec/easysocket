@@ -9,7 +9,6 @@ import com.orientsec.easysocket.client.AbstractSocketClient;
 import com.orientsec.easysocket.client.EventManager;
 import com.orientsec.easysocket.error.ErrorCode;
 import com.orientsec.easysocket.error.ErrorType;
-import com.orientsec.easysocket.error.Errors;
 import com.orientsec.easysocket.request.Callback;
 import com.orientsec.easysocket.request.Request;
 
@@ -147,7 +146,7 @@ public class RequestTask<R extends T, T> implements Task<R> {
         if (isFinished()) return;
         SocketClient socketClient = this.socketClient;
         if (socketClient.isShutdown()) {
-            onError(Errors.shutdown());
+            onError(ErrorCode.SHUTDOWN, ErrorType.SYSTEM, "Socket client is shutdown.");
         } else if (request.isPulse()) {
             if (socketClient.isAvailable()) {
                 taskMap.put(taskId, this);
@@ -182,8 +181,8 @@ public class RequestTask<R extends T, T> implements Task<R> {
     void onEnqueue() {
         if (!isFinished() && !writingQueue.offer(this)) {
             taskMap.remove(taskId);
-            onError(Errors.error(ErrorCode.TASK_REFUSED, ErrorType.SYSTEM,
-                    "Task queue refuse to accept task!"));
+            onError(ErrorCode.TASK_REFUSED, ErrorType.SYSTEM,
+                    "Task queue refuse to accept task!");
         }
     }
 
@@ -237,6 +236,10 @@ public class RequestTask<R extends T, T> implements Task<R> {
         callbackExecutor.execute(() -> callback.onError(e));
     }
 
+    private void onError(int code, int type, String msg) {
+        onError(socketClient.errorBuilder.create(code, type, msg));
+    }
+
     void onError() {
         if (!isFinished()) {
             taskMap.remove(taskId);
@@ -248,8 +251,7 @@ public class RequestTask<R extends T, T> implements Task<R> {
     void onTimeout() {
         if (!isFinished()) {
             taskMap.remove(taskId);
-            onError(Errors.error(ErrorCode.RESPONSE_TIME_OUT,
-                    ErrorType.RESPONSE, "Response time out."));
+            onError(ErrorCode.RESPONSE_TIME_OUT, ErrorType.RESPONSE, "Response time out.");
         }
     }
 

@@ -1,9 +1,10 @@
 package com.orientsec.easysocket.client;
 
+import static com.orientsec.easysocket.client.EasySocketClient.RESTART;
+
+import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.utils.Logger;
-
-import static com.orientsec.easysocket.client.EasySocketClient.RESTART;
 
 class Connector {
 
@@ -18,28 +19,36 @@ class Connector {
     Connector(EasySocketClient socketClient) {
         this.socketClient = socketClient;
         options = socketClient.getOptions();
-        logger = options.getLogger();
+        logger = socketClient.logger;
         eventManager = socketClient.eventManager;
     }
 
 
     /**
-     * 重连
+     * Session连接失败或者断开后执行延时的重连。
      */
-    void prepareRestart() {
-        if (options.getLivePolicy().autoConnect(socketClient.isActive())) {
-            eventManager.remove(RESTART);
+    void restart(Session session) {
+        if (EasySocket.getInstance().isNetworkAvailable()) {
+            //当前Session连接的服务器不可用的情况下，需要切换到下一个站点。
+            if (!session.isServerAvailable()) {
+                socketClient.switchServer();
+            }
+            if (options.getLivePolicy().autoConnect(socketClient.isActive())) {
+                eventManager.remove(RESTART);
 
-            long delay = options.getConnectInterval();
-            eventManager.publish(RESTART, delay);
-            logger.i("Restart after " + delay + " mill seconds...");
+                long delay = options.getConnectInterval();
+                eventManager.publish(RESTART, delay);
+                logger.i("Restart after " + delay + " mill seconds...");
+            }
         }
     }
 
 
+    /**
+     * 重连。
+     */
     void restart() {
-        if (socketClient.session == null
-                && options.getLivePolicy().autoConnect(socketClient.isActive())) {
+        if (options.getLivePolicy().autoConnect(socketClient.isActive())) {
             socketClient.onStart(false);
         } else {
             logger.i("Restart abandon.");

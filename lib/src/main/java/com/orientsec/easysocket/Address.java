@@ -1,5 +1,7 @@
 package com.orientsec.easysocket;
 
+import androidx.annotation.NonNull;
+
 import java.io.Serializable;
 
 /**
@@ -60,8 +62,12 @@ public final class Address implements Serializable, Cloneable {
         return result;
     }
 
+    @NonNull
     @Override
     public String toString() {
-        return host + ":" + port;
+        return "Address[" +
+                "host=" + host +
+                ", port=" + port +
+                ']';
     }
 }

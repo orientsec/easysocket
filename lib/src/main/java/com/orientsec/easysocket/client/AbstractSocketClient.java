@@ -3,16 +3,18 @@ package com.orientsec.easysocket.client;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.ConnectionListener;
 import com.orientsec.easysocket.HeadParser;
 import com.orientsec.easysocket.Initializer;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.SocketClient;
+import com.orientsec.easysocket.error.ErrorBuilder;
 import com.orientsec.easysocket.push.PushManager;
 import com.orientsec.easysocket.request.Decoder;
 import com.orientsec.easysocket.request.Request;
 import com.orientsec.easysocket.task.TaskManager;
+import com.orientsec.easysocket.utils.LogFactory;
+import com.orientsec.easysocket.utils.Logger;
 
 import javax.net.SocketFactory;
 
@@ -25,9 +27,14 @@ public abstract class AbstractSocketClient implements SocketClient, EventListene
     private SocketFactory socketFactory;
     private Decoder<Boolean> pulseDecoder;
     private Request<Boolean> pulseRequest;
+    public final ErrorBuilder errorBuilder;
+    protected final Logger logger;
 
     public AbstractSocketClient(Options options) {
         this.options = options;
+        String suffix = " Client[" + options.getName() + "]";
+        errorBuilder = new ErrorBuilder(suffix);
+        logger = LogFactory.getLogger(options, suffix);
     }
 
     protected abstract void onStart();
@@ -39,8 +46,6 @@ public abstract class AbstractSocketClient implements SocketClient, EventListene
     public abstract void onNetworkAvailable();
 
     public abstract TaskManager getTaskManager();
-
-    protected abstract Address obtainAddress();
 
     @NonNull
     @Override
@@ -84,5 +89,16 @@ public abstract class AbstractSocketClient implements SocketClient, EventListene
             pulseRequest = options.getPulseRequestProvider().get(this);
         }
         return pulseRequest;
+    }
+
+    @Override
+    @NonNull
+    public Options getOptions() {
+        return options;
+    }
+
+    @Override
+    public Logger getLogger() {
+        return logger;
     }
 }

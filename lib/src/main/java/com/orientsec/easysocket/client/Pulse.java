@@ -6,7 +6,7 @@ import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.PacketHandler;
 import com.orientsec.easysocket.error.ErrorCode;
-import com.orientsec.easysocket.error.Errors;
+import com.orientsec.easysocket.error.ErrorType;
 import com.orientsec.easysocket.request.Callback;
 import com.orientsec.easysocket.request.PulseRequest;
 import com.orientsec.easysocket.request.Request;
@@ -31,7 +31,7 @@ public class Pulse implements PacketHandler {
 
     private final Options options;
 
-    private final Session session;
+    private final OperableSession session;
 
     private final EventManager eventManager;
 
@@ -41,13 +41,13 @@ public class Pulse implements PacketHandler {
 
     private final Logger logger;
 
-    Pulse(AbstractSocketClient socketClient, Session session, EventManager eventManager) {
+    Pulse(AbstractSocketClient socketClient, OperableSession session, EventManager eventManager) {
         this.socketClient = socketClient;
         this.session = session;
         this.eventManager = eventManager;
         options = socketClient.getOptions();
         codecExecutor = options.getCodecExecutor();
-        logger = options.getLogger();
+        logger = session.getLogger();
     }
 
     /**
@@ -78,7 +78,7 @@ public class Pulse implements PacketHandler {
         if (lostTimes.getAndAdd(1) > options.getPulseLostTimes()) {
             //心跳失败超过上限后断开连接
             logger.e("Pulse failed times up, session invalid.");
-            session.close(Errors.connectError(ErrorCode.PULSE_TIME_OUT, "Pulse time out."));
+            session.close(ErrorCode.PULSE_TIME_OUT, ErrorType.CONNECT, "Pulse time out.");
         } else {
             Request<Boolean> pulseRequest = socketClient.getPulseRequest();
             if (!pulseRequest.isPulse()) {

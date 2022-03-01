@@ -3,10 +3,11 @@ package com.orientsec.easysocket;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.orientsec.easysocket.client.Session;
 import com.orientsec.easysocket.push.PushManager;
 import com.orientsec.easysocket.task.TaskFactory;
+import com.orientsec.easysocket.utils.Logger;
 
-import java.net.InetAddress;
 
 /**
  * Product: EasySocket
@@ -43,7 +44,7 @@ public interface SocketClient extends TaskFactory {
      *
      * @return 是否连接
      */
-    boolean isConnect();
+    boolean isConnected();
 
     /**
      * 连接是否可达
@@ -51,17 +52,6 @@ public interface SocketClient extends TaskFactory {
      * @return 是否可达
      */
     boolean isAvailable();
-
-    /**
-     * 获取当前连接站点信息
-     *
-     * @return 当前连接站点信息
-     */
-    @Nullable
-    Address getAddress();
-
-    @Nullable
-    InetAddress getInetAddress();
 
     /**
      * 添加连接事件监听器
@@ -92,4 +82,19 @@ public interface SocketClient extends TaskFactory {
      */
     @NonNull
     Options getOptions();
+
+    /**
+     * 获取客户端Logger。
+     *
+     * @return Logger。
+     */
+    Logger getLogger();
+
+    /**
+     * 获取当前连接会话。
+     *
+     * @return 当前session。
+     */
+    @Nullable
+    Session getSession();
 }

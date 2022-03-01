@@ -4,7 +4,6 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.SocketClient;
 
@@ -17,33 +16,18 @@ import com.orientsec.easysocket.SocketClient;
  */
 class AndroidLogger implements Logger {
     private static final String TAG = "EasySocket";
-    private SocketClient socketClient;
+    private final String suffix;
     private final Options options;
 
-    public AndroidLogger(Options options) {
+    public AndroidLogger(Options options, String suffix) {
         this.options = options;
+        this.suffix = suffix;
     }
 
     private String formatMsg(String msg) {
         if (options.isDetailLog()) {
-            StringBuilder sb = new StringBuilder(msg);
-            sb.append(" {Name:[");
-            if (socketClient != null) {
-                sb.append(options.getName());
-            }
-
-            sb.append("]. Address:[");
-            SocketClient socketClient = this.socketClient;
-            if (socketClient != null) {
-                Address address = socketClient.getAddress();
-                if (address != null) {
-                    sb.append(address);
-                }
-            }
-            sb.append("] Thread:[");
-            sb.append(Thread.currentThread().getName());
-            sb.append("]}");
-            return sb.toString();
+            return msg + suffix +
+                    " Thread:[" + Thread.currentThread().getName() + "]";
         } else {
             return msg;
         }
@@ -84,8 +68,4 @@ class AndroidLogger implements Logger {
         Log.d(TAG, formatMsg(msg));
     }
 
-    @Override
-    public void attach(@NonNull SocketClient socketClient) {
-        this.socketClient = socketClient;
-    }
 }

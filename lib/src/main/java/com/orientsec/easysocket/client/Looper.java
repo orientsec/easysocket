@@ -51,7 +51,7 @@ public abstract class Looper implements Runnable {
             }
         } catch (Exception e) {
             error = e;
-            logger.i(name + " is shutting down. error.", e);
+            logger.e(name + " is shutting down.", e);
         } finally {
             loopFinish();
         }

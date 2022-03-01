@@ -17,6 +17,7 @@ import com.orientsec.easysocket.client.AbstractSocketClient;
 import com.orientsec.easysocket.client.EasySocketClient;
 import com.orientsec.easysocket.client.EventListener;
 import com.orientsec.easysocket.client.EventManager;
+import com.orientsec.easysocket.utils.NetUtils;
 
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -105,7 +106,7 @@ public class EasySocket implements EventListener {
         application.registerActivityLifecycleCallbacks(
                 new EasySocket.EasySocketAppLifecycleListener());
         NetworkRequest request = new NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
                 .build();
         ConnectivityManager cm
                 = (ConnectivityManager) application.getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -141,6 +142,10 @@ public class EasySocket implements EventListener {
         for (AbstractSocketClient socketClient : socketClients) {
             socketClient.onNetworkAvailable();
         }
+    }
+
+    public boolean isNetworkAvailable() {
+        return NetUtils.isNetworkAvailable(application);
     }
 
     /**
