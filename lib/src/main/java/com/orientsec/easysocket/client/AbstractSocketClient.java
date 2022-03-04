@@ -32,7 +32,7 @@ public abstract class AbstractSocketClient implements SocketClient, EventListene
 
     public AbstractSocketClient(Options options) {
         this.options = options;
-        String suffix = " Client[" + options.getName() + "]";
+        String suffix = "  Client[" + options.getName() + "]";
         errorBuilder = new ErrorBuilder(suffix);
         logger = LogFactory.getLogger(options, suffix);
     }

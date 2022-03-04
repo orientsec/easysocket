@@ -93,8 +93,8 @@ public class SocketSession implements OperableSession, Initializer.Emitter, Runn
         eventManager = EasySocket.getInstance().newEventManager();
         eventManager.addListener(this);
 
-        String suffix = " Session(" + id + ")[" + address.getHost() + ":"
-                + address.getPort() + "], Client[" + options.getName() + "]";
+        String suffix = "  Session(" + id + ")[" + address.getHost() + ":"
+                + address.getPort() + "]  Client[" + options.getName() + "]";
         errorBuilder = new ErrorBuilder(suffix);
         logger = LogFactory.getLogger(options, suffix);
     }

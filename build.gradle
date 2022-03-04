@@ -35,7 +35,7 @@ ext {
     // 库的ID
     PROJ_ARTIFACTID = 'easysocket'
     // 库的版本
-    PROJ_VERSION = '2.2.0-alpha8'
+    PROJ_VERSION = '2.2.0-alpha9'
     // 最后 gradle引用的形式就是 $PROJ_GROUP:$PROJ_ARTIFACTID:$PROJ_VERSION
     // 库的简单描述
     PROJ_DESCRIPTION = 'easysocket'

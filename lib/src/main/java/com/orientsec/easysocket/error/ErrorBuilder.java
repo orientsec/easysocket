@@ -8,10 +8,13 @@ public class ErrorBuilder {
     }
 
     public EasyException create(int code, int type, String message, Exception cause) {
-        return new EasyException(code, type, message + suffix, cause);
+        String msg = message + "  (" + type + "," + code + ")" + suffix;
+        return new EasyException(code, type, msg, cause);
     }
 
     public EasyException create(int code, int type, String message) {
-        return new EasyException(code, type, message + suffix);
+        String msg = message + "  (" + type + "," + code + ")" + suffix;
+        return new EasyException(code, type, msg);
     }
+
 }

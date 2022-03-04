@@ -1,7 +1,5 @@
 package com.orientsec.easysocket.error;
 
-import androidx.annotation.NonNull;
-
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket.exception
@@ -24,16 +22,6 @@ public class EasyException extends Exception {
         super(message, cause);
         this.code = code;
         this.type = type;
-    }
-
-    @NonNull
-    @Override
-    public String toString() {
-        return "EasyException{" +
-                "code=" + code +
-                ", type=" + type +
-                ", message=" + getMessage() +
-                '}';
     }
 
 }

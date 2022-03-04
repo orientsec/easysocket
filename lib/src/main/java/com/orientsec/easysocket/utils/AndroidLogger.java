@@ -27,7 +27,7 @@ class AndroidLogger implements Logger {
     private String formatMsg(String msg) {
         if (options.isDetailLog()) {
             return msg + suffix +
-                    " Thread:[" + Thread.currentThread().getName() + "]";
+                    "  Thread:[" + Thread.currentThread().getName() + "]";
         } else {
             return msg;
         }
