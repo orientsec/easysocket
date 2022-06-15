@@ -24,6 +24,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
+import javax.net.ssl.SSLSocket;
+
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket.inner.blocking
@@ -216,6 +218,9 @@ public class SocketSession implements Session, Initializer.Emitter, Runnable, Ev
             SocketAddress socketAddress
                     = new InetSocketAddress(address.getHost(), address.getPort());
             socket.connect(socketAddress, options.getConnectTimeOut());
+            if (socket instanceof SSLSocket) {
+                ((SSLSocket) socket).startHandshake();
+            }
             eventManager.publish(START_SUCCESS, socket);
         } catch (Exception e) {
             logger.i("Socket connect failed.", e);
