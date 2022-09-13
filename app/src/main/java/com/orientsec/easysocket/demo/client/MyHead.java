@@ -4,8 +4,8 @@ import com.orientsec.easysocket.HeadParser;
 import com.orientsec.easysocket.PacketType;
 
 class MyHead extends HeadParser.Head {
-    private int taskId;
-    private PacketType packetType;
+    private final int taskId;
+    private final PacketType packetType;
 
     int getTaskId() {
         return taskId;

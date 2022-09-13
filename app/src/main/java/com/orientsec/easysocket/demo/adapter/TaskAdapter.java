@@ -23,8 +23,7 @@ public class TaskAdapter {
      * @param <R>     请求返回类型
      * @return Observable
      */
-    public static <R> Observable<R>
-    buildObservable(SocketClient socketClient, Request<R> request) {
+    public static <R> Observable<R> buildObservable(SocketClient socketClient, Request<R> request) {
         TaskObservable<R> observable = new TaskObservable<>();
         Task<R> task = socketClient.buildTask(request, observable);
         observable.setTask(task);

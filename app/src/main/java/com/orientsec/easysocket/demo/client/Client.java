@@ -22,7 +22,7 @@ public class Client {
     final Session session;
 
     private static class ClientHolder {
-        private static Client client = new Client();
+        private static final Client client = new Client();
     }
 
     public static Client getInstance() {

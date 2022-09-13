@@ -7,6 +7,7 @@ import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.HandlerThread;
 
@@ -105,8 +106,13 @@ public class EasySocket implements EventListener {
     private void register(Application application) {
         application.registerActivityLifecycleCallbacks(
                 new EasySocket.EasySocketAppLifecycleListener());
+        int capability;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
+            capability = NetworkCapabilities.NET_CAPABILITY_INTERNET;
+        else capability = NetworkCapabilities.NET_CAPABILITY_VALIDATED;
+
         NetworkRequest request = new NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                .addCapability(capability)
                 .build();
         ConnectivityManager cm
                 = (ConnectivityManager) application.getSystemService(Context.CONNECTIVITY_SERVICE);

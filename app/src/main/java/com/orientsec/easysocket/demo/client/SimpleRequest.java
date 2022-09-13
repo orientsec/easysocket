@@ -9,9 +9,9 @@ import com.orientsec.easysocket.request.Request;
 import java.nio.ByteBuffer;
 
 public class SimpleRequest extends Request<String> {
-    private int cmd;
-    private Session session;
-    private String param;
+    private final int cmd;
+    private final Session session;
+    private final String param;
 
     SimpleRequest(String param, Session session) {
         this.cmd = 2;
