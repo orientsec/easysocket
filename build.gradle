@@ -50,6 +50,8 @@ ext {
     DEVELOPER_EMAIL = 'xiaomao_mh@163.com'
     SNAPSHOT_REPOSITORY_URL = 'https://jitpack.io/#orientsec/easysocket'
     RELEASE_REPOSITORY_URL = 'https://jitpack.io/#orientsec/easysocket'
+    NEXUS_USERNAME = ''
+    NEXUS_PASSWORD = ''
 }
 
 Properties props = new Properties()
