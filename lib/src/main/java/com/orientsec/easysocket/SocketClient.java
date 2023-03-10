@@ -8,6 +8,8 @@ import com.orientsec.easysocket.push.PushManager;
 import com.orientsec.easysocket.task.TaskFactory;
 import com.orientsec.easysocket.utils.Logger;
 
+import java.util.List;
+
 
 /**
  * Product: EasySocket
@@ -97,4 +99,10 @@ public interface SocketClient extends TaskFactory {
      */
     @Nullable
     Session getSession();
+
+    /**
+     * @return 站点列表。
+     */
+    @Nullable
+    List<Address> getAddressList();
 }

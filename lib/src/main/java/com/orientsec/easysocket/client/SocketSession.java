@@ -65,6 +65,8 @@ public class SocketSession implements OperableSession, Initializer.Emitter, Runn
 
     private final Address address;
 
+    private final int addressIndex;
+
     private State state = State.IDLE;
 
     private boolean serverAvailable = false;
@@ -82,9 +84,10 @@ public class SocketSession implements OperableSession, Initializer.Emitter, Runn
      */
     private final Map<Period, Long> connectTimeMap = new HashMap<>();
 
-    SocketSession(AbstractSocketClient socketClient, Address address, long id) {
+    SocketSession(AbstractSocketClient socketClient, Address address, int addressIndex, long id) {
         this.socketClient = socketClient;
         this.address = address;
+        this.addressIndex = addressIndex;
         this.options = socketClient.getOptions();
         this.id = id;
 
@@ -353,6 +356,11 @@ public class SocketSession implements OperableSession, Initializer.Emitter, Runn
             return socket.getInetAddress();
         }
         return null;
+    }
+
+    @Override
+    public int getAddressIndex() {
+        return addressIndex;
     }
 
     @Override

@@ -64,7 +64,7 @@ public class EasySocketClient extends AbstractSocketClient {
     /**
      * 备用站点下标
      */
-    private int backUpIndex;
+    private int addressIndex;
 
     private long sessionId;
 
@@ -107,6 +107,12 @@ public class EasySocketClient extends AbstractSocketClient {
         return session;
     }
 
+    @Nullable
+    @Override
+    public List<Address> getAddressList() {
+        return addressList;
+    }
+
     @Override
     protected void onStart() {
         onStart(true);
@@ -133,8 +139,8 @@ public class EasySocketClient extends AbstractSocketClient {
                 options.getCodecExecutor().execute(new InitializeTask());
             }
         } else if (session == null) {
-            session = new SocketSession(this, addressList.get(backUpIndex),
-                    sessionId++);
+            session = new SocketSession(this, addressList.get(addressIndex),
+                    addressIndex, sessionId++);
             session.open();
         }
     }
@@ -304,10 +310,10 @@ public class EasySocketClient extends AbstractSocketClient {
         if (++failedTimes >= options.getRetryTimes()) {
             failedTimes = 0;
 
-            if (++backUpIndex >= addressList.size()) {
-                backUpIndex = 0;
+            if (++addressIndex >= addressList.size()) {
+                addressIndex = 0;
             }
-            logger.i("Switch to server: " + addressList.get(backUpIndex));
+            logger.i("Switch to server: " + addressList.get(addressIndex));
         }
     }
 
@@ -350,9 +356,7 @@ public class EasySocketClient extends AbstractSocketClient {
     @NonNull
     @Override
     public String toString() {
-        return "EasySocketClient[" +
-                "name=" + name +
-                ']';
+        return "EasySocketClient[" + "name=" + name + ']';
     }
 
     /**

@@ -33,16 +33,25 @@ public interface Session extends PacketHandler {
     boolean isServerAvailable();
 
     /**
-     * 获取当前连接站点信息
+     * 获取当前连接站点信息。
      *
-     * @return 当前连接站点信息
+     * @return 当前连接站点信息。
      */
     @NonNull
     Address getAddress();
 
+    /**
+     * 获取站点IP。
+     * @return 站点IP。
+     */
     @Nullable
     InetAddress getInetAddress();
 
+    /**
+     * 获取站点地址下标。
+     * @return 站点地址下标。
+     */
+    int getAddressIndex();
     /**
      * 连接时间，单位ms。
      *

@@ -6,7 +6,7 @@ import java.io.Serializable;
 
 /**
  * 连接信息服务类
- * Created by xuhao on 2017/5/16.
+ * Created by Fredric on 2017/5/16.
  */
 public final class Address implements Serializable, Cloneable {
     /**
@@ -69,5 +69,11 @@ public final class Address implements Serializable, Cloneable {
                 "host=" + host +
                 ", port=" + port +
                 ']';
+    }
+
+    @NonNull
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return super.clone();
     }
 }
