@@ -26,42 +26,57 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
         int cmd = msg.readInt();
         int sessionId = msg.readInt();
         if (cmd == 0) {
-            System.out.println("receive heart beat");
-            ByteBuf resBuf = Unpooled.buffer();
-            resBuf.writeInt(0);
-            resBuf.writeInt(id);
-            resBuf.writeInt(cmd);
-            ctx.writeAndFlush(resBuf);
+            pulse(ctx, id, cmd);
         } else if (cmd == 1) {
-            System.out.println("receive auth");
-            ByteBuf resBuf = Unpooled.buffer();
-            resBuf.writeInt(4);
-            resBuf.writeInt(id);
-            resBuf.writeInt(cmd);
-            int randomId = random.nextInt(100);
-            resBuf.writeInt(randomId);
-            ctx.writeAndFlush(resBuf);
-            sessions.put(ctx, randomId);
+            auth(ctx, msg, id, cmd);
         } else {
-            byte[] data = new byte[msg.readableBytes()];
-            msg.readBytes(data);
-            String req = new String(data);
-            int cachedId = sessions.get(ctx);
-            System.out.println("receive request, id:" + id + ", msg:" + req + ", session id:" + sessionId);
-            String res;
-            if (sessionId > 0 && cachedId == sessionId) {
-                res = "我是只会学你说话:" + req + id;
-            } else {
-                res = "请先认证";
-            }
-            ByteBuf resBuf = Unpooled.buffer();
-            byte[] resData = res.getBytes();
-            resBuf.writeInt(resData.length);
-            resBuf.writeInt(id);
-            resBuf.writeInt(cmd);
-            resBuf.writeBytes(resData);
-            ctx.writeAndFlush(resBuf);
+            onRequest(ctx, msg, id, cmd, sessionId);
         }
+    }
+
+    private void pulse(ChannelHandlerContext ctx, int id, int cmd) {
+        System.out.println("receive heart beat");
+        ByteBuf resBuf = Unpooled.buffer();
+        resBuf.writeInt(0);
+        resBuf.writeInt(id);
+        resBuf.writeInt(cmd);
+        ctx.writeAndFlush(resBuf);
+    }
+
+    private void auth(ChannelHandlerContext ctx, ByteBuf msg, int id, int cmd) {
+        byte[] data = new byte[msg.readableBytes()];
+        msg.readBytes(data);
+        String req = new String(data);
+        System.out.println("receive auth user name: " + req);
+
+        int randomId = random.nextInt(100);
+        write(ctx, randomId + "", id, cmd);
+        sessions.put(ctx, randomId);
+    }
+
+    private void onRequest(ChannelHandlerContext ctx, ByteBuf msg, int id, int cmd, int sessionId) {
+        byte[] data = new byte[msg.readableBytes()];
+        msg.readBytes(data);
+        String req = new String(data);
+        int cachedId = sessions.get(ctx);
+        System.out.println("receive request, id:" + id + ", msg:" + req + ", session id:" + sessionId);
+        String res;
+        if (sessionId > 0 && cachedId == sessionId) {
+            res = "我是只会学你说话:" + req + id;
+        } else {
+            res = "请先认证";
+        }
+        write(ctx, res, id, cmd);
+    }
+
+    private void write(ChannelHandlerContext ctx, String msg, int id, int cmd) {
+        ByteBuf resBuf = Unpooled.buffer();
+        byte[] resData = msg.getBytes();
+        resBuf.writeInt(resData.length);
+        resBuf.writeInt(id);
+        resBuf.writeInt(cmd);
+        resBuf.writeBytes(resData);
+        ctx.writeAndFlush(resBuf);
     }
 
     @Override

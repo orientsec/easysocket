@@ -1,8 +1,8 @@
 package com.orientsec.easysocket.utils;
 
-import android.util.Log;
+import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.Options;
+import com.orientsec.easysocket.SocketClient;
 
 /**
  * Product: EasySocket
@@ -11,28 +11,19 @@ import com.orientsec.easysocket.Options;
  * Author: Fredric
  * coding is art not science
  */
-public class Logger {
-    public static void e(String msg) {
-        if (Options.isDebug()) {
-            Log.e("Socket", msg);
-        }
-    }
+public interface Logger {
 
-    public static void i(String msg) {
-        if (Options.isDebug()) {
-            Log.i("Socket", msg);
-        }
-    }
+    void e(String msg);
 
-    public static void w(String msg) {
-        if (Options.isDebug()) {
-            Log.w("Socket", msg);
-        }
-    }
+    void e(String msg, Throwable t);
 
-    public static void d(String msg) {
-        if (Options.isDebug()) {
-            Log.d("Socket", msg);
-        }
-    }
+    void i(String msg);
+
+    void i(String msg, Throwable t);
+
+    void w(String msg);
+
+    void w(String msg, Throwable t);
+
+    void d(String msg);
 }

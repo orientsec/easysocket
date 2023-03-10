@@ -1,0 +1,73 @@
+apply plugin: 'maven-publish'
+
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    archiveClassifier.set('sources')
+}
+
+task javadoc(type: Javadoc) {
+    options.addStringOption('Xdoclint:none', '-quiet')
+    options.charSet = 'UTF-8'
+    options.encoding = "UTF-8"
+    source = android.sourceSets.main.java.srcDirs
+    classpath += configurations.implementation
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    archiveClassifier.set('javadoc')
+    from javadoc.destinationDir
+}
+
+javadoc {
+    options {
+        encoding "UTF-8"
+        charSet 'UTF-8'
+        author true
+        version true
+        links "http://docs.oracle.com/javase/7/docs/api"
+        title "$project.name $PROJ_VERSION"
+    }
+}
+
+// Because the components are created only during the afterEvaluate phase, you must
+// configure your publications using the afterEvaluate() lifecycle method.
+afterEvaluate {
+    publishing {
+        publications {
+            // Creates a Maven publication called "release".
+            release(MavenPublication) {
+                // Applies the component for the release build variant.
+                from components.release
+
+                // You can then customize attributes of the publication as shown below.
+                groupId = PROJ_GROUP
+                artifactId = PROJ_ARTIFACTID
+                version = PROJ_VERSION
+
+                //artifact javadocJar
+                artifact sourcesJar
+            }
+            // Creates a Maven publication called “debug”.
+            debug(MavenPublication) {
+                // Applies the component for the debug build variant.
+                from components.debug
+
+                groupId = PROJ_GROUP
+                artifactId = PROJ_ARTIFACTID
+                version = PROJ_VERSION
+            }
+        }
+
+        repositories {
+            maven {
+                name 'jitpack'
+                url RELEASE_REPOSITORY_URL
+                credentials {
+                    username NEXUS_USERNAME
+                    password NEXUS_PASSWORD
+                }
+            }
+        }
+    }
+}

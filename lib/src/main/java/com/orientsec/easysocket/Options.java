@@ -1,150 +1,169 @@
 package com.orientsec.easysocket;
 
-import android.os.Handler;
-import android.os.Looper;
+import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.utils.Logger;
+import com.orientsec.easysocket.push.PushManager;
+import com.orientsec.easysocket.request.Decoder;
+import com.orientsec.easysocket.request.Request;
+import com.orientsec.easysocket.utils.Executors;
 
-import java.nio.ByteOrder;
 import java.util.List;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 
-import io.reactivex.annotations.NonNull;
+import javax.net.SocketFactory;
+
 
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket
- * Time: 2017/12/27 13:33
+ * Time: 2017/12/25 13:01
  * Author: Fredric
  * coding is art not science
- * <p>
- * 连接配置类
  */
-public class Options<T> {
+
+public class Options {
+
     /**
      * 是否是调试模式
      */
-    public static boolean debug;
+    private final boolean debug;
+
+    private final String name;
+
+    private final boolean detailLog;
+
+    /**
+     * 心跳解码器
+     */
+    private final Provider<Decoder<Boolean>> pulseDecoderProvider;
+    /**
+     * 心跳请求
+     */
+    private final Provider<Request<Boolean>> pulseRequestProvider;
     /**
      * 站点信息
      */
-    private ConnectionInfo connectionInfo;
+    private final Provider<List<Address>> addressProvider;
     /**
-     * 备用站点信息
+     * Socket factory
      */
-    private List<ConnectionInfo> backupConnectionInfoList;
-    /**
-     * 写入Socket管道中给服务器的字节序
-     */
-    private ByteOrder writeOrder;
-    /**
-     * 从Socket管道中读取字节序时的字节序
-     */
-    private ByteOrder readByteOrder;
+    private final Provider<SocketFactory> socketFactoryProvider;
     /**
      * 数据协议
      */
-    private Protocol<T> protocol;
+    private final Provider<HeadParser> headParserProvider;
     /**
      * 推送消息处理器
      */
-    private PushHandler<T> pushHandler;
+    private final Provider<PushManager<?, ?>> pushManagerProvider;
+    /**
+     * 连接初始化
+     */
+    private final Provider<Initializer> initializerProvider;
     /**
      * 消息分发执行器
-     * 推送消息，连接状态监听回调，请求回调，都执行在Executor所在线程
+     * 连接状态监听回调，请求回调，都执行在Executor所在线程
      */
-    private Executor dispatchExecutor;
+    private final Executor callbackExecutor;
 
+    /**
+     * 连接管理线程池
+     * 启动连接、关闭连接的执行线程池
+     */
+    private final Executor connectExecutor;
+
+    /**
+     * 编解码执行器
+     */
+    private final Executor codecExecutor;
     /**
      * 最大读取数据的K数(KB)<br>
      * 防止服务器返回数据体过大的数据导致前端内存溢出.
      */
-    private int maxReadDataKB;
+    private final int maxReadDataKB;
 
     /**
      * 请求超时时间 单位秒
      */
-    private int requestTimeOut;
+    private final int requestTimeOut;
 
     /**
      * 连接超时时间 单位秒
      */
-    private int connectTimeOut;
+    private final int connectTimeOut;
 
     /**
      * 心跳频率 单位秒
      */
-    private int pulseRate;
+    private final int pulseRate;
     /**
      * 心跳失败次数
      */
-    private int pulseLostTimes;
+    private final int pulseLostTimes;
 
     /**
      * 后台存活时间
      */
-    private int backgroundLiveTime;
+    private final int liveTime;
 
     /**
      * 后台策略
      */
-    private LivePolicy livePolicy;
-
-    /**
-     * 连接的任务执行器
-     */
-    private ScheduledExecutorService executorService;
+    private final LivePolicy livePolicy;
 
     /**
      * 失败重连尝试次数
      */
-    private int retryTimes;
+    private final int retryTimes;
 
     /**
      * 连接间隔
      */
-    private int connectInterval;
+    private final int connectInterval;
 
-    private Options(Builder<T> builder) {
-        connectionInfo = builder.connectionInfo;
-        backupConnectionInfoList = builder.backupConnectionInfoList;
-        writeOrder = builder.writeOrder;
-        readByteOrder = builder.readByteOrder;
-        protocol = builder.protocol;
-        pushHandler = builder.pushHandler;
-        dispatchExecutor = builder.dispatchExecutor;
+    private Options(Builder builder) {
+        name = builder.name;
+        debug = builder.debug;
+        callbackExecutor = builder.callbackExecutor;
+        connectExecutor = builder.connectExecutor;
+        codecExecutor = builder.codecExecutor;
         maxReadDataKB = builder.maxReadDataKB;
         requestTimeOut = builder.requestTimeOut;
         connectTimeOut = builder.connectTimeOut;
         pulseRate = builder.pulseRate;
         pulseLostTimes = builder.pulseLostTimes;
-        backgroundLiveTime = builder.backgroundLiveTime;
+        liveTime = builder.liveTime;
         livePolicy = builder.livePolicy;
-        executorService = builder.executorService;
         retryTimes = builder.retryTimes;
         connectInterval = builder.connectInterval;
+        addressProvider = builder.addressProvider;
+        headParserProvider = builder.headParserProvider;
+        initializerProvider = builder.initializerProvider;
+        pulseRequestProvider = builder.pulseRequestProvider;
+        pulseDecoderProvider = builder.pulseDecoderProvider;
+        pushManagerProvider = builder.pushManagerProvider;
+        socketFactoryProvider = builder.socketFactoryProvider;
+        detailLog = builder.detailLog;
     }
 
-    public static boolean isDebug() {
+    public boolean isDebug() {
         return debug;
     }
 
-    public Protocol<T> getProtocol() {
-        return protocol;
+    public String getName() {
+        return name;
     }
 
-    public ByteOrder getWriteOrder() {
-        return writeOrder;
+    public Executor getCallbackExecutor() {
+        return callbackExecutor;
     }
 
-    public ByteOrder getReadByteOrder() {
-        return readByteOrder;
+    public Executor getConnectExecutor() {
+        return connectExecutor;
     }
 
-    public Executor getDispatchExecutor() {
-        return dispatchExecutor;
+    public Executor getCodecExecutor() {
+        return codecExecutor;
     }
 
     public int getMaxReadDataKB() {
@@ -163,32 +182,16 @@ public class Options<T> {
         return pulseLostTimes;
     }
 
-    public int getBackgroundLiveTime() {
-        return backgroundLiveTime;
+    public int getLiveTime() {
+        return liveTime;
     }
 
     public LivePolicy getLivePolicy() {
         return livePolicy;
     }
 
-    public PushHandler<T> getPushHandler() {
-        return pushHandler;
-    }
-
     public int getConnectTimeOut() {
         return connectTimeOut;
-    }
-
-    public ConnectionInfo getConnectionInfo() {
-        return connectionInfo;
-    }
-
-    public List<ConnectionInfo> getBackupConnectionInfoList() {
-        return backupConnectionInfoList;
-    }
-
-    public ScheduledExecutorService getExecutorService() {
-        return executorService;
     }
 
     public int getRetryTimes() {
@@ -199,182 +202,251 @@ public class Options<T> {
         return connectInterval;
     }
 
-    private static class DefaultPushHandler<T> implements PushHandler<T> {
-        @Override
-        public void onPush(T message) {
-            Logger.i("unhandled push event");
-        }
+    public Provider<Request<Boolean>> getPulseRequestProvider() {
+        return pulseRequestProvider;
     }
 
-    private static class MainThreadExecutor implements Executor {
-        private Handler handler = new Handler(Looper.getMainLooper());
-
-        @Override
-        public void execute(@NonNull Runnable command) {
-            handler.post(command);
-        }
+    public Provider<Decoder<Boolean>> getPulseDecoderProvider() {
+        return pulseDecoderProvider;
     }
 
-    private static class ExecutorHolder {
-        private static ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+    public Provider<List<Address>> getAddressProvider() {
+        return addressProvider;
     }
 
+    public Provider<SocketFactory> getSocketFactoryProvider() {
+        return socketFactoryProvider;
+    }
 
-    public static final class Builder<T> {
-        private ConnectionInfo connectionInfo;
-        private List<ConnectionInfo> backupConnectionInfoList;
-        private ByteOrder writeOrder = ByteOrder.BIG_ENDIAN;
-        private ByteOrder readByteOrder = ByteOrder.BIG_ENDIAN;
-        private Protocol<T> protocol;
-        private PushHandler<T> pushHandler;
-        private Executor dispatchExecutor;
+    public Provider<HeadParser> getHeadParserProvider() {
+        return headParserProvider;
+    }
+
+    public Provider<PushManager<?, ?>> getPushManagerProvider() {
+        return pushManagerProvider;
+    }
+
+    public Provider<Initializer> getInitializerProvider() {
+        return initializerProvider;
+    }
+
+    public boolean isDetailLog() {
+        return detailLog;
+    }
+
+    public static final class Builder {
+        private String name = "";
+        private boolean debug;
+        private Provider<Request<Boolean>> pulseRequestProvider;
+        private Provider<Decoder<Boolean>> pulseDecoderProvider;
+        private Provider<List<Address>> addressProvider;
+        private Provider<SocketFactory> socketFactoryProvider;
+        private Provider<HeadParser> headParserProvider;
+        private Provider<PushManager<?, ?>> pushManagerProvider;
+        private Provider<Initializer> initializerProvider;
+        private Executor callbackExecutor;
+        private Executor connectExecutor;
+        private Executor codecExecutor;
         private int maxReadDataKB = 1024;
-        private int requestTimeOut = 5;
+        private int requestTimeOut = 5000;
         private int connectTimeOut = 5000;
-        private int pulseRate = 60;
+        private int pulseRate = 60 * 1000;
         private int pulseLostTimes = 2;
-        private int backgroundLiveTime = 120;
+        private int liveTime = 30 * 1000;
         private LivePolicy livePolicy = LivePolicy.DEFAULT;
-        private ScheduledExecutorService executorService;
         private int retryTimes;
         private int connectInterval = 3000;
+        private boolean detailLog = true;
 
         public Builder() {
         }
 
-        public Builder<T> connectionInfo(ConnectionInfo val) {
-            connectionInfo = val;
+        public Builder name(@NonNull String val) {
+            name = val;
             return this;
         }
 
-        public Builder<T> backupConnectionInfoList(List<ConnectionInfo> val) {
-            backupConnectionInfoList = val;
+        public Builder debug(boolean val) {
+            debug = val;
             return this;
         }
 
-        public Builder<T> writeOrder(@NonNull ByteOrder val) {
-            writeOrder = val;
+        public Builder pulseRequestProvider(@NonNull Provider<Request<Boolean>> val) {
+            pulseRequestProvider = val;
             return this;
         }
 
-        public Builder<T> readByteOrder(@NonNull ByteOrder val) {
-            readByteOrder = val;
+        public Builder pulseDecoderProvider(@NonNull Provider<Decoder<Boolean>> val) {
+            pulseDecoderProvider = val;
             return this;
         }
 
-        public Builder<T> protocol(Protocol<T> val) {
-            protocol = val;
+        public Builder addressList(@NonNull List<Address> val) {
+            addressProvider = StaticAddressProvider.build(val);
             return this;
         }
 
-        public Builder<T> pushHandler(PushHandler<T> val) {
-            pushHandler = val;
+        public Builder addressProvider(@NonNull Provider<List<Address>> val) {
+            addressProvider = val;
             return this;
         }
 
-        public Builder<T> executorService(ScheduledExecutorService val) {
-            executorService = val;
+        public Builder headParserProvider(@NonNull Provider<HeadParser> val) {
+            headParserProvider = val;
             return this;
         }
 
-        public Builder<T> dispatchExecutor(Executor val) {
-            dispatchExecutor = val;
+        public Builder pushManagerProvider(@NonNull Provider<PushManager<?, ?>> val) {
+            pushManagerProvider = val;
             return this;
         }
 
-        public Builder<T> maxReadDataKB(int val) {
+        public Builder initializerProvider(@NonNull Provider<Initializer> val) {
+            initializerProvider = val;
+            return this;
+        }
+
+        public Builder socketFactoryProvider(@NonNull Provider<SocketFactory> val) {
+            socketFactoryProvider = val;
+            return this;
+        }
+
+        public Builder callbackExecutor(@NonNull Executor val) {
+            callbackExecutor = val;
+            return this;
+        }
+
+        public Builder connectExecutor(@NonNull Executor val) {
+            connectExecutor = val;
+            return this;
+        }
+
+        public Builder codecExecutor(@NonNull Executor val) {
+            codecExecutor = val;
+            return this;
+        }
+
+        public Builder maxReadDataKB(int val) {
             maxReadDataKB = val;
             return this;
         }
 
-        public Builder<T> requestTimeOut(int val) {
+        public Builder requestTimeOut(int val) {
             requestTimeOut = val;
             return this;
         }
 
-        public Builder<T> connectTimeOut(int val) {
+        public Builder connectTimeOut(int val) {
             connectTimeOut = val;
             return this;
         }
 
-        public Builder<T> pulseRate(int val) {
+        public Builder pulseRate(int val) {
             pulseRate = val;
             return this;
         }
 
-        public Builder<T> pulseLostTimes(int val) {
+        public Builder pulseLostTimes(int val) {
             pulseLostTimes = val;
             return this;
         }
 
-        public Builder<T> backgroundLiveTime(int val) {
-            backgroundLiveTime = val;
+        public Builder liveTime(int val) {
+            liveTime = val;
             return this;
         }
 
-        public Builder<T> livePolicy(@NonNull LivePolicy val) {
+        public Builder livePolicy(@NonNull LivePolicy val) {
             livePolicy = val;
             return this;
         }
 
-        public Builder<T> retryTimes(int val) {
+        public Builder retryTimes(int val) {
             retryTimes = val;
             return this;
         }
 
-        public Builder<T> connectInterval(int val) {
+        public Builder connectInterval(int val) {
             connectInterval = val;
             return this;
         }
 
-        public Options<T> build() {
-            if (!checkParams()) {
-                throw new IllegalArgumentException();
-            }
-            return new Options<>(this);
+        public Builder detailLog(boolean val) {
+            detailLog = val;
+            return this;
         }
 
-        private boolean checkParams() {
-            if (connectionInfo == null) {
-                return false;
+        @NonNull
+        public Options build() {
+            String error = checkParams();
+            if (error.isEmpty()) {
+                return new Options(this);
             }
-            if (protocol == null) {
-                return false;
+            throw new IllegalArgumentException(error);
+        }
+
+        @NonNull
+        public SocketClient open() {
+            return EasySocket.getInstance().open(build());
+        }
+
+        private String checkParams() {
+            if (headParserProvider == null) {
+                return "Head parser provider not set.";
             }
-            if (dispatchExecutor == null) {
-                dispatchExecutor = new MainThreadExecutor();
+            if (addressProvider == null) {
+                return "Address provider not set.";
             }
-            if (maxReadDataKB < 100 || maxReadDataKB > 1024) {
-                maxReadDataKB = 1024;
+            if (maxReadDataKB <= 0) {
+                return "Max read data size in kb must be positive.";
             }
-            if (connectTimeOut < 500) {
-                connectTimeOut = 5000;
+            if (connectTimeOut < 0) {
+                return "Connect time out is negative.";
             }
             if (requestTimeOut <= 0) {
-                requestTimeOut = 5;
+                return "Request time out must be positive..";
             }
-            if (pulseRate < 30 || pulseRate > 300) {
-                pulseRate = 60;
+            if (pulseRate < 30 * 1000) {
+                return "Pulse rate must big than 30s.";
             }
             if (pulseLostTimes < 0) {
-                return false;
+                return "Pulse lost time is negative.";
             }
-            if (backgroundLiveTime < 30) {
-                backgroundLiveTime = 120;
-            }
-            if (pushHandler == null) {
-                pushHandler = new DefaultPushHandler<>();
-            }
-            if (executorService == null) {
-                executorService = ExecutorHolder.executorService;
+            if (liveTime < 0) {
+                return "Live time must be positive.";
             }
             if (retryTimes < 0) {
-                retryTimes = 0;
+                return "Retry time is negative.";
             }
-            if (connectInterval < 1000) {
-                connectInterval = 3000;
+            if (connectInterval <= 1000) {
+                return "Connect interval must big than 1000ms.";
             }
-            return true;
+            if (socketFactoryProvider == null) {
+                socketFactoryProvider = new DefaultSocketFactoryProvider();
+            }
+            if (pulseRequestProvider == null) {
+                pulseRequestProvider = new DefaultPulseRequestProvider();
+            }
+            if (pulseDecoderProvider == null) {
+                pulseDecoderProvider = new DefaultPulseDecoderProvider();
+            }
+            if (pushManagerProvider == null) {
+                pushManagerProvider = new DefaultPushManagerProvider();
+            }
+            if (initializerProvider == null) {
+                initializerProvider = new DefaultInitializerProvider();
+            }
+            if (callbackExecutor == null) {
+                callbackExecutor = Executors.defaultMainExecutor();
+            }
+            if (connectExecutor == null) {
+                connectExecutor = Executors.defaultConnectExecutor();
+            }
+            if (codecExecutor == null) {
+                codecExecutor = Executors.defaultCodecExecutor();
+            }
+
+            return "";
         }
     }
 }
