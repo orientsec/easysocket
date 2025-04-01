@@ -1,4 +1,5 @@
 jdk:
   - openjdk17
 install:
-  - ./gradlew clean :lib:assembleRelease
+  - ./gradlew :lib:assembleRelease
+  - find . -name "*.aar"
