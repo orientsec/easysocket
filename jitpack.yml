@@ -1,0 +1,6 @@
+jdk:
+  - openjdk17
+install:
+  - ./gradlew assembleRelease
+artifacts:
+  - lib/build/outputs/aar/lib-release.aar
