@@ -2,6 +2,3 @@ jdk:
   - openjdk17
 install:
   - ./gradlew clean :lib:assembleRelease
-artifacts:
-  - lib/build/outputs/aar/lib-release.aar
-  - ${project.buildDir}/outputs/aar/lib-release.aar #尝试使用gradle变量
