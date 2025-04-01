@@ -1,8 +1,7 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 35
-    buildToolsVersion '30.0.3'
+    compileSdk 35
     defaultConfig {
         applicationId "com.orientsec.easysocket.demo"
         minSdkVersion 21
