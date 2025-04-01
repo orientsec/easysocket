@@ -32,3 +32,12 @@ dependencies {
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 }
+
+tasks.register('copyAAR', Copy) {
+    from(layout.buildDirectory.file("outputs/aar/lib-release.aar"))
+    into(layout.buildDirectory.dir("libs")) // 复制到 build/libs
+}
+
+tasks.matching { it.name == "assembleRelease" }.configureEach {
+    finalizedBy("copyAAR")
+}
