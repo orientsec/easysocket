@@ -35,7 +35,7 @@ dependencies {
 
 tasks.register('copyAAR', Copy) {
     from(layout.buildDirectory.file("outputs/aar/lib-release.aar"))
-    into(layout.buildDirectory.dir("libs")) // 复制到 build/libs
+    into(rootProject.layout.buildDirectory.dir("libs")) // 复制到 build/libs
 }
 
 tasks.matching { it.name == "assembleRelease" }.configureEach {
