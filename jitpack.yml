@@ -1,5 +1,7 @@
 jdk:
   - openjdk17
 install:
-  - ./gradlew :lib:assembleRelease
+  - ./gradlew :library:assembleRelease
   - find . -name "*.aar"
+artifacts:
+  - lib/build/outputs/aar/library-release.aar
