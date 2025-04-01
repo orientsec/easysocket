@@ -136,7 +136,7 @@ public class EasySocketClient extends AbstractSocketClient {
                 logger.i("Client is initializing, just wait for the result.");
             } else {
                 initializing = true;
-                options.getCodecExecutor().execute(new InitializeTask());
+                options.getConnectExecutor().execute(new InitializeTask());
             }
         } else if (session == null) {
             session = new SocketSession(this, addressList.get(addressIndex),
@@ -190,7 +190,7 @@ public class EasySocketClient extends AbstractSocketClient {
     @Override
     public void onConnectionStart(@NonNull Session session) {
         assert session == this.session;
-        if (connectionListeners.size() > 0) {
+        if (!connectionListeners.isEmpty()) {
             callbackExecutor.execute(() -> {
                 for (ConnectionListener listener : connectionListeners) {
                     listener.onConnectionStart(session);
@@ -202,7 +202,7 @@ public class EasySocketClient extends AbstractSocketClient {
     @Override
     public void onConnected(@NonNull final Session session) {
         assert session == this.session;
-        if (connectionListeners.size() > 0) {
+        if (!connectionListeners.isEmpty()) {
             callbackExecutor.execute(() -> {
                 for (ConnectionListener listener : connectionListeners) {
                     listener.onConnected(session);
@@ -218,7 +218,7 @@ public class EasySocketClient extends AbstractSocketClient {
         taskManager.reset(e);
         connector.restart(session);
 
-        if (connectionListeners.size() > 0) {
+        if (!connectionListeners.isEmpty()) {
             callbackExecutor.execute(() -> {
                 for (ConnectionListener listener : connectionListeners) {
                     listener.onConnectionFailed(session, e);
@@ -234,7 +234,7 @@ public class EasySocketClient extends AbstractSocketClient {
         taskManager.reset(e);
         connector.restart(session);
 
-        if (connectionListeners.size() > 0) {
+        if (!connectionListeners.isEmpty()) {
             callbackExecutor.execute(() -> {
                 for (ConnectionListener listener : connectionListeners) {
                     listener.onDisconnected(session, e);
@@ -250,7 +250,7 @@ public class EasySocketClient extends AbstractSocketClient {
         failedTimes = 0;
         taskManager.ready();
 
-        if (connectionListeners.size() > 0) {
+        if (!connectionListeners.isEmpty()) {
             callbackExecutor.execute(() -> {
                 for (ConnectionListener listener : connectionListeners) {
                     listener.onConnectionAvailable(session);

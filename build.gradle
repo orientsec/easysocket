@@ -1,14 +1,14 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-    ext.kotlin_version = '1.8.0'
+    ext.kotlin_version = '2.1.20'
 
     repositories {
         google()
         maven { url 'https://maven.aliyun.com/nexus/content/groups/public/' }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.4.0'
+        classpath 'com.android.tools.build:gradle:8.9.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
 
 
@@ -22,40 +22,4 @@ allprojects {
         maven { url 'https://maven.aliyun.com/nexus/content/groups/public/' }
         google()
     }
-}
-
-task clean(type: Delete) {
-    delete rootProject.buildDir
-}
-
-
-ext {
-    // 库的包名
-    PROJ_GROUP = 'com.github.orientsec'
-    // 库的ID
-    PROJ_ARTIFACTID = 'easysocket'
-    // 库的版本
-    PROJ_VERSION = '2.2.0-beta2'
-    // 最后 gradle引用的形式就是 $PROJ_GROUP:$PROJ_ARTIFACTID:$PROJ_VERSION
-    // 库的简单描述
-    PROJ_DESCRIPTION = 'easysocket'
-    // 组织
-    PROJ_ORGANIZATION = "DFZQ"
-    PROJ_LICENCE_NAME = "MIT License"
-    PROJ_LICENCE_URL = "https://opensource.org/licenses/MIT"
-    PROJ_LICENCE_DIST = "东方证券研发六部"
-    // 开发者的信息, 可以随意
-    DEVELOPER_ID = 'orientsec'
-    DEVELOPER_NAME = 'orientsec'
-    DEVELOPER_EMAIL = 'xiaomao_mh@163.com'
-    SNAPSHOT_REPOSITORY_URL = 'https://jitpack.io/#orientsec/easysocket'
-    RELEASE_REPOSITORY_URL = 'https://jitpack.io/#orientsec/easysocket'
-    NEXUS_USERNAME = ''
-    NEXUS_PASSWORD = ''
-}
-
-Properties props = new Properties()
-new File(rootDir, 'local.properties').withInputStream { props.load(it) }
-props.each {
-    ext.set(it.key, it.value)
 }
