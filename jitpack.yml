@@ -5,3 +5,4 @@ install:
   - find . -name "*.aar"
 artifacts:
   - lib/build/outputs/aar/library-release.aar
+  - build/libs/lib-release.aar

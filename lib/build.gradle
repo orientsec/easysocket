@@ -34,7 +34,7 @@ dependencies {
 }
 
 tasks.register('copyAAR', Copy) {
-    from(layout.buildDirectory.file("outputs/aar/lib-release.aar"))
+    from(layout.buildDirectory.file("outputs/aar/library-release.aar"))
     into(rootProject.layout.buildDirectory.dir("libs")) // 复制到 build/libs
 }
 
