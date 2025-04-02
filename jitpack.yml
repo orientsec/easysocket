@@ -1,6 +1,7 @@
 jdk:
   - openjdk17
 install:
-  - ./gradlew :lib:publishToMavenLocal
+  - ./gradlew :lib:publishReleasePublicationToMavenRepository
 artifacts:
   - lib/build/outputs/aar/lib-release.aar
+  - lib/build/publications/release/pom-default.xml
