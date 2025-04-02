@@ -39,7 +39,6 @@ publishing {
             artifactId = "easysocket"
             version = "1.0.0"
             afterEvaluate {
-                println(components.findByName("release"))
                 from(components["release"])
             }
         }
