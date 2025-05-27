@@ -2,14 +2,16 @@ package com.orientsec.easysocket.client;
 
 import androidx.annotation.NonNull;
 
+import com.orientsec.easysocket.EasyRunner;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.PacketHandler;
 import com.orientsec.easysocket.error.ErrorCode;
 import com.orientsec.easysocket.error.ErrorType;
 import com.orientsec.easysocket.request.Callback;
-import com.orientsec.easysocket.request.PulseRequest;
+import com.orientsec.easysocket.request.Decoder;
 import com.orientsec.easysocket.request.Request;
+import com.orientsec.easysocket.request.Result;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.concurrent.Executor;
@@ -24,16 +26,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * 心跳管理器
  */
-public class Pulse implements PacketHandler {
-    static final int PULSE = 201;
-
+public class Pulse implements PacketHandler, Runnable {
     private final AbstractSocketClient socketClient;
 
     private final Options options;
 
     private final OperableSession session;
 
-    private final EventManager eventManager;
+    private final EasyRunner runner;
 
     private final AtomicInteger lostTimes = new AtomicInteger();
 
@@ -41,10 +41,10 @@ public class Pulse implements PacketHandler {
 
     private final Logger logger;
 
-    Pulse(AbstractSocketClient socketClient, OperableSession session, EventManager eventManager) {
+    Pulse(AbstractSocketClient socketClient, OperableSession session, EasyRunner runner) {
         this.socketClient = socketClient;
         this.session = session;
-        this.eventManager = eventManager;
+        this.runner = runner;
         options = socketClient.getOptions();
         codecExecutor = options.getCodecExecutor();
         logger = session.getLogger();
@@ -61,31 +61,32 @@ public class Pulse implements PacketHandler {
      * 启动心跳，每一次连接建立成功后调用
      */
     void start() {
-        eventManager.publish(PULSE, options.getPulseRate());
+        runner.postDelayed(this, this, options.getPulseRate());
     }
 
     /**
      * 停止心跳，连接断开后调用
      */
     void stop() {
-        eventManager.remove(PULSE);
+        runner.remove(this, this);
     }
 
     /**
      * 发送一次心跳。
      */
-    void pulse() {
+    public void run() {
         if (lostTimes.getAndAdd(1) > options.getPulseLostTimes()) {
             //心跳失败超过上限后断开连接
-            logger.e("Pulse failed times up, session invalid.");
-            session.close(ErrorCode.PULSE_TIME_OUT, ErrorType.CONNECT, "Pulse time out.");
+            logger.e("pulse failed times up, session invalid");
+            session.close(ErrorCode.PULSE_TIME_OUT, ErrorType.CONNECT, "pulse time out");
         } else {
             Request<Boolean> pulseRequest = socketClient.getPulseRequest();
-            if (!pulseRequest.isPulse()) {
-                pulseRequest = new PulseRequest(pulseRequest);
+            if (pulseRequest == null) {
+                logger.w("no pulse request");
+            } else {
+                socketClient.buildTask(pulseRequest, callback).execute();
+                start();
             }
-            socketClient.buildTask(pulseRequest, callback).execute();
-            start();
         }
     }
 
@@ -99,21 +100,21 @@ public class Pulse implements PacketHandler {
         }
 
         @Override
-        public void onError(@NonNull Exception e) {
-            logger.e("Client pulse failed!", e);
+        public void onFailure(@NonNull Throwable t) {
+            logger.e("client pulse failed", t);
         }
     };
 
     @Override
     public void handlePacket(@NonNull Packet packet) {
+        Decoder<Boolean> pulseDecoder = socketClient.getPulseDecoder();
+        if (pulseDecoder == null) return;
         codecExecutor.execute(() -> {
-            try {
-                boolean success = socketClient.getPulseDecoder().decode(packet);
-                if (success) {
-                    feed();
-                }
-            } catch (Exception e) {
-                logger.e("Server pulse failed!", e);
+            Result<Boolean> result = pulseDecoder.decode(packet);
+            if (result.isSuccess()) {
+                feed();
+            } else {
+                logger.e("server pulse failed", result.error());
             }
         });
     }

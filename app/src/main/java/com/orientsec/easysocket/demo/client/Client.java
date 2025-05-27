@@ -3,12 +3,10 @@ package com.orientsec.easysocket.demo.client;
 import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.SocketClient;
-import com.orientsec.easysocket.demo.adapter.TaskAdapter;
+import com.orientsec.easysocket.request.Callback;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import io.reactivex.Observable;
 
 /**
  * Product: EasySocket
@@ -45,8 +43,8 @@ public class Client {
                 .open();
     }
 
-    public Observable<String> request(String param) {
-        return TaskAdapter.buildObservable(socketClient, new SimpleRequest(param, session));
+    public void request(String param, Callback<String> callback) {
+        socketClient.buildTask(new SimpleRequest(param, session), callback).execute();
     }
 
 }

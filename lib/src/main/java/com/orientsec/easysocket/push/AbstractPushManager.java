@@ -83,7 +83,7 @@ public abstract class AbstractPushManager<K, E> implements PushManager<K, E> {
                 listener.onPush(event);
             }
         } else {
-            logger.w("No push lister registered for event: " + key);
+            logger.w("no push lister registered for event: " + key);
         }
         if (!globalListenerSet.isEmpty()) {
             for (PushListener<E> listener : globalListenerSet) {

@@ -4,10 +4,9 @@ junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 appcompat = "1.7.0"
-annotation = "1.8.0"
+annotation = "1.9.1"
 mavenPublish = "0.31.0"
 constraintlayout = "2.2.1"
-rxjava2 = "2.2.9"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -16,7 +15,6 @@ espresso-core = { group = "androidx.test.espresso", name = "espresso-core", vers
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-annotation = { group = "androidx.annotation", name = "annotation", version.ref = "annotation" }
 androidx-constraint-layout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
-reactivex-rxjava2 = { group = "io.reactivex.rxjava2", name = "rxjava", version.ref = "rxjava2" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

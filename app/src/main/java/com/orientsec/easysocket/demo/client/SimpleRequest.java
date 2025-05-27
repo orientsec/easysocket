@@ -5,6 +5,7 @@ import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.request.Request;
+import com.orientsec.easysocket.request.Result;
 
 import java.nio.ByteBuffer;
 
@@ -14,27 +15,19 @@ public class SimpleRequest extends Request<String> {
     private final String param;
 
     SimpleRequest(String param, Session session) {
-        this.cmd = 2;
-        this.session = session;
-        this.param = param;
+        this(2, param, session);
     }
 
-    public SimpleRequest(String param, int cmd, Session session) {
-        this.cmd = cmd;
-        this.session = session;
-        this.param = param;
-    }
 
-    public SimpleRequest(String param, int cmd, boolean init, Session session) {
-        super(init ? INITIALIZE : 0);
-        this.cmd = cmd;
-        this.session = session;
+    public SimpleRequest(int cmd, String param, Session session) {
         this.param = param;
+        this.session = session;
+        this.cmd = cmd;
     }
 
     @Override
     @NonNull
-    public byte[] encode(int sequenceId) {
+    public Result<byte[]> encode(int sequenceId) {
         byte[] body = param.getBytes();
         ByteBuffer byteBuffer = ByteBuffer.allocate(16);
         byteBuffer.putInt(body.length);
@@ -47,12 +40,12 @@ public class SimpleRequest extends Request<String> {
         byte[] sendBytes = new byte[head.length + body.length];
         System.arraycopy(head, 0, sendBytes, 0, head.length);
         System.arraycopy(body, 0, sendBytes, head.length, body.length);
-        return sendBytes;
+        return Result.success(sendBytes);
     }
 
     @Override
     @NonNull
-    public String decode(@NonNull Packet packet) {
-        return new String((byte[]) packet.getBody());
+    public Result<String> decode(@NonNull Packet packet) {
+        return Result.success(new String((byte[]) packet.getBody()));
     }
 }

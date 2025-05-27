@@ -4,7 +4,6 @@ import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.PacketHandler;
-import com.orientsec.easysocket.error.EasyException;
 
 /**
  * Product: EasySocket

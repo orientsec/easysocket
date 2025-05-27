@@ -16,5 +16,5 @@ public class ErrorType {
     /**
      * 无响应
      */
-    public static final int RESPONSE = 3;
+    public static final int TASK = 3;
 }

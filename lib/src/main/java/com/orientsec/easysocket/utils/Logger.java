@@ -1,9 +1,5 @@
 package com.orientsec.easysocket.utils;
 
-import androidx.annotation.NonNull;
-
-import com.orientsec.easysocket.SocketClient;
-
 /**
  * Product: EasySocket
  * Package: com.orientsec.easysocket.utils

@@ -1,6 +1,7 @@
 package com.orientsec.easysocket;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.orientsec.easysocket.push.PushManager;
 import com.orientsec.easysocket.request.Decoder;
@@ -121,6 +122,21 @@ public class Options {
      */
     private final int connectInterval;
 
+    /**
+     * 连接状态标签，用于标识不同的连接统计信息。
+     */
+    private final int connectStatsTag;
+
+    /**
+     * 读取数据状态标签，用于标识不同的读取操作统计信息。
+     */
+    private final int readStatsTag;
+
+    /**
+     * 写入数据状态标签，用于标识不同的写入操作统计信息。
+     */
+    private final int writeStatsTag;
+
     private Options(Builder builder) {
         name = builder.name;
         debug = builder.debug;
@@ -144,6 +160,9 @@ public class Options {
         pushManagerProvider = builder.pushManagerProvider;
         socketFactoryProvider = builder.socketFactoryProvider;
         detailLog = builder.detailLog;
+        connectStatsTag = builder.connectStatsTag;
+        readStatsTag = builder.readStatsTag;
+        writeStatsTag = builder.writeStatsTag;
     }
 
     public boolean isDebug() {
@@ -202,36 +221,55 @@ public class Options {
         return connectInterval;
     }
 
+    @Nullable
     public Provider<Request<Boolean>> getPulseRequestProvider() {
         return pulseRequestProvider;
     }
 
+    @Nullable
     public Provider<Decoder<Boolean>> getPulseDecoderProvider() {
         return pulseDecoderProvider;
     }
 
+    @NonNull
     public Provider<List<Address>> getAddressProvider() {
         return addressProvider;
     }
 
+    @NonNull
     public Provider<SocketFactory> getSocketFactoryProvider() {
         return socketFactoryProvider;
     }
 
+    @NonNull
     public Provider<HeadParser> getHeadParserProvider() {
         return headParserProvider;
     }
 
+    @Nullable
     public Provider<PushManager<?, ?>> getPushManagerProvider() {
         return pushManagerProvider;
     }
 
+    @NonNull
     public Provider<Initializer> getInitializerProvider() {
         return initializerProvider;
     }
 
     public boolean isDetailLog() {
         return detailLog;
+    }
+
+    public int getConnectStatsTag() {
+        return connectStatsTag;
+    }
+
+    public int getReadStatsTag() {
+        return readStatsTag;
+    }
+
+    public int getWriteStatsTag() {
+        return writeStatsTag;
     }
 
     public static final class Builder {
@@ -257,6 +295,9 @@ public class Options {
         private int retryTimes;
         private int connectInterval = 3000;
         private boolean detailLog = true;
+        private int connectStatsTag = 0x1001;
+        private int readStatsTag = 0x1002;
+        private int writeStatsTag = 0x1003;
 
         public Builder() {
         }
@@ -376,6 +417,21 @@ public class Options {
             return this;
         }
 
+        public Builder connectStatsTag(int val) {
+            connectStatsTag = val;
+            return this;
+        }
+
+        public Builder readStatsTag(int val) {
+            readStatsTag = val;
+            return this;
+        }
+
+        public Builder writeStatsTag(int val) {
+            writeStatsTag = val;
+            return this;
+        }
+
         @NonNull
         public Options build() {
             String error = checkParams();
@@ -423,15 +479,6 @@ public class Options {
             }
             if (socketFactoryProvider == null) {
                 socketFactoryProvider = new DefaultSocketFactoryProvider();
-            }
-            if (pulseRequestProvider == null) {
-                pulseRequestProvider = new DefaultPulseRequestProvider();
-            }
-            if (pulseDecoderProvider == null) {
-                pulseDecoderProvider = new DefaultPulseDecoderProvider();
-            }
-            if (pushManagerProvider == null) {
-                pushManagerProvider = new DefaultPushManagerProvider();
             }
             if (initializerProvider == null) {
                 initializerProvider = new DefaultInitializerProvider();

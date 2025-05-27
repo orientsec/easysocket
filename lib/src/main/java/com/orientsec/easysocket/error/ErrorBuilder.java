@@ -7,7 +7,7 @@ public class ErrorBuilder {
         this.suffix = suffix;
     }
 
-    public EasyException create(int code, int type, String message, Exception cause) {
+    public EasyException create(int code, int type, String message, Throwable cause) {
         String msg = message + "  (" + type + "," + code + ")" + suffix;
         return new EasyException(code, type, msg, cause);
     }

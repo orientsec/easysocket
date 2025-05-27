@@ -6,15 +6,13 @@ import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.SocketClient;
 import com.orientsec.easysocket.client.AbstractSocketClient;
-import com.orientsec.easysocket.client.EventManager;
+import com.orientsec.easysocket.EasyRunner;
 import com.orientsec.easysocket.error.ErrorCode;
 import com.orientsec.easysocket.error.ErrorType;
 import com.orientsec.easysocket.request.Callback;
 import com.orientsec.easysocket.request.Request;
+import com.orientsec.easysocket.request.Result;
 
-import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -26,23 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * coding is art not science
  */
 
-public class RequestTask<R extends T, T> implements Task<R> {
-    protected enum State {
-        //收到响应
-        SUCCESS,
-        //出错
-        ERROR,
-        //取消
-        CANCELED,
-    }
-
-    static final int TASK_START = 301;
-    static final int TASK_ENQUEUE = 302;
-    static final int TASK_SEND = 303;
-    static final int TASK_SUCCESS = 304;
-    static final int TASK_ERROR = 305;
-    static final int TASK_CANCEL = 306;
-    static final int TASK_TIME_OUT = 307;
+public class RequestTask<R extends T, T> implements Task<R>, Runnable {
 
     // Guarded by this.
     private final AtomicBoolean executed = new AtomicBoolean();
@@ -51,19 +33,23 @@ public class RequestTask<R extends T, T> implements Task<R> {
     private final Callback<T> callback;
     private final Executor callbackExecutor;
     private final Executor codecExecutor;
-    private final EventManager eventManager;
+    private final EasyRunner runner;
     private final Options options;
-    private final Map<Integer, RequestTask<?, ?>> taskMap;
 
-    private final BlockingQueue<Task<?>> writingQueue;
-
-    private final Queue<RequestTask<?, ?>> waitingQueue;
     /**
      * 每一个任务的id是唯一的，通过taskId，客户端可以匹配每个请求的返回
      */
     final int taskId;
 
-    private volatile State state;
+    /**
+     * 任务类型
+     */
+    final TaskType taskType;
+
+    /**
+     * 请求任务结束状态
+     */
+    private volatile State state = null;
     /**
      * 编码后的请求数据
      *
@@ -71,33 +57,27 @@ public class RequestTask<R extends T, T> implements Task<R> {
      */
     private byte[] data = new byte[0];
 
-    private R response;
+    private final RealTaskManager taskManager;
 
-    private Exception exception;
-
-    RequestTask(int taskId,
-                Request<R> request,
-                Callback<T> callback,
-                Map<Integer, RequestTask<?, ?>> taskMap,
-                Queue<RequestTask<?, ?>> waitingQueue,
-                BlockingQueue<Task<?>> writingQueue,
-                EventManager eventManager,
-                AbstractSocketClient socketClient) {
+    public RequestTask(int taskId,
+                       TaskType taskType,
+                       Request<R> request,
+                       Callback<T> callback,
+                       AbstractSocketClient socketClient) {
         this.request = request;
         this.callback = callback;
         this.taskId = taskId;
-        this.waitingQueue = waitingQueue;
-        this.writingQueue = writingQueue;
-        this.taskMap = taskMap;
-        this.eventManager = eventManager;
+        this.taskType = taskType;
         this.socketClient = socketClient;
         this.options = socketClient.getOptions();
-        callbackExecutor = options.getCallbackExecutor();
-        codecExecutor = options.getCodecExecutor();
+        this.taskManager = (RealTaskManager) socketClient.getTaskManager();
+        this.runner = socketClient.getEasyRunner();
+        this.callbackExecutor = options.getCallbackExecutor();
+        this.codecExecutor = options.getCodecExecutor();
     }
 
     @Override
-    public int taskId() {
+    public int getTaskId() {
         return taskId;
     }
 
@@ -108,16 +88,16 @@ public class RequestTask<R extends T, T> implements Task<R> {
      * @return 请求的编码数据
      */
     @Override
-    public byte[] data() {
+    public byte[] getData() {
         return data;
     }
 
     @Override
     public void execute() {
         if (executed.compareAndSet(false, true)) {
-            eventManager.publish(TASK_START, this);
+            runner.post(this::onStart);
         } else {
-            throw new IllegalStateException("Already Executed");
+            throw new IllegalStateException("task is already executed");
         }
     }
 
@@ -134,7 +114,7 @@ public class RequestTask<R extends T, T> implements Task<R> {
     @Override
     public void cancel() {
         if (isFinished()) return;
-        eventManager.publish(TASK_CANCEL, this);
+        runner.post(this::onCancel);
     }
 
     @Override
@@ -142,26 +122,36 @@ public class RequestTask<R extends T, T> implements Task<R> {
         return state == State.CANCELED;
     }
 
-    void onStart() {
+    @Override
+    @NonNull
+    public Request<R> request() {
+        return request;
+    }
+
+    @Override
+    public void run() {
+        onTimeout();
+    }
+
+    private void onStart() {
         if (isFinished()) return;
         SocketClient socketClient = this.socketClient;
         if (socketClient.isShutdown()) {
-            onError(ErrorCode.SHUTDOWN, ErrorType.SYSTEM, "Socket client is shutdown.");
-        } else if (request.isPulse()) {
+            onFailure(ErrorCode.SHUTDOWN, ErrorType.SYSTEM, "socket client is shutdown");
+        } else if (taskType == TaskType.PULSE) {
             if (socketClient.isAvailable()) {
-                taskMap.put(taskId, this);
+                taskManager.start(this);
                 onEncode();
             }
         } else {
             socketClient.start();
-            taskMap.put(taskId, this);
-            if (socketClient.isAvailable() || request.isInitialize()) {
+            taskManager.start(this);
+            if (socketClient.isAvailable() || taskType == TaskType.INITIALIZE) {
                 onEncode();
             } else {
-                waitingQueue.add(this);
+                taskManager.wait(this);
             }
         }
-
     }
 
     void onEncode() {
@@ -169,95 +159,113 @@ public class RequestTask<R extends T, T> implements Task<R> {
         //对请求消息进行编码, 获取最终写入的字节数组。
         codecExecutor.execute(() -> {
             try {
-                data = request.encode(taskId);
-                eventManager.publish(TASK_ENQUEUE, this);
-            } catch (Exception e) {
-                exception = e;
-                eventManager.publish(TASK_ERROR, this);
+                Result<byte[]> result = request.encode(taskId);
+                if (result.isSuccess()) {
+                    data = result.get();
+                    if (data.length == 0) {
+                        runner.post(() -> {
+                            taskManager.remove(this);
+                            onFailure(ErrorCode.REQUEST_DATA_EMPTY, ErrorType.TASK,
+                                    "request data is empty");
+                        });
+                    } else {
+                        runner.post(this::onEnqueue);
+                    }
+                } else {
+                    runner.post(() -> {
+                        taskManager.remove(this);
+                        onFailure(result.error());
+                    });
+                }
+            } catch (Throwable t) {
+                runner.post(() -> {
+                    taskManager.remove(this);
+                    onFailure(t);
+                });
             }
         });
     }
 
-    void onEnqueue() {
-        if (!isFinished() && !writingQueue.offer(this)) {
-            taskMap.remove(taskId);
-            onError(ErrorCode.TASK_REFUSED, ErrorType.SYSTEM,
-                    "Task queue refuse to accept task!");
+    private void onEnqueue() {
+        if (isFinished()) return;
+        if (!taskManager.enqueue(this)) {
+            taskManager.remove(this);
+            onFailure(ErrorCode.TASK_REFUSED, ErrorType.SYSTEM,
+                    "task queue refuse to accept task");
         }
     }
 
-    void onCancel() {
+    private void onCancel() {
         if (!isFinished()) {
-            taskMap.remove(taskId);
-            writingQueue.remove(this);
-            waitingQueue.remove(this);
+            taskManager.cancel(this);
             state = State.CANCELED;
-            callbackExecutor.execute(callback::onCancel);
+            callbackExecutor.execute(callback::onCanceled);
         }
     }
 
-    void onSend() {
+    @Override
+    public void onRequestSent() {
         if (!isFinished()) {
-            if (request.isNoResponse()) {
-                //仅发送请求，发送成功后直接进入SUCCESS状态。
-                taskMap.remove(taskId);
-                state = State.SUCCESS;
-            } else {
-                eventManager.publish(TASK_TIME_OUT, this, options.getRequestTimeOut());
-            }
-            callbackExecutor.execute(callback::onSend);
+            runner.post(this::onSent);
         }
+    }
+
+    private void onSent() {
+        if (isFinished()) return;
+        runner.postDelayed(this, this, options.getRequestTimeOut());
+        callbackExecutor.execute(callback::onSent);
     }
 
     void onReceive(Packet packet) {
-        eventManager.remove(TASK_TIME_OUT, this);
+        runner.remove(this, this);
         codecExecutor.execute(() -> {
             try {
-                response = request.decode(packet);
-                eventManager.publish(TASK_SUCCESS, this);
-            } catch (Exception e) {
-                exception = e;
-                eventManager.publish(TASK_ERROR, this);
+                Result<R> result = request.decode(packet);
+                if (result.isSuccess()) {
+                    runner.post(() -> onSuccess(result.get()));
+                } else {
+                    runner.post(() -> onFailure(result.error()));
+                }
+            } catch (Throwable t) {
+                runner.post(() -> onFailure(t));
             }
         });
     }
 
-    void onSuccess() {
+    private void onTimeout() {
+        taskManager.remove(this);
+        onFailure(ErrorCode.RESPONSE_TIME_OUT, ErrorType.TASK, "response time out");
+    }
+
+    private void onSuccess(R response) {
         if (!isFinished()) {
-            taskMap.remove(taskId);
             state = State.SUCCESS;
             callbackExecutor.execute(() -> callback.onSuccess(response));
         }
     }
 
-    void onError(@NonNull Exception e) {
-        state = State.ERROR;
-        exception = e;
-        callbackExecutor.execute(() -> callback.onError(e));
-    }
-
-    private void onError(int code, int type, String msg) {
-        onError(socketClient.errorBuilder.create(code, type, msg));
-    }
-
-    void onError() {
+    void onFailure(@NonNull Throwable t) {
         if (!isFinished()) {
-            taskMap.remove(taskId);
-            state = State.ERROR;
-            callbackExecutor.execute(() -> callback.onError(exception));
+            state = State.FAILURE;
+            callbackExecutor.execute(() -> callback.onFailure(t));
         }
     }
 
-    void onTimeout() {
+    private void onFailure(int code, int type, String msg) {
         if (!isFinished()) {
-            taskMap.remove(taskId);
-            onError(ErrorCode.RESPONSE_TIME_OUT, ErrorType.RESPONSE, "Response time out.");
+            state = State.FAILURE;
+            Throwable t = socketClient.errorBuilder.create(code, type, msg);
+            callbackExecutor.execute(() -> callback.onFailure(t));
         }
     }
 
-    @Override
-    @NonNull
-    public Request<R> request() {
-        return request;
+
+    protected enum State {
+        //收到响应
+        SUCCESS,
+        //出错
+        FAILURE,
+        //取消
+        CANCELED,
     }
 }

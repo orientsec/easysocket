@@ -5,7 +5,7 @@ import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.Initializer;
 import com.orientsec.easysocket.request.Callback;
-import com.orientsec.easysocket.task.Task;
+import com.orientsec.easysocket.task.TaskType;
 
 public class MyInitializer implements Initializer {
     private final Client client;
@@ -16,7 +16,7 @@ public class MyInitializer implements Initializer {
 
     @Override
     public void start(@NonNull Emitter emitter) {
-        SimpleRequest authRequest = new SimpleRequest("test", 1, true, client.session);
+        SimpleRequest authRequest = new SimpleRequest(1, "test", client.session);
         Callback<String> callback = new Callback.EmptyCallback<String>() {
             @Override
             public void onSuccess(@NonNull String res) {
@@ -25,11 +25,12 @@ public class MyInitializer implements Initializer {
             }
 
             @Override
-            public void onError(@NonNull Exception e) {
-                emitter.fail(e);
+            public void onFailure(@NonNull Throwable t) {
+                emitter.fail(t);
             }
         };
-        Task<String> task = client.socketClient.buildTask(authRequest, callback);
-        task.execute();
+        client.socketClient
+                .buildTask(authRequest, callback, TaskType.INITIALIZE)
+                .execute();
     }
 }

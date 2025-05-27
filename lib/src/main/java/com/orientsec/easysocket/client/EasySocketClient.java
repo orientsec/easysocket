@@ -6,6 +6,7 @@ import androidx.annotation.Nullable;
 
 import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.ConnectionListener;
+import com.orientsec.easysocket.EasyRunner;
 import com.orientsec.easysocket.EasySocket;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.error.EasyException;
@@ -14,14 +15,16 @@ import com.orientsec.easysocket.error.ErrorType;
 import com.orientsec.easysocket.request.Callback;
 import com.orientsec.easysocket.request.Request;
 import com.orientsec.easysocket.task.RealTaskManager;
+import com.orientsec.easysocket.task.RequestTask;
 import com.orientsec.easysocket.task.Task;
 import com.orientsec.easysocket.task.TaskManager;
+import com.orientsec.easysocket.task.TaskType;
 
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Executor;
-
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Product: EasySocket
@@ -31,18 +34,11 @@ import java.util.concurrent.Executor;
  * coding is art not science
  */
 public class EasySocketClient extends AbstractSocketClient {
-    static final int START = 101;
-    static final int STOP = 102;
-    static final int SHUTDOWN = 103;
-    static final int RESTART = 104;
-    static final int INIT_SUCCESS = 105;
-    static final int INIT_ERROR = 106;
-
+    private final AtomicInteger uniqueTaskId = new AtomicInteger(1);
     private final String name;
     private final Connector connector;
     private final Executor callbackExecutor;
     private final TaskManager taskManager;
-    final EventManager eventManager;
     private final Set<ConnectionListener> connectionListeners = new CopyOnWriteArraySet<>();
 
     //激活时间戳。主动发起请求即为一次激活。
@@ -68,22 +64,28 @@ public class EasySocketClient extends AbstractSocketClient {
 
     private long sessionId;
 
-    public EasySocketClient(Options options) {
-        super(options);
+    public EasySocketClient(Options options, EasyRunner runner) {
+        super(options, runner);
         name = options.getName();
         callbackExecutor = options.getCallbackExecutor();
-        eventManager = EasySocket.getInstance().newEventManager();
-        taskManager = new RealTaskManager(this, eventManager);
+        taskManager = new RealTaskManager(this);
         connector = new Connector(this);
-        eventManager.addListener(this);
-        EasySocket.getInstance().addSocketClient(this);
     }
 
     @NonNull
     @Override
     public <R extends T, T> Task<R> buildTask(@NonNull Request<R> request,
                                               @NonNull Callback<T> callback) {
-        return taskManager.buildTask(request, callback);
+        return buildTask(request, callback, TaskType.REQUEST);
+    }
+
+    @NonNull
+    @Override
+    public <I extends T, T> Task<I> buildTask(@NonNull Request<I> request,
+                                              @NonNull Callback<T> callback,
+                                              TaskType taskType) {
+        return new RequestTask<>(uniqueTaskId.getAndIncrement(),
+                taskType, request, callback, this);
     }
 
     @Override
@@ -133,7 +135,7 @@ public class EasySocketClient extends AbstractSocketClient {
         }
         if (addressList == null) {
             if (initializing) {
-                logger.i("Client is initializing, just wait for the result.");
+                logger.i("client is initializing, just wait for the result");
             } else {
                 initializing = true;
                 options.getConnectExecutor().execute(new InitializeTask());
@@ -169,20 +171,20 @@ public class EasySocketClient extends AbstractSocketClient {
     @Override
     protected void onStop() {
         if (isShutdown()) return;
-        logger.w("Stop socket client.");
+        logger.w("stop socket client");
         timestamp = 0;
         if (session != null) {
-            session.close(ErrorCode.STOP, ErrorType.SYSTEM, "Socket client stop.");
+            session.close(ErrorCode.STOP, ErrorType.SYSTEM, "socket client on stop");
         }
     }
 
     @Override
     protected void onShutdown() {
         if (isShutdown()) return;
-        logger.w("Shutdown socket client.");
+        logger.w("shutdown socket client");
         timestamp = -1;
         if (session != null) {
-            session.close(ErrorCode.SHUTDOWN, ErrorType.SYSTEM, "Socket client shutdown.");
+            session.close(ErrorCode.SHUTDOWN, ErrorType.SYSTEM, "socket client on shutdown");
         }
         EasySocket.getInstance().removeSocketClient(this);
     }
@@ -263,19 +265,19 @@ public class EasySocketClient extends AbstractSocketClient {
     @Override
     public void start() {
         if (isShutdown()) return;
-        eventManager.publish(START);
+        runner.post(this::onStart);
     }
 
     @Override
     public void stop() {
         if (isShutdown()) return;
-        eventManager.publish(STOP);
+        runner.post(this::onStop);
     }
 
     @Override
     public void shutdown() {
         if (isShutdown()) return;
-        eventManager.publish(SHUTDOWN);
+        runner.post(this::onShutdown);
     }
 
     @Override
@@ -313,7 +315,7 @@ public class EasySocketClient extends AbstractSocketClient {
             if (++addressIndex >= addressList.size()) {
                 addressIndex = 0;
             }
-            logger.i("Switch to server: " + addressList.get(addressIndex));
+            logger.i("switch to server: " + addressList.get(addressIndex));
         }
     }
 
@@ -327,30 +329,6 @@ public class EasySocketClient extends AbstractSocketClient {
         long mills = System.currentTimeMillis();
         long liveMills = options.getLiveTime();
         return mills - backgroundTimestamp <= liveMills && mills - timestamp <= liveMills;
-    }
-
-    @Override
-    public void onEvent(int eventId, @Nullable Object object) {
-        switch (eventId) {
-            case START:
-                onStart();
-                break;
-            case STOP:
-                onStop();
-                break;
-            case SHUTDOWN:
-                onShutdown();
-                break;
-            case RESTART:
-                connector.restart();
-                break;
-            case INIT_SUCCESS:
-                onInitialized((List<Address>) object);
-                break;
-            case INIT_ERROR:
-                onInitializeFailed((EasyException) object);
-                break;
-        }
     }
 
     @NonNull
@@ -371,16 +349,16 @@ public class EasySocketClient extends AbstractSocketClient {
                         .get(EasySocketClient.this);
                 if (addressList.isEmpty()) {
                     EasyException e = errorBuilder.create(ErrorCode.INIT_FAILED, ErrorType.SYSTEM,
-                            "Address list is empty.");
-                    eventManager.publish(INIT_ERROR, e);
+                            "address list is empty");
+                    runner.post(() -> onInitializeFailed(e));
                 } else {
-                    eventManager.publish(INIT_SUCCESS, addressList);
+                    runner.post(() -> onInitialized(addressList));
                 }
             } catch (Exception ex) {
-                logger.e("Fail to get address list.", ex);
+                logger.e("fail to get address list", ex);
                 EasyException e = errorBuilder.create(ErrorCode.INIT_FAILED, ErrorType.SYSTEM,
-                        "Failed to get address list.", ex);
-                eventManager.publish(INIT_ERROR, e);
+                        "failed to get address list", ex);
+                runner.post(() -> onInitializeFailed(e));
             }
 
         }

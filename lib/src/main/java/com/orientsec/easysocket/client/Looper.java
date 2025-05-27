@@ -21,7 +21,7 @@ public abstract class Looper implements Runnable {
 
     private final Logger logger;
 
-    protected Exception error;
+    protected Throwable error;
 
     protected Looper(Logger logger) {
         this.logger = logger;
@@ -37,7 +37,7 @@ public abstract class Looper implements Runnable {
             thread = new Thread(this, name);
             loopTimes = 0;
             thread.start();
-            logger.i(name + " is starting.");
+            logger.i(name + " is starting");
         }
     }
 
@@ -49,9 +49,9 @@ public abstract class Looper implements Runnable {
                 this.runInLoopThread();
                 loopTimes++;
             }
-        } catch (Exception e) {
-            error = e;
-            logger.e(name + " is shutting down.", e);
+        } catch (Throwable t) {
+            error = t;
+            logger.e(name + " is shutting down", t);
         } finally {
             loopFinish();
         }

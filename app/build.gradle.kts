@@ -31,6 +31,5 @@ dependencies {
     androidTestImplementation(libs.ext.junit)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.constraint.layout)
-    implementation(libs.reactivex.rxjava2)
     implementation(project(":lib"))
 }

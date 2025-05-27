@@ -1,15 +1,10 @@
 package com.orientsec.easysocket.task;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.client.AbstractSocketClient;
-import com.orientsec.easysocket.client.EventListener;
-import com.orientsec.easysocket.client.EventManager;
 import com.orientsec.easysocket.error.EasyException;
-import com.orientsec.easysocket.request.Callback;
-import com.orientsec.easysocket.request.Request;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -17,7 +12,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Product: EasySocket
@@ -26,9 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Author: Fredric
  * coding is art not science
  */
-public class RealTaskManager implements TaskManager, EventListener {
-
-    private final AtomicInteger uniqueId = new AtomicInteger(1);
+public class RealTaskManager implements TaskManager {
 
     private final Map<Integer, RequestTask<?, ?>> taskMap = new HashMap<>();
 
@@ -36,38 +28,20 @@ public class RealTaskManager implements TaskManager, EventListener {
 
     private final BlockingQueue<Task<?>> writingQueue = new LinkedBlockingQueue<>();
 
-    private final EventManager eventManager;
-
     private final AbstractSocketClient socketClient;
 
-    public RealTaskManager(AbstractSocketClient socketClient, EventManager eventManager) {
+    public RealTaskManager(AbstractSocketClient socketClient) {
         this.socketClient = socketClient;
-        this.eventManager = eventManager;
-        eventManager.addListener(this);
-    }
-
-    @NonNull
-    @Override
-    public <R extends T, T> Task<R> buildTask(@NonNull Request<R> request,
-                                              @NonNull Callback<T> callback) {
-        int id;
-        if (request.isNoTaskId()) {
-            id = 0;
-        } else {
-            id = uniqueId.getAndIncrement();
-        }
-        return new RequestTask<>(id, request, callback, taskMap,
-                waitingQueue, writingQueue, eventManager, socketClient);
     }
 
     @Override
-    public BlockingQueue<Task<?>> taskQueue() {
+    public BlockingQueue<Task<?>> getTaskQueue() {
         return writingQueue;
     }
 
     @Override
     public void handlePacket(@NonNull Packet packet) {
-        RequestTask<?, ?> task = taskMap.get(packet.getTaskId());
+        RequestTask<?, ?> task = taskMap.remove(packet.getTaskId());
         if (task != null) {
             task.onReceive(packet);
         }
@@ -75,9 +49,8 @@ public class RealTaskManager implements TaskManager, EventListener {
 
     @Override
     public void reset(@NonNull EasyException e) {
-        eventManager.remove(RequestTask.TASK_TIME_OUT);
         for (RequestTask<?, ?> task : taskMap.values()) {
-            task.onError(e);
+            task.onFailure(e);
         }
         taskMap.clear();
         waitingQueue.clear();
@@ -92,40 +65,30 @@ public class RealTaskManager implements TaskManager, EventListener {
         waitingQueue.clear();
     }
 
-    @Override
-    public void onTaskSend(@NonNull Task<?> task) {
-        eventManager.publish(RequestTask.TASK_SEND, task);
+    void wait(@NonNull RequestTask<?, ?> task) {
+        waitingQueue.add(task);
     }
 
-    @Override
-    public void onEvent(int eventId, @Nullable Object object) {
-        if (eventId < 300 || eventId > 400) return;
-        RequestTask<?, ?> task = (RequestTask<?, ?>) object;
-        assert task != null;
-        switch (eventId) {
-            case RequestTask.TASK_START:
-                task.onStart();
-                break;
-            case RequestTask.TASK_ENQUEUE:
-                task.onEnqueue();
-                break;
-            case RequestTask.TASK_SEND:
-                task.onSend();
-                break;
-            case RequestTask.TASK_SUCCESS:
-                task.onSuccess();
-                break;
-            case RequestTask.TASK_ERROR:
-                task.onError();
-                break;
-            case RequestTask.TASK_CANCEL:
-                task.onCancel();
-                break;
-            case RequestTask.TASK_TIME_OUT:
-                task.onTimeout();
-                break;
-            default:
-                break;
-        }
+    void start(@NonNull RequestTask<?, ?> task) {
+        taskMap.put(task.getTaskId(), task);
+    }
+
+    boolean enqueue(@NonNull Task<?> task) {
+        return writingQueue.add(task);
+    }
+
+    void remove(@NonNull Task<?> task) {
+        taskMap.remove(task.getTaskId());
+    }
+
+    void cancel(@NonNull RequestTask<?, ?> task) {
+        boolean removeFromTaskMap = taskMap.remove(task.getTaskId()) != null;
+        boolean removeFromWritingQueue = writingQueue.remove(task);
+        boolean removeFromWaitingQueue = waitingQueue.remove(task);
+
+        socketClient.getLogger().i("cancel task:" + task.getTaskId() +
+                " removed from task map:" + removeFromTaskMap +
+                " removed from writing queue:" + removeFromWritingQueue +
+                " removed from waiting queue:" + removeFromWaitingQueue);
     }
 }

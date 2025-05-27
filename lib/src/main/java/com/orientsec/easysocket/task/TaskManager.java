@@ -1,5 +1,6 @@
 package com.orientsec.easysocket.task;
 
+import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.PacketHandler;
@@ -14,26 +15,29 @@ import java.util.concurrent.BlockingQueue;
  * Author: Fredric
  * coding is art not science
  */
-public interface TaskManager extends PacketHandler, TaskFactory {
+public interface TaskManager extends PacketHandler {
 
     /**
      * 获取任务队列
      *
      * @return 任务队列
      */
-    BlockingQueue<Task<?>> taskQueue();
+    BlockingQueue<Task<?>> getTaskQueue();
 
     /**
      * 复位任务管理器。
+     * EasySocket 主线程调用。
      *
      * @param e 异常
      */
+    @MainThread
     void reset(@NonNull EasyException e);
 
     /**
      * 启动任务管理器。在完成资源初始化、登录之后，连接连接准备就绪，进入可用状态。
+     * EasySocket 主线程调用。
      */
+    @MainThread
     void ready();
 
-    void onTaskSend(@NonNull Task<?> task);
 }

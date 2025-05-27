@@ -1,5 +1,7 @@
 package com.orientsec.easysocket.client;
 
+import android.net.TrafficStats;
+
 import com.orientsec.easysocket.HeadParser;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
@@ -44,14 +46,14 @@ public class BlockingReader extends Looper implements Reader {
         HeadParser.Head head = headParser.parseHead(headBytes);
         int bodyLength = head.getPacketSize();
         if (bodyLength > options.getMaxReadDataKB() * 1024) {
-            throw new IllegalStateException("Packet size too large: " + bodyLength);
+            throw new Exception("packet size too large: " + bodyLength);
         } else if (bodyLength >= 0) {
             byte[] data = new byte[bodyLength];
             readInputStream(inputStream, data);
             Packet packet = headParser.decodePacket(head, data);
             session.handlePacket(packet);
         } else {
-            throw new IllegalStateException("Negative packet size : " + bodyLength);
+            throw new Exception("negative packet size : " + bodyLength);
         }
     }
 
@@ -61,7 +63,7 @@ public class BlockingReader extends Looper implements Reader {
         while (readCount < count) {
             int len = inputStream.read(data, readCount, count - readCount);
             if (len == -1) {
-                throw new IOException("Input stream closed.");
+                throw new IOException("input stream closed");
             }
             readCount += len;
         }
@@ -69,6 +71,7 @@ public class BlockingReader extends Looper implements Reader {
 
     @Override
     protected void beforeLoop() throws IOException {
+        TrafficStats.setThreadStatsTag(options.getReadStatsTag());
         inputStream = socket.getInputStream();
     }
 
@@ -79,9 +82,10 @@ public class BlockingReader extends Looper implements Reader {
 
     @Override
     protected synchronized void loopFinish() {
+        TrafficStats.clearThreadStatsTag();
         if (isRunning()) {
-            session.postClose(ErrorCode.READ_EXIT, ErrorType.CONNECT,
-                    "Socket read aborted.", error);
+            session.onError(ErrorCode.READ_EXIT, ErrorType.CONNECT,
+                    "socket read aborted", error);
         }
     }
 }

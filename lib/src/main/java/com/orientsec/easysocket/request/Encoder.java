@@ -4,5 +4,5 @@ import androidx.annotation.NonNull;
 
 public interface Encoder {
     @NonNull
-    byte[] encode(int sequenceId) throws Exception;
+    Result<byte[]> encode(int sequenceId);
 }

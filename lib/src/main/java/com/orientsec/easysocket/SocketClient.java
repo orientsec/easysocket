@@ -5,7 +5,7 @@ import androidx.annotation.Nullable;
 
 import com.orientsec.easysocket.client.Session;
 import com.orientsec.easysocket.push.PushManager;
-import com.orientsec.easysocket.task.TaskFactory;
+import com.orientsec.easysocket.task.TaskBuilder;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.List;
@@ -18,7 +18,7 @@ import java.util.List;
  * Author: Fredric
  * coding is art not science
  */
-public interface SocketClient extends TaskFactory {
+public interface SocketClient extends TaskBuilder {
     /**
      * 启动连接, 如果连接已经启动，无效果。
      */
@@ -74,7 +74,7 @@ public interface SocketClient extends TaskFactory {
      *
      * @return 推送管理器。
      */
-    @NonNull
+    @Nullable
     PushManager<?, ?> getPushManager();
 
     /**
@@ -90,6 +90,7 @@ public interface SocketClient extends TaskFactory {
      *
      * @return Logger。
      */
+    @NonNull
     Logger getLogger();
 
     /**

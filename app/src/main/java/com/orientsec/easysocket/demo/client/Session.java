@@ -1,6 +1,6 @@
 package com.orientsec.easysocket.demo.client;
 
-class Session {
+public class Session {
     private int sessionId;
 
     int getSessionId() {

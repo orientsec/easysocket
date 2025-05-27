@@ -16,7 +16,7 @@ public interface Callback<R> {
     /**
      * 请求开始执行回调
      */
-    void onSend();
+    void onSent();
 
     /**
      * 成功回调
@@ -28,19 +28,19 @@ public interface Callback<R> {
     /**
      * 失败回调
      *
-     * @param e 异常
+     * @param t 异常
      */
-    void onError(@NonNull Exception e);
+    void onFailure(@NonNull Throwable t);
 
     /**
      * 取消回调
      */
-    void onCancel();
+    void onCanceled();
 
     class EmptyCallback<R> implements Callback<R> {
 
         @Override
-        public void onSend() {
+        public void onSent() {
 
         }
 
@@ -50,12 +50,12 @@ public interface Callback<R> {
         }
 
         @Override
-        public void onError(@NonNull Exception e) {
+        public void onFailure(@NonNull Throwable t) {
 
         }
 
         @Override
-        public void onCancel() {
+        public void onCanceled() {
 
         }
     }

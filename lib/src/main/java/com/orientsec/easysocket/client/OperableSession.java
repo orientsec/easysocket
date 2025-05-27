@@ -22,12 +22,12 @@ public interface OperableSession extends Session {
     void close(int code, int type, String message);
 
     /**
-     * 向连接主线程post一个异常。
+     * 连接会话出现错误。
      *
      * @param code 错误码
      * @param type 错误类型
      */
-    void postClose(int code, int type, String message, Exception cause);
+    void onError(int code, int type, String message, Throwable cause);
 
     Logger getLogger();
 }

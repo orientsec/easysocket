@@ -2,10 +2,7 @@ package com.orientsec.easysocket.utils;
 
 import android.util.Log;
 
-import androidx.annotation.NonNull;
-
 import com.orientsec.easysocket.Options;
-import com.orientsec.easysocket.SocketClient;
 
 /**
  * Product: EasySocket

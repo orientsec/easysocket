@@ -14,6 +14,8 @@ public class ErrorCode {
     public static final int TASK_REFUSED = 101;
     //响应超时
     public static final int RESPONSE_TIME_OUT = 102;
+    //请求数据空
+    public static final int REQUEST_DATA_EMPTY = 103;
 
     //======>连接错误<======
     //初始化失败

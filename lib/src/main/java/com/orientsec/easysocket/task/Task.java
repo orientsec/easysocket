@@ -11,12 +11,11 @@ import com.orientsec.easysocket.request.Request;
  * Author: Fredric
  * coding is art not science
  */
-
 public interface Task<R> {
 
-    int taskId();
+    int getTaskId();
 
-    byte[] data();
+    byte[] getData();
 
     /**
      * Asynchronously send the OUT and notify {@code callback} of its IN or if an error
@@ -49,4 +48,9 @@ public interface Task<R> {
      */
     @NonNull
     Request<R> request();
+
+    /**
+     * Callback method invoked when the request has been successfully sent.
+     */
+    void onRequestSent();
 }

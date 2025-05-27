@@ -9,15 +9,11 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.HandlerThread;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import com.orientsec.easysocket.client.AbstractSocketClient;
 import com.orientsec.easysocket.client.EasySocketClient;
-import com.orientsec.easysocket.client.EventListener;
-import com.orientsec.easysocket.client.EventManager;
 import com.orientsec.easysocket.utils.NetUtils;
 
 import java.util.Set;
@@ -32,17 +28,14 @@ import java.util.concurrent.CopyOnWriteArraySet;
  * <p>
  * 连接管理
  */
-public class EasySocket implements EventListener {
-    private static final int NET_AVAILABLE = 1;
-
+public class EasySocket {
     private Application application;
-    private HandlerThread handlerThread;
     //ON_START的activity数量，大于0时应用处于前台。
     private int count;
 
     private final Set<AbstractSocketClient> socketClients = new CopyOnWriteArraySet<>();
 
-    private EventManager eventManager;
+    private EasyRunner runner;
 
     private volatile long backgroundTimestamp;
 
@@ -65,24 +58,16 @@ public class EasySocket implements EventListener {
      */
     public synchronized void initialize(@NonNull Application application) {
         if (this.application != null)
-            throw new IllegalStateException("EasySocket has already initialized.");
+            throw new IllegalStateException("EasySocket has already initialized");
         this.application = application;
-        handlerThread = new HandlerThread("EasyMain");
-        handlerThread.start();
-        eventManager = newEventManager();
-        eventManager.addListener(this);
+        runner = new EasyRunner();
         register(application);
-    }
-
-    @NonNull
-    public EventManager newEventManager() {
-        return new EventManager(handlerThread.getLooper());
     }
 
     @NonNull
     public Context getContext() {
         if (application == null) {
-            throw new IllegalStateException("EasySocket is not initialized.");
+            throw new IllegalStateException("EasySocket is not initialized");
         }
         return application;
     }
@@ -90,9 +75,11 @@ public class EasySocket implements EventListener {
     @NonNull
     public SocketClient open(Options options) {
         if (application == null) {
-            throw new IllegalStateException("EasySocket is not initialized.");
+            throw new IllegalStateException("EasySocket is not initialized");
         }
-        return new EasySocketClient(options);
+        EasySocketClient socketClient = new EasySocketClient(options, runner);
+        EasySocket.getInstance().addSocketClient(socketClient);
+        return socketClient;
     }
 
     public void addSocketClient(@NonNull AbstractSocketClient socketClient) {
@@ -119,13 +106,6 @@ public class EasySocket implements EventListener {
         cm.registerNetworkCallback(request, new EasySocket.NetworkCallbackImpl());
     }
 
-    @Override
-    public void onEvent(int eventId, @Nullable Object object) {
-        if (eventId == NET_AVAILABLE) {
-            networkAvailable();
-        }
-    }
-
     private void foreground() {
         if (count == 0) {
             backgroundTimestamp = 0;
@@ -144,7 +124,7 @@ public class EasySocket implements EventListener {
         return backgroundTimestamp;
     }
 
-    private void networkAvailable() {
+    private void onNetworkAvailable() {
         for (AbstractSocketClient socketClient : socketClients) {
             socketClient.onNetworkAvailable();
         }
@@ -201,7 +181,7 @@ public class EasySocket implements EventListener {
         @Override
         public void onAvailable(@NonNull Network network) {
             super.onAvailable(network);
-            eventManager.publish(NET_AVAILABLE);
+            runner.post(EasySocket.this::onNetworkAvailable);
         }
     }
 

@@ -1,16 +1,13 @@
 package com.orientsec.easysocket.client;
 
-import static com.orientsec.easysocket.client.EasySocketClient.RESTART;
 
-import com.orientsec.easysocket.EasySocket;
+import com.orientsec.easysocket.EasyRunner;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.utils.Logger;
 
-class Connector {
+class Connector implements Runnable {
 
     private final Options options;
-
-    private final EventManager eventManager;
 
     private final Logger logger;
 
@@ -20,7 +17,6 @@ class Connector {
         this.socketClient = socketClient;
         options = socketClient.getOptions();
         logger = socketClient.logger;
-        eventManager = socketClient.eventManager;
     }
 
 
@@ -34,11 +30,11 @@ class Connector {
             socketClient.switchServer();
         }
         if (options.getLivePolicy().autoConnect(socketClient.isActive())) {
-            eventManager.remove(RESTART);
-
+            EasyRunner runner = socketClient.getEasyRunner();
+            runner.remove(this, this);
             long delay = options.getConnectInterval();
-            eventManager.publish(RESTART, delay);
-            logger.i("Restart after " + delay + " mill seconds...");
+            runner.postDelayed(this, this, delay);
+            logger.i("restart after " + delay + " mill seconds...");
         }
         //}
     }
@@ -51,8 +47,12 @@ class Connector {
         if (options.getLivePolicy().autoConnect(socketClient.isActive())) {
             socketClient.onStart(false);
         } else {
-            logger.i("Restart abandon.");
+            logger.i("restart abandoned");
         }
     }
 
+    @Override
+    public void run() {
+        restart();
+    }
 }
