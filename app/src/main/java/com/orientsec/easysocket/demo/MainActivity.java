@@ -9,9 +9,9 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.orientsec.easysocket.demo.client.Client;
-import com.orientsec.easysocket.request.Callback;
+import com.orientsec.easysocket.request.DefaultCallback;
 
-public class MainActivity extends AppCompatActivity implements Callback<String> {
+public class MainActivity extends AppCompatActivity {
     private TextView textView;
     private int errorTimes;
 
@@ -23,29 +23,21 @@ public class MainActivity extends AppCompatActivity implements Callback<String> 
         Button button = findViewById(R.id.button);
         button.setText("点我");
         button.setOnClickListener(v ->
-                Client.getInstance().request("hello", this));
+                Client.getInstance().request("hello", new Callback()));
     }
 
-    @Override
-    public void onSent() {
+    class Callback extends DefaultCallback<String> {
+        @Override
+        public void onSuccess(@NonNull String res) {
+            textView.setText(res);
+        }
 
-    }
-
-    @Override
-    public void onSuccess(@NonNull String res) {
-        textView.setText(res);
-    }
-
-    @Override
-    public void onFailure(@NonNull Throwable t) {
-        errorTimes++;
-        String msg = "error: " + t.getMessage() + "\n error counts:" + errorTimes;
-        textView.setText(msg);
-        Log.e("MainActivity", "onFailure: ", t);
-    }
-
-    @Override
-    public void onCanceled() {
-
+        @Override
+        public void onFailure(@NonNull Throwable t) {
+            errorTimes++;
+            String msg = "error: " + t.getMessage() + "\n error counts:" + errorTimes;
+            textView.setText(msg);
+            Log.e("MainActivity", "onFailure: ", t);
+        }
     }
 }

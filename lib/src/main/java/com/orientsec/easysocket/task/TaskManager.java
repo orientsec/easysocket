@@ -6,38 +6,71 @@ import androidx.annotation.NonNull;
 import com.orientsec.easysocket.PacketHandler;
 import com.orientsec.easysocket.error.EasyException;
 
-import java.util.concurrent.BlockingQueue;
-
 /**
- * Product: EasySocket
- * Package: com.orientsec.easysocket.inner
- * Time: 2018/01/09 15:26
- * Author: Fredric
- * coding is art not science
+ * Interface for managing tasks and their lifecycle in the EasySocket framework.
+ * This interface extends `PacketHandler` and provides methods for generating task IDs,
+ * resetting the task manager, and managing tasks (e.g., adding, removing, or canceling tasks).
  */
 public interface TaskManager extends PacketHandler {
 
     /**
-     * 获取任务队列
+     * Generates a unique task ID to identify different tasks.
      *
-     * @return 任务队列
+     * @return The generated task ID as an integer.
      */
-    BlockingQueue<Task<?>> getTaskQueue();
+    int generateTaskId();
 
     /**
-     * 复位任务管理器。
-     * EasySocket 主线程调用。
+     * Resets the task manager.
+     * This method is called on the main thread to reset the task manager's state
+     * in case of an exception.
      *
-     * @param e 异常
+     * @param e The exception that caused the reset.
      */
     @MainThread
     void reset(@NonNull EasyException e);
 
     /**
-     * 启动任务管理器。在完成资源初始化、登录之后，连接连接准备就绪，进入可用状态。
-     * EasySocket 主线程调用。
+     * Prepares the task manager for operation.
+     * This method is called on the main thread after resource initialization and login,
+     * transitioning the task manager to a ready state.
      */
     @MainThread
     void ready();
 
+    /**
+     * Adds a task to the waiting queue.
+     * This method is called on the main thread when a task cannot be executed immediately.
+     *
+     * @param task The task to be added to the waiting queue.
+     */
+    @MainThread
+    void addTaskToWaitingQueue(@NonNull TaskImpl<?> task);
+
+    /**
+     * Adds a task to the task manager.
+     * This method is called on the main thread to register a task for management.
+     *
+     * @param task The task to be added.
+     */
+    @MainThread
+    void addTask(@NonNull TaskImpl<?> task);
+
+    /**
+     * Removes a task from the task manager.
+     * This method is called on the main thread to delete a specific task from management.
+     *
+     * @param task The task to be removed.
+     */
+    @MainThread
+    void removeTask(@NonNull Task<?> task);
+
+    /**
+     * Cancels a specific task.
+     * This method is called on the main thread to cancel a task that is being managed.
+     *
+     * @param task The task to be canceled.
+     */
+    @MainThread
+    void cancelTask(@NonNull TaskImpl<?> task);
 }

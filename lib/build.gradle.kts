@@ -29,6 +29,8 @@ android {
 
 dependencies {
     implementation(libs.androidx.annotation)
+    implementation(libs.androidx.lifecycle.common.jvm)
+    implementation(libs.androidx.lifecycle.process)
     testImplementation(libs.junit)
 }
 

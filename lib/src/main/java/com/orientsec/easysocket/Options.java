@@ -13,145 +13,167 @@ import java.util.concurrent.Executor;
 
 import javax.net.SocketFactory;
 
-
 /**
- * Product: EasySocket
- * Package: com.orientsec.easysocket
- * Time: 2017/12/25 13:01
- * Author: Fredric
- * coding is art not science
+ * Represents the configuration options for the EasySocket library.
+ * This class provides various settings for socket connections, including
+ * connection timeouts, heartbeat configurations, reconnection policies, and
+ * thread executors for managing tasks.
  */
-
 public class Options {
 
     /**
-     * 是否是调试模式
+     * Indicates whether the application is in debug mode.
      */
     private final boolean debug;
 
+    /**
+     * The name of the socket client.
+     */
     private final String name;
 
+    /**
+     * Indicates whether detailed logging is enabled.
+     */
     private final boolean detailLog;
 
     /**
-     * 心跳解码器
+     * Provider for the heartbeat decoder.
      */
     private final Provider<Decoder<Boolean>> pulseDecoderProvider;
+
     /**
-     * 心跳请求
+     * Provider for the heartbeat request.
      */
     private final Provider<Request<Boolean>> pulseRequestProvider;
+
     /**
-     * 站点信息
+     * Provider for the list of server addresses.
      */
     private final Provider<List<Address>> addressProvider;
+
     /**
-     * Socket factory
+     * Provider for the socket factory.
      */
     private final Provider<SocketFactory> socketFactoryProvider;
+
     /**
-     * 数据协议
+     * Provider for the data protocol parser.
      */
     private final Provider<HeadParser> headParserProvider;
+
     /**
-     * 推送消息处理器
+     * Provider for the push message handler.
      */
     private final Provider<PushManager<?, ?>> pushManagerProvider;
+
     /**
-     * 连接初始化
+     * Provider for the session initializer.
      */
-    private final Provider<Initializer> initializerProvider;
+    private final Provider<SessionInitializer> initializerProvider;
+
     /**
-     * 消息分发执行器
-     * 连接状态监听回调，请求回调，都执行在Executor所在线程
+     * Executor for handling callback tasks, such as connection state changes
+     * and request responses.
      */
     private final Executor callbackExecutor;
 
     /**
-     * 连接管理线程池
-     * 启动连接、关闭连接的执行线程池
+     * Executor for managing connection tasks, such as starting and stopping connections.
      */
     private final Executor connectExecutor;
 
     /**
-     * 编解码执行器
+     * Executor for encoding and decoding tasks.
      */
     private final Executor codecExecutor;
+
     /**
-     * 最大读取数据的K数(KB)<br>
-     * 防止服务器返回数据体过大的数据导致前端内存溢出.
+     * Executor for handling write operations.
+     */
+    private final Executor writeExecutor;
+
+    /**
+     * The maximum size of data (in KB) that can be read to prevent memory overflow.
      */
     private final int maxReadDataKB;
 
     /**
-     * 请求超时时间 单位秒
+     * The timeout duration (in seconds) for requests.
      */
-    private final int requestTimeOut;
+    private final int requestTimeOutInMills;
 
     /**
-     * 连接超时时间 单位秒
+     * The timeout duration (in seconds) for establishing a connection.
      */
-    private final int connectTimeOut;
+    private final int connectTimeOutInMills;
 
     /**
-     * 心跳频率 单位秒
+     * The frequency (in seconds) of heartbeat messages.
      */
     private final int pulseRate;
+
     /**
-     * 心跳失败次数
+     * The number of consecutive heartbeat failures allowed before considering
+     * the connection lost.
      */
     private final int pulseLostTimes;
 
     /**
-     * 后台存活时间
+     * The duration (in seconds) the client remains active in the background.
      */
     private final int liveTime;
 
     /**
-     * 后台策略
+     * The reconnection policy to be used when the connection is lost.
      */
-    private final LivePolicy livePolicy;
+    private final ReconnectPolicy reconnectPolicy;
 
     /**
-     * 失败重连尝试次数
+     * The number of retry attempts for reconnection.
      */
     private final int retryTimes;
 
     /**
-     * 连接间隔
+     * The interval (in milliseconds) between connection attempts.
      */
-    private final int connectInterval;
+    private final int connectIntervalInMills;
 
     /**
-     * 连接状态标签，用于标识不同的连接统计信息。
+     * A tag used to identify connection statistics.
      */
     private final int connectStatsTag;
 
     /**
-     * 读取数据状态标签，用于标识不同的读取操作统计信息。
+     * A tag used to identify read operation statistics.
      */
     private final int readStatsTag;
 
     /**
-     * 写入数据状态标签，用于标识不同的写入操作统计信息。
+     * A tag used to identify write operation statistics.
      */
     private final int writeStatsTag;
 
+    /**
+     * Constructs an `Options` instance using the provided builder.
+     *
+     * @param builder The builder containing the configuration settings.
+     */
     private Options(Builder builder) {
         name = builder.name;
         debug = builder.debug;
         callbackExecutor = builder.callbackExecutor;
         connectExecutor = builder.connectExecutor;
         codecExecutor = builder.codecExecutor;
+        writeExecutor = builder.writeExecutor;
         maxReadDataKB = builder.maxReadDataKB;
-        requestTimeOut = builder.requestTimeOut;
-        connectTimeOut = builder.connectTimeOut;
+        requestTimeOutInMills = builder.requestTimeOutInMills;
+        connectTimeOutInMills = builder.connectTimeOutInMills;
         pulseRate = builder.pulseRate;
         pulseLostTimes = builder.pulseLostTimes;
         liveTime = builder.liveTime;
-        livePolicy = builder.livePolicy;
+        reconnectPolicy = builder.reconnectPolicy;
         retryTimes = builder.retryTimes;
-        connectInterval = builder.connectInterval;
+        connectIntervalInMills = builder.connectIntervalInMills;
         addressProvider = builder.addressProvider;
         headParserProvider = builder.headParserProvider;
         initializerProvider = builder.initializerProvider;
@@ -164,6 +186,9 @@ public class Options {
         readStatsTag = builder.readStatsTag;
         writeStatsTag = builder.writeStatsTag;
     }
+
+    // Getter methods for accessing the configuration options...
+
 
     public boolean isDebug() {
         return debug;
@@ -185,12 +210,16 @@ public class Options {
         return codecExecutor;
     }
 
+    public Executor getWriteExecutor() {
+        return writeExecutor;
+    }
+
     public int getMaxReadDataKB() {
         return maxReadDataKB;
     }
 
-    public int getRequestTimeOut() {
-        return requestTimeOut;
+    public int getRequestTimeOutInMills() {
+        return requestTimeOutInMills;
     }
 
     public int getPulseRate() {
@@ -205,20 +234,20 @@ public class Options {
         return liveTime;
     }
 
-    public LivePolicy getLivePolicy() {
-        return livePolicy;
+    public ReconnectPolicy getLivePolicy() {
+        return reconnectPolicy;
     }
 
-    public int getConnectTimeOut() {
-        return connectTimeOut;
+    public int getConnectTimeOutInMills() {
+        return connectTimeOutInMills;
     }
 
     public int getRetryTimes() {
         return retryTimes;
     }
 
-    public int getConnectInterval() {
-        return connectInterval;
+    public int getConnectIntervalInMills() {
+        return connectIntervalInMills;
     }
 
     @Nullable
@@ -252,7 +281,7 @@ public class Options {
     }
 
     @NonNull
-    public Provider<Initializer> getInitializerProvider() {
+    public Provider<SessionInitializer> getInitializerProvider() {
         return initializerProvider;
     }
 
@@ -272,6 +301,10 @@ public class Options {
         return writeStatsTag;
     }
 
+    /**
+     * Builder class for constructing `Options` instances.
+     * Provides methods for setting various configuration parameters.
+     */
     public static final class Builder {
         private String name = "";
         private boolean debug;
@@ -281,19 +314,20 @@ public class Options {
         private Provider<SocketFactory> socketFactoryProvider;
         private Provider<HeadParser> headParserProvider;
         private Provider<PushManager<?, ?>> pushManagerProvider;
-        private Provider<Initializer> initializerProvider;
+        private Provider<SessionInitializer> initializerProvider;
         private Executor callbackExecutor;
         private Executor connectExecutor;
         private Executor codecExecutor;
+        private Executor writeExecutor;
         private int maxReadDataKB = 1024;
-        private int requestTimeOut = 5000;
-        private int connectTimeOut = 5000;
-        private int pulseRate = 60 * 1000;
+        private int requestTimeOutInMills = 5000;
+        private int connectTimeOutInMills = 5000;
+        private int pulseRate = 60;
         private int pulseLostTimes = 2;
-        private int liveTime = 30 * 1000;
-        private LivePolicy livePolicy = LivePolicy.DEFAULT;
+        private int liveTime = 30;
+        private ReconnectPolicy reconnectPolicy = ReconnectPolicy.ACTIVE;
         private int retryTimes;
-        private int connectInterval = 3000;
+        private int connectIntervalInMills = 3000;
         private boolean detailLog = true;
         private int connectStatsTag = 0x1001;
         private int readStatsTag = 0x1002;
@@ -342,7 +376,7 @@ public class Options {
             return this;
         }
 
-        public Builder initializerProvider(@NonNull Provider<Initializer> val) {
+        public Builder initializerProvider(@NonNull Provider<SessionInitializer> val) {
             initializerProvider = val;
             return this;
         }
@@ -367,18 +401,23 @@ public class Options {
             return this;
         }
 
+        public Builder writeExecutor(@NonNull Executor val) {
+            writeExecutor = val;
+            return this;
+        }
+
         public Builder maxReadDataKB(int val) {
             maxReadDataKB = val;
             return this;
         }
 
-        public Builder requestTimeOut(int val) {
-            requestTimeOut = val;
+        public Builder requestTimeOutInMills(int val) {
+            requestTimeOutInMills = val;
             return this;
         }
 
-        public Builder connectTimeOut(int val) {
-            connectTimeOut = val;
+        public Builder connectTimeOutInMills(int val) {
+            connectTimeOutInMills = val;
             return this;
         }
 
@@ -397,8 +436,8 @@ public class Options {
             return this;
         }
 
-        public Builder livePolicy(@NonNull LivePolicy val) {
-            livePolicy = val;
+        public Builder livePolicy(@NonNull ReconnectPolicy val) {
+            reconnectPolicy = val;
             return this;
         }
 
@@ -407,8 +446,8 @@ public class Options {
             return this;
         }
 
-        public Builder connectInterval(int val) {
-            connectInterval = val;
+        public Builder connectIntervalInMills(int val) {
+            connectIntervalInMills = val;
             return this;
         }
 
@@ -432,6 +471,12 @@ public class Options {
             return this;
         }
 
+        /**
+         * Builds and returns an `Options` instance with the configured settings.
+         *
+         * @return A new `Options` instance.
+         * @throws IllegalArgumentException If any required parameter is invalid or missing.
+         */
         @NonNull
         public Options build() {
             String error = checkParams();
@@ -456,13 +501,13 @@ public class Options {
             if (maxReadDataKB <= 0) {
                 return "Max read data size in kb must be positive.";
             }
-            if (connectTimeOut < 0) {
+            if (connectTimeOutInMills < 0) {
                 return "Connect time out is negative.";
             }
-            if (requestTimeOut <= 0) {
+            if (requestTimeOutInMills <= 0) {
                 return "Request time out must be positive..";
             }
-            if (pulseRate < 30 * 1000) {
+            if (pulseRate < 30) {
                 return "Pulse rate must big than 30s.";
             }
             if (pulseLostTimes < 0) {
@@ -474,7 +519,7 @@ public class Options {
             if (retryTimes < 0) {
                 return "Retry time is negative.";
             }
-            if (connectInterval <= 1000) {
+            if (connectIntervalInMills <= 1000) {
                 return "Connect interval must big than 1000ms.";
             }
             if (socketFactoryProvider == null) {
@@ -484,13 +529,16 @@ public class Options {
                 initializerProvider = new DefaultInitializerProvider();
             }
             if (callbackExecutor == null) {
-                callbackExecutor = Executors.defaultMainExecutor();
+                callbackExecutor = Executors.defaultMainThreadExecutor();
             }
             if (connectExecutor == null) {
                 connectExecutor = Executors.defaultConnectExecutor();
             }
             if (codecExecutor == null) {
                 codecExecutor = Executors.defaultCodecExecutor();
+            }
+            if (writeExecutor == null) {
+                writeExecutor = Executors.defaultWriteExecutor();
             }
 
             return "";

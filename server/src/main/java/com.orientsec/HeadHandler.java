@@ -5,13 +5,6 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 import java.nio.ByteOrder;
 
-/**
- * Product: server
- * Package: com.orientsec
- * Time: 2018/1/30 11:55
- * Author: Fredric
- * coding is art not science
- */
 public class HeadHandler extends LengthFieldBasedFrameDecoder {
     public HeadHandler(int maxFrameLength, int lengthFieldOffset, int lengthFieldLength) {
         super(maxFrameLength, lengthFieldOffset, lengthFieldLength);

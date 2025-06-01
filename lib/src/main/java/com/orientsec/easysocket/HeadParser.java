@@ -3,51 +3,66 @@ package com.orientsec.easysocket;
 import androidx.annotation.NonNull;
 
 /**
- * Product: EasySocket
- * Package: com.orientsec.easysocket
- * Time: 2017/12/26 10:05
- * Author: Fredric
- * coding is art not science
- * <p>
- * 数据协议
+ * The `HeadParser` interface defines the structure for parsing data protocols.
+ * It includes methods for obtaining the header size, parsing the header, and decoding the message
+ * body.
  */
-
 public interface HeadParser {
+
+    /**
+     * Represents the header of a data packet.
+     */
     class Head {
+        /**
+         * The size of the packet.
+         */
         protected int packetSize;
 
+        /**
+         * Constructs a `Head` instance with the specified packet size.
+         *
+         * @param packetSize The size of the packet.
+         */
         public Head(int packetSize) {
             this.packetSize = packetSize;
         }
 
+        /**
+         * Retrieves the size of the packet.
+         *
+         * @return The packet size.
+         */
         public int getPacketSize() {
             return packetSize;
         }
     }
 
     /**
-     * 获得包头长度
+     * Retrieves the length of the header.
      *
-     * @return 包头的长度
+     * @return The length of the header.
      */
     int headSize();
 
     /**
-     * @param bytes 包头原始数据
-     * @return 包体大小
+     * Parses the header from the given raw byte data.
+     *
+     * @param bytes The raw byte data of the header.
+     * @return A `Head` object containing the parsed header information.
+     * @throws Exception If an error occurs during parsing.
      */
     @NonNull
     Head parseHead(@NonNull byte[] bytes) throws Exception;
 
     /**
-     * 解析消息体
+     * Decodes the message body using the provided header and body byte array.
      *
-     * @param head      包头
-     * @param bodyBytes 包体字节数组
-     * @return 消息体
+     * @param head      The parsed header.
+     * @param bodyBytes The byte array of the message body.
+     * @return A `Packet` object representing the decoded message body.
+     * @throws Exception If an error occurs during decoding.
      */
     @NonNull
-    Packet decodePacket(@NonNull Head head, @NonNull byte[] bodyBytes)
-            throws Exception;
+    Packet decodePacket(@NonNull Head head, @NonNull byte[] bodyBytes) throws Exception;
 
 }

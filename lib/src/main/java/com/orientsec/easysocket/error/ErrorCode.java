@@ -1,31 +1,54 @@
 package com.orientsec.easysocket.error;
 
+/**
+ * This class defines error codes used to represent various types of errors
+ * in the EasySocket library. The error codes are categorized into three groups:
+ * client errors, request task errors, and connection errors.
+ */
 public class ErrorCode {
-    //======>客户端错误<======
-    //停止
+    //======> Client Errors <======
+    /**
+     * Indicates that the client has stopped.
+     */
     public static final int STOP = 1;
-    //关闭
+    /**
+     * Indicates that the client has been shut down.
+     */
     public static final int SHUTDOWN = 2;
-    //Client初始化失败
+    /**
+     * Indicates that the client initialization has failed.
+     */
     public static final int INIT_FAILED = 3;
 
-    //======>请求任务错误<======
-    //拒绝执行任务
-    public static final int TASK_REFUSED = 101;
-    //响应超时
+    //======> Request Task Errors <======
+    /**
+     * Indicates that a response has timed out.
+     */
     public static final int RESPONSE_TIME_OUT = 102;
-    //请求数据空
+    /**
+     * Indicates that the request data is empty.
+     */
     public static final int REQUEST_DATA_EMPTY = 103;
 
-    //======>连接错误<======
-    //初始化失败
+    //======> Connection Errors <======
+    /**
+     * Indicates that the session initialization has failed.
+     */
     public static final int SESSION_INIT_FAILED = 201;
-    //心跳超时
+    /**
+     * Indicates that a heartbeat (pulse) has timed out.
+     */
     public static final int PULSE_TIME_OUT = 202;
-    //socket连接
+    /**
+     * Indicates a socket connection error.
+     */
     public static final int SOCKET_CONNECT = 203;
-    //Reader exit
+    /**
+     * Indicates that the reader has exited unexpectedly.
+     */
     public static final int READ_EXIT = 204;
-    //Writer exit
-    public static final int WRITE_EXIT = 205;
+    /**
+     * Indicates that a write operation has failed.
+     */
+    public static final int WRITE_ERROR = 205;
 }

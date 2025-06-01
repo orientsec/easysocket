@@ -12,12 +12,33 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Utility class `Executors` provides static methods for creating and managing thread pools.
+ * Includes default executors for codec, connection, writing, and main thread tasks,
+ * as well as methods for creating custom thread pools.
+ */
 public class Executors {
 
+    // Executor for managing connection tasks
     private static Executor connectExecutor;
-    private static Executor codecExecutor;
-    private static Executor mainExecutor;
 
+    // Executor for managing connection tasks
+    private static Executor writeExecutor;
+
+    // Executor for managing codec tasks
+    private static Executor codecExecutor;
+
+    // Executor for managing main thread tasks
+    private static Executor mainThreadExecutor;
+
+    /**
+     * Creates a custom thread pool executor.
+     *
+     * @param threadPoolSize   The size of the thread pool.
+     * @param threadNamePrefix The prefix for thread names.
+     * @param timeoutSeconds   The idle timeout for threads in seconds.
+     * @return The created thread pool executor.
+     */
     public static Executor createExecutor(int threadPoolSize,
                                           String threadNamePrefix,
                                           long timeoutSeconds) {
@@ -31,6 +52,12 @@ public class Executors {
         return executor;
     }
 
+    /**
+     * Retrieves the default codec task executor.
+     * If not already created, initializes an executor with a thread pool size of 4.
+     *
+     * @return The default codec task executor.
+     */
     public static synchronized Executor defaultCodecExecutor() {
         if (codecExecutor == null) {
             codecExecutor = createExecutor(4,
@@ -39,6 +66,12 @@ public class Executors {
         return codecExecutor;
     }
 
+    /**
+     * Retrieves the default connection task executor.
+     * If not already created, initializes an executor with a thread pool size of 8.
+     *
+     * @return The default connection task executor.
+     */
     public static synchronized Executor defaultConnectExecutor() {
         if (connectExecutor == null) {
             connectExecutor = createExecutor(8,
@@ -47,9 +80,29 @@ public class Executors {
         return connectExecutor;
     }
 
-    public static synchronized Executor defaultMainExecutor() {
-        if (mainExecutor == null) {
-            mainExecutor = new Executor() {
+    /**
+     * Retrieves the default write task executor.
+     * If not already created, initializes an executor with a thread pool size of 8.
+     *
+     * @return The default write task executor.
+     */
+    public static synchronized Executor defaultWriteExecutor() {
+        if (writeExecutor == null) {
+            writeExecutor = createExecutor(8,
+                    "EasySocket_write_", 30L);
+        }
+        return writeExecutor;
+    }
+
+    /**
+     * Retrieves the default main thread task executor.
+     * If not already created, initializes an executor based on a `Handler`.
+     *
+     * @return The default main thread task executor.
+     */
+    public static synchronized Executor defaultMainThreadExecutor() {
+        if (mainThreadExecutor == null) {
+            mainThreadExecutor = new Executor() {
                 private final Handler handler = new Handler(Looper.getMainLooper());
 
                 @Override
@@ -58,14 +111,24 @@ public class Executors {
                 }
             };
         }
-        return mainExecutor;
+        return mainThreadExecutor;
     }
 
-
+    /**
+     * Custom thread factory for creating threads with a specified name prefix.
+     */
     public static class EasyThreadFactory implements ThreadFactory {
+        // Prefix for thread names
         private final String threadName;
+
+        // Thread group
         private final ThreadGroup group;
 
+        /**
+         * Constructs an `EasyThreadFactory` instance.
+         *
+         * @param threadName The prefix for thread names.
+         */
         public EasyThreadFactory(String threadName) {
             this.threadName = threadName;
             SecurityManager s = System.getSecurityManager();
@@ -73,8 +136,15 @@ public class Executors {
                     Thread.currentThread().getThreadGroup();
         }
 
+        // Counter for thread numbering
         private final AtomicInteger threadNumber = new AtomicInteger(0);
 
+        /**
+         * Creates a new thread.
+         *
+         * @param r The task to be executed by the thread.
+         * @return The created thread.
+         */
         @Override
         public Thread newThread(Runnable r) {
             Thread t = new Thread(group, r,

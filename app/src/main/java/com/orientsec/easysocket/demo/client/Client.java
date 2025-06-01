@@ -8,13 +8,6 @@ import com.orientsec.easysocket.request.Callback;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Product: EasySocket
- * Package: com.orientsec.easysocket
- * Time: 2018/01/26 13:19
- * Author: Fredric
- * coding is art not science
- */
 public class Client {
     final SocketClient socketClient;
     final Session session;
@@ -29,17 +22,20 @@ public class Client {
 
     private Client() {
         session = new Session();
-        Address address = new Address("192.168.0.107", 10010);
+        Address address = new Address("192.168.0.108", 10010);
         List<Address> addresses = new ArrayList<>();
         addresses.add(address);
         socketClient = new Options.Builder()
+                .debug(true)
+                .name("EasySocketDemo")
                 .addressList(addresses)
                 .headParserProvider((it) -> new MyHeadParser())
-                .initializerProvider((it) -> new MyInitializer(this))
-                .requestTimeOut(6000)
-                .pulseRate(30000)
-                .connectInterval(3000)
-                .liveTime(60000)
+                .initializerProvider((it) -> new MySessionInitializer(this))
+                .requestTimeOutInMills(10000)
+                .connectTimeOutInMills(5000)
+                .connectIntervalInMills(3000)
+                .pulseRate(30)
+                .liveTime(10)
                 .open();
     }
 

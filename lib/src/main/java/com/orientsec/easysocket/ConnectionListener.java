@@ -2,43 +2,54 @@ package com.orientsec.easysocket;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.client.Session;
+import com.orientsec.easysocket.session.Session;
 import com.orientsec.easysocket.error.EasyException;
 
 /**
- * Product: EasySocket
- * Package: com.orientsec.easysocket.inner
- * Time: 2017/12/27 13:50
- * Author: Fredric
- * coding is art not science
- * <p>
- * 连接事件监听
+ * Interface `ConnectionListener` defines callbacks for monitoring connection events.
+ * It provides methods to handle various connection states such as starting, success, failure,
+ * availability, and disconnection.
  */
 public interface ConnectionListener {
+
     /**
-     * 开始启动连接
+     * Called when a connection attempt starts.
+     *
+     * @param session The session associated with the connection.
      */
     void onConnectionStart(@NonNull final Session session);
 
     /**
-     * 连接连接建立成功后的回调
+     * Called when a connection is successfully established.
+     *
+     * @param session The session associated with the successful connection.
      */
-    void onConnected(@NonNull final Session session);
+    void onConnectionSuccess(@NonNull final Session session);
 
     /**
-     * 当连接失败时会进行回调
-     * 如果服务器出现故障,网络出现异常都将导致该方法被回调
+     * Called when a connection attempt fails.
+     * This can occur due to server issues or network problems.
+     *
+     * @param session The session associated with the failed connection.
+     * @param e       The exception describing the failure.
      */
     void onConnectionFailed(@NonNull final Session session, @NonNull EasyException e);
 
     /**
-     * 登入服务器回调，所有请求在登入成功之后才能发起。
-     * 客户端接入服务器后，有可能会被主动断开，需要通过login事件确认是否成功接入。
+     * Called when the client successfully logs into the server.
+     * All requests can only be initiated after a successful login.
+     * This event confirms that the client has successfully connected to the server,
+     * even if the connection might be interrupted later.
+     *
+     * @param session The session associated with the connection.
      */
     void onConnectionAvailable(@NonNull final Session session);
 
     /**
-     * 连接断开后进行的回调
+     * Called when the connection is terminated.
+     *
+     * @param session The session associated with the terminated connection.
+     * @param e       The exception describing the reason for disconnection.
      */
-    void onDisconnected(@NonNull final Session session, @NonNull EasyException e);
+    void onConnectionAborted(@NonNull final Session session, @NonNull EasyException e);
 }

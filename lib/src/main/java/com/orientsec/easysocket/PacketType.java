@@ -1,36 +1,27 @@
 package com.orientsec.easysocket;
 
 /**
- * Product: EasySocket
- * Package: com.orientsec.easysocket
- * Time: 2017/12/26 10:44
- * Author: Fredric
- * coding is art not science
+ * Enum `PacketType` defines the types of packets used in the EasySocket library.
+ * Each packet type represents a specific category of communication between the client and server.
  */
-
 public enum PacketType {
-    /**
-     * 请求消息
-     */
-    RESPONSE("response"),
 
     /**
-     * 推送消息
+     * Represents a response message.
+     * This type is used for handling responses to client requests.
      */
-    PUSH("push"),
+    RESPONSE,
 
     /**
-     * 心跳
+     * Represents a push message.
+     * This type is used for handling server-initiated messages sent to the client.
      */
-    PULSE("pulse");
+    PUSH,
 
-    private final String value;
+    /**
+     * Represents a heartbeat message.
+     * This type is used for maintaining the connection's liveliness.
+     */
+    PULSE;
 
-    PacketType(String value) {
-        this.value = value;
-    }
-
-    public String getValue() {
-        return value;
-    }
 }

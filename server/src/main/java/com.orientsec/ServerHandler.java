@@ -9,13 +9,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-/**
- * Product: EasySocket
- * Package: com.orientsec
- * Time: 2018/01/25 16:58
- * Author: Fredric
- * coding is art not science
- */
 public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
     private Map<ChannelHandlerContext, Integer> sessions = new HashMap<>();
     private Random random = new Random();

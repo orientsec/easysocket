@@ -4,7 +4,19 @@ import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.Packet;
 
-public interface Decoder<R> {
+/**
+ * A generic interface for decoding packets into specific types.
+ *
+ * @param <T> The type of the object that the packet will be decoded into.
+ */
+public interface Decoder<T> {
+
+    /**
+     * Decodes the given packet into an object of type T.
+     *
+     * @param packet The packet to be decoded.
+     * @return The decoded object of type T.
+     */
     @NonNull
-    Result<R> decode(@NonNull Packet packet);
+    T decode(@NonNull Packet packet);
 }

@@ -6,37 +6,37 @@ import com.orientsec.easysocket.HeadParser;
 import com.orientsec.easysocket.Packet;
 
 /**
- * Product: EasySocket
- * Package: com.orientsec.easysocket
- * Time: 2017/12/28 13:35
- * Author: Fredric
- * coding is art not science
- * <p>
- * Request send to server
+ * Represents a request sent to the server in the EasySocket framework.
+ * This abstract class provides methods for encoding request data and decoding server responses.
  *
- * @param <R> 返回类型
+ * @param <T> The type of the response object returned after decoding.
  */
-public abstract class Request<R> implements Encoder, Decoder<R> {
+public abstract class Request<T> implements Encoder, Decoder<T> {
+
     /**
-     * handle output data here.
-     * 对请求数据进行处理，可以进行统一的业务数据填充、校验，数据编码等。
+     * Encodes the request data into a byte array.
+     * This method processes the request data, allowing for tasks such as
+     * business data filling, validation, and data encoding.
+     * The returned byte array must not have a size of 0.
      *
-     * @return 发送的字节数组
+     * @param sequenceId The sequence ID associated with the request.
+     * @return A non-empty byte array representing the encoded request data.
      */
     @Override
     @NonNull
-    public abstract Result<byte[]> encode(int sequenceId);
+    public abstract byte[] encode(int sequenceId);
 
     /**
-     * 获取的服务器消息经过{@link HeadParser#decodePacket(HeadParser.Head, byte[])}
-     * 处理后，得到{@link Packet}。 在这里将{@link Packet#getBody()}转换为返回结果。
-     * 并且可以进行统一的异常封装及其他的一些业务处理。
+     * Decodes the server's response into the specified return type.
+     * The server message is processed using {@link HeadParser#decodePacket(HeadParser.Head, byte[])}
+     * to obtain a {@link Packet}. This method converts the {@link Packet#getBody()}
+     * into the desired return result, while also allowing for unified exception handling
+     * and other business logic processing.
      *
-     * @param data 消息数据
-     * @return 接码后的响应结果
+     * @param data The packet data received from the server.
+     * @return The decoded response object of type T.
      */
     @Override
     @NonNull
-    public abstract Result<R> decode(@NonNull Packet data);
-
+    public abstract T decode(@NonNull Packet data);
 }

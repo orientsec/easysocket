@@ -5,26 +5,21 @@ import androidx.annotation.NonNull;
 import com.orientsec.easysocket.request.Callback;
 import com.orientsec.easysocket.request.Request;
 
+/**
+ * Interface for building executable tasks from requests and callbacks.
+ * This interface defines a method to create tasks that can be executed
+ * to handle server requests and process their responses.
+ */
 public interface TaskBuilder {
-    /**
-     * 创建一个请求任务。
-     *
-     * @param request  发往服务端的请求。
-     * @param callback 结果回调。
-     * @return 可执行任务。
-     */
-    @NonNull
-    <R extends T, T> Task<R> buildTask(@NonNull Request<R> request, @NonNull Callback<T> callback);
 
     /**
-     * 创建一个请求任务。
+     * Creates an executable task.
      *
-     * @param request  发往服务端的请求。
-     * @param callback 结果回调。
-     * @param taskType  任务类型。
-     * @return 可执行任务。
+     * @param request  The request to be sent to the server.
+     * @param callback The callback to handle the result of the task.
+     * @param <T>      The type of the result returned by the task.
+     * @return An executable task.
      */
     @NonNull
-    <I extends T, T> Task<I> buildTask(@NonNull Request<I> request, @NonNull Callback<T> callback,
-                                       TaskType taskType);
+    <T> Task<T> buildTask(@NonNull Request<T> request, @NonNull Callback<T> callback);
 }

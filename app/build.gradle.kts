@@ -31,5 +31,6 @@ dependencies {
     androidTestImplementation(libs.ext.junit)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.constraint.layout)
+    implementation(libs.kotlin.stdlib)
     implementation(project(":lib"))
 }

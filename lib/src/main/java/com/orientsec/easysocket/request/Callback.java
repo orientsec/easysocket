@@ -3,60 +3,34 @@ package com.orientsec.easysocket.request;
 import androidx.annotation.NonNull;
 
 /**
- * Product: EasySocket
- * Package: com.orientsec.easysocket
- * Time: 2017/12/26 16:54
- * Author: Fredric
- * coding is art not science
- * <p>
- * 请求结果回调
+ * A generic callback interface for handling various stages of a request lifecycle.
+ *
+ * @param <T> The type of the response object.
  */
+public interface Callback<T> {
 
-public interface Callback<R> {
     /**
-     * 请求开始执行回调
+     * Called when the request starts execution.
      */
-    void onSent();
+    void onStart();
 
     /**
-     * 成功回调
+     * Called when the request completes successfully.
      *
-     * @param res 响应
+     * @param res The response object.
      */
-    void onSuccess(@NonNull R res);
+    void onSuccess(@NonNull T res);
 
     /**
-     * 失败回调
+     * Called when the request fails.
      *
-     * @param t 异常
+     * @param t The exception that caused the failure.
      */
     void onFailure(@NonNull Throwable t);
 
     /**
-     * 取消回调
+     * Called when the request is canceled.
      */
     void onCanceled();
 
-    class EmptyCallback<R> implements Callback<R> {
-
-        @Override
-        public void onSent() {
-
-        }
-
-        @Override
-        public void onSuccess(@NonNull R res) {
-
-        }
-
-        @Override
-        public void onFailure(@NonNull Throwable t) {
-
-        }
-
-        @Override
-        public void onCanceled() {
-
-        }
-    }
 }

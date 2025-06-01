@@ -1,18 +1,28 @@
 package com.orientsec.easysocket.task;
 
+/**
+ * Enum representing the types of tasks in the EasySocket framework.
+ * Each task type defines a specific purpose or behavior in the system.
+ */
 public enum TaskType {
     /**
-     * 请求任务。
+     * Represents a request task.
+     * This type is used for general request operations.
      */
     REQUEST,
+
     /**
-     * 初始化任务。
-     * 在连接可用之前，非初始化请求会进入等待状态，直到连接可用之后，
-     * 进行编码、发送。初始化请求在连接成功之后可以直接执行。
+     * Represents an initialization task.
+     * Non-initialization requests will enter a waiting state until the connection becomes
+     * available.
+     * Once the connection is available, they will be encoded and sent.
+     * Initialization requests can be executed directly after a successful connection.
      */
     INITIALIZE,
+
     /**
-     * 心跳任务。
+     * Represents a heartbeat task.
+     * This type is used for maintaining the connection through periodic heartbeat messages.
      */
     PULSE
 }
