@@ -67,82 +67,39 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @param <T> The type of the response data.
  */
 public class TaskImpl<T> implements OperableTask<T>, Runnable {
-
-    /**
-     * Indicates whether the task has already been executed. A task can only be executed once.
-     */
+    // Indicates whether the task has already been executed. A task can only be executed once.
     private final AtomicBoolean executed = new AtomicBoolean();
-
     // The socket client associated with this task
     private final BaseSocketClient socketClient;
-
     // The request associated with this task
     private final Request<T> request;
-
     // The callback to handle task lifecycle events
     private final LifecycleCallback<T> callback;
-
     // Executor for encoding and decoding operations
     private final Executor codecExecutor;
-
     // Executor for task execution
     private final EasyExecutor mainExecutor;
-
     // Configuration options for the task
     private final Options options;
-
-    /**
-     * A unique identifier for the task, used to match requests with their responses.
-     */
+    // A unique identifier for the task, used to match requests with their responses.
     private final int taskId;
-
-    /**
-     * The type of the task.
-     */
+    // The type of the task.
     private final TaskType taskType;
-
-    /**
-     * The completion state of the task.
-     */
+    // The completion state of the task.
     private volatile CompleteType completeType = null;
-
-    /**
-     * Indicates whether the task is currently timing out.
-     */
+    // Indicates whether the task is currently timing out.
     private boolean isTiming = false;
-
-    /**
-     * The encoded request data.
-     *
-     * @see Request#encode(int)
-     */
+    // The encoded request data.
     private volatile byte[] data = new byte[0];
-
-    /**
-     * The response data.
-     *
-     * @see Request#decode(Packet)
-     */
+    // The response data.
     private volatile T response = null;
-
-    /**
-     * The error that occurred during task execution.
-     */
+    // The error that occurred during task execution.
     private volatile Throwable error = null;
-
-    /**
-     * The task manager responsible for managing this task.
-     */
+    // The task manager responsible for managing this task.
     private final TaskManager taskManager;
-
-    /**
-     * The session associated with this task.
-     */
+    //  The session associated with this task.
     private OperableSession session;
-
-    /**
-     * The writer responsible for writing the task to the socket.
-     */
+    // The writer responsible for writing the task to the socket.
     private Writer writer;
 
     /**

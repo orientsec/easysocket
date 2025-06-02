@@ -7,7 +7,6 @@ import androidx.annotation.Nullable;
 import com.orientsec.easysocket.ConnectionListener;
 import com.orientsec.easysocket.EasyExecutor;
 import com.orientsec.easysocket.HeadParser;
-import com.orientsec.easysocket.SessionInitializer;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Provider;
 import com.orientsec.easysocket.SocketClient;
@@ -15,6 +14,7 @@ import com.orientsec.easysocket.push.PushManager;
 import com.orientsec.easysocket.request.Decoder;
 import com.orientsec.easysocket.request.Request;
 import com.orientsec.easysocket.session.OperableSession;
+import com.orientsec.easysocket.session.SessionInitializer;
 import com.orientsec.easysocket.task.TaskManager;
 import com.orientsec.easysocket.utils.LogFactory;
 import com.orientsec.easysocket.utils.Logger;
@@ -31,7 +31,8 @@ public abstract class BaseSocketClient implements SocketClient, ConnectionListen
     protected final EasyExecutor mainExecutor; // Executor for running client operations.
     private PushManager<?, ?> pushManager; // Manages push notifications.
     private HeadParser headParser; // Parses the header of socket messages.
-    private SessionInitializer sessionInitializer; // Initializes the socket client.
+    private ClientInitializer clientInitializer; // Initializes the socket client.
+    private SessionInitializer sessionInitializer; // Initializes the session.
     private SocketFactory socketFactory; // Factory for creating socket instances.
     private Decoder<Boolean> pulseDecoder; // Decoder for heartbeat (pulse) messages.
     private Request<Boolean> pulseRequest; // Request object for sending heartbeat (pulse) messages.
@@ -133,15 +134,38 @@ public abstract class BaseSocketClient implements SocketClient, ConnectionListen
     }
 
     /**
+     * Returns the `ClientInitializer` instance associated with the client.
+     * <p>
+     * If the `ClientInitializer` is not already initialized, this method will
+     * create a new instance using the provider specified in the client's options.
+     * This ensures that the `ClientInitializer` is always available when needed.
+     *
+     * @return The `ClientInitializer` instance.
+     */
+    @Nullable
+    public synchronized ClientInitializer getClientInitializer() {
+        if (clientInitializer == null) {
+            Provider<ClientInitializer> provider = options.getClientInitializerProvider();
+            if (provider != null) {
+                clientInitializer = provider.get(this);
+            }
+        }
+        return clientInitializer;
+    }
+
+    /**
      * Returns the initializer associated with the client.
      * If the initializer is not initialized, it will be created using the provider.
      *
      * @return The initializer.
      */
-    @NonNull
-    public synchronized SessionInitializer getInitializer() {
+    @Nullable
+    public synchronized SessionInitializer getSessionInitializer() {
         if (sessionInitializer == null) {
-            sessionInitializer = options.getInitializerProvider().get(this);
+            Provider<SessionInitializer> provider = options.getSessionInitializerProvider();
+            if (provider != null) {
+                sessionInitializer = provider.get(this);
+            }
         }
         return sessionInitializer;
     }

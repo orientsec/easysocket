@@ -3,10 +3,10 @@ package com.orientsec.easysocket.demo.client;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.SessionInitializer;
 import com.orientsec.easysocket.request.Callback;
 import com.orientsec.easysocket.request.DefaultCallback;
-import com.orientsec.easysocket.session.OperableSession;
+import com.orientsec.easysocket.session.SessionInitializer;
+import com.orientsec.easysocket.task.TaskBuilder;
 
 public class MySessionInitializer implements SessionInitializer {
     private final Client client;
@@ -16,20 +16,20 @@ public class MySessionInitializer implements SessionInitializer {
     }
 
     @Override
-    public void start(@NonNull OperableSession session) {
+    public void start(@NonNull Emitter emitter, @NonNull TaskBuilder taskBuilder) {
         SimpleRequest authRequest = new SimpleRequest(1, "test", client.session);
         Callback<String> callback = new DefaultCallback<String>() {
             @Override
             public void onSuccess(@NonNull String res) {
                 client.session.setSessionId(Integer.parseInt(res));
-                session.postAvailable();
+                emitter.postSuccess();
             }
 
             @Override
             public void onFailure(@NonNull Throwable t) {
-                session.postFail(t);
+                emitter.postFailure(t);
             }
         };
-        session.buildTask(authRequest, callback).execute();
+        taskBuilder.buildTask(authRequest, callback).execute();
     }
 }

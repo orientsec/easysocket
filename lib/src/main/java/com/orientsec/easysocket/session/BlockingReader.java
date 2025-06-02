@@ -6,6 +6,7 @@ import com.orientsec.easysocket.EasyExecutor;
 import com.orientsec.easysocket.HeadParser;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
+import com.orientsec.easysocket.client.BaseSocketClient;
 import com.orientsec.easysocket.error.EasyException;
 import com.orientsec.easysocket.error.ErrorCode;
 import com.orientsec.easysocket.error.ErrorType;
@@ -40,20 +41,17 @@ public class BlockingReader extends Looper implements Reader {
     /**
      * Constructs a BlockingReader instance with the specified parameters.
      *
-     * @param session      The session associated with this reader.
-     * @param socket       The socket used for communication.
-     * @param mainExecutor The executor for executing tasks.
-     * @param options      The configuration options for the reader.
-     * @param headParser   The parser for handling packet headers.
+     * @param session The session associated with this reader.
+     * @param socket  The socket used for communication.
+     * @param client  The BaseSocketClient instance providing options and executors.
      */
-    BlockingReader(OperableSession session, Socket socket, EasyExecutor mainExecutor,
-                   Options options, HeadParser headParser) {
+    BlockingReader(OperableSession session, Socket socket, BaseSocketClient client) {
         super(session.getLogger());
         this.session = session;
         this.socket = socket;
-        this.mainExecutor = mainExecutor;
-        this.options = options;
-        this.headParser = headParser;
+        this.mainExecutor = client.getMainExecutor();
+        this.options = client.getOptions();
+        this.headParser = client.getHeadParser();
     }
 
     /**
@@ -68,7 +66,7 @@ public class BlockingReader extends Looper implements Reader {
         readInputStream(inputStream, headBytes);
         HeadParser.Head head = headParser.parseHead(headBytes);
         int bodyLength = head.getPacketSize();
-        if (bodyLength > options.getMaxReadDataKB() * 1024) {
+        if (bodyLength > options.getMaxReadSizeInKB() * 1024) {
             throw new Exception("packet size too large: " + bodyLength);
         } else if (bodyLength >= 0) {
             byte[] data = new byte[bodyLength];

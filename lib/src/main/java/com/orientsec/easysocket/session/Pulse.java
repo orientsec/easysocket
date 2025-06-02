@@ -30,22 +30,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Pulse implements PacketHandler, TaskBuilder, Runnable {
     // The socket client associated with this heartbeat manager
     private final BaseSocketClient socketClient;
-
-    // Configuration options for the socket client
-    private final Options options;
-
+    // The maximum number of consecutive heartbeat failures allowed
+    // before the session is considered invalid.
+    private final int maxLostTimes;
+    // The interval in milliseconds between consecutive heartbeat messages.
+    private final long intervalInMills;
     // The session associated with this heartbeat manager
     private final OperableSession session;
-
     // EasyExecutor for scheduling tasks
     private final EasyExecutor mainExecutor;
-
     // Counter for tracking the number of consecutive heartbeat failures
     private final AtomicInteger lostTimes = new AtomicInteger();
-
     // Executor for handling codec-related tasks
     private final Executor codecExecutor;
-
     // Logger instance for logging messages
     private final Logger logger;
 
@@ -60,8 +57,10 @@ public class Pulse implements PacketHandler, TaskBuilder, Runnable {
         this.socketClient = socketClient;
         this.session = session;
         this.mainExecutor = mainExecutor;
-        options = socketClient.getOptions();
-        codecExecutor = options.getCodecExecutor();
+        Options options = socketClient.getOptions();
+        this.codecExecutor = options.getCodecExecutor();
+        this.intervalInMills = options.getPulseIntervalInSec() * 1000L;
+        this.maxLostTimes = options.getPulseMaxLostTimes();
         logger = session.getLogger();
     }
 
@@ -77,7 +76,7 @@ public class Pulse implements PacketHandler, TaskBuilder, Runnable {
      * This method is called after a successful connection is established.
      */
     void start() {
-        mainExecutor.schedule(this, options.getPulseRate() * 1000L);
+        mainExecutor.schedule(this, intervalInMills);
     }
 
     /**
@@ -94,7 +93,7 @@ public class Pulse implements PacketHandler, TaskBuilder, Runnable {
      * the session is closed.
      */
     public void run() {
-        if (lostTimes.getAndAdd(1) > options.getPulseLostTimes()) {
+        if (lostTimes.getAndAdd(1) > maxLostTimes) {
             // Close the session if the heartbeat failure count exceeds the limit
             logger.i("pulse failed times up, session invalid");
             EasyException e = EasyException.create(ErrorCode.PULSE_TIME_OUT, ErrorType.CONNECT,

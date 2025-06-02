@@ -23,6 +23,7 @@ import com.orientsec.easysocket.task.TaskManager;
 import com.orientsec.easysocket.task.TaskManagerImpl;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Executor;
@@ -62,10 +63,6 @@ import java.util.concurrent.Executor;
  * It uses an {@code activeTimestamp} to track client activity and determine if it should remain
  * active,
  * especially considering background application states.
- *
- * <p>Initialization of server addresses is performed asynchronously. If the initial address list
- * is not
- * provided, an {@link InitializeRunnable} is executed to fetch the addresses.
  *
  * <p>Connection failures and disconnections trigger reconnection attempts, and if multiple
  * addresses are available,
@@ -199,37 +196,68 @@ public class EasySocketClient extends BaseSocketClient {
             state = STATE_ACTIVE;
             activeTimestamp = System.currentTimeMillis();
         }
-        if (addressList == null) {
-            if (initializing) {
-                logger.i("client is initializing, just wait for the result");
-            } else {
-                initializing = true;
-                options.getConnectExecutor().execute(new InitializeRunnable());
-            }
-        } else if (session == null) {
-            session = new SocketSession(this, addressList.get(addressIndex),
-                    addressIndex, sessionId++);
+        if (session == null && initialize()) {
+            Address currentAddress = addressList.get(addressIndex);
+            session = new SocketSession(this, currentAddress, addressIndex, sessionId++);
             session.open();
         }
     }
 
     /**
-     * Called when initialization succeeds. Starts the client with the new address list.
+     * Initializes the client by setting up the address list and starting the initialization
+     * process if necessary.
+     * <p>
+     * This method checks if the address list is already initialized. If not, it attempts to
+     * retrieve the address list from the options. If the address list is still null, it marks the
+     * client as initializing and starts the initialization process using the `ClientInitializer`.
      *
-     * @param addressList The list of server addresses.
+     * @return `true` if the address list is already initialized, `false` otherwise.
      */
-    void onInitializeSuccess(List<Address> addressList) {
+    private boolean initialize() {
+        if (addressList != null)
+            return true; // Return true if the address list is already initialized.
+        if (initializing) {
+            logger.i("client is initializing, just wait for the result");
+            return false;
+        }
+        // Attempt to retrieve the address list from the options.
+        addressList = options.getAddressList();
+        if (addressList == null) {
+            // Mark the client as initializing.
+            initializing = true;
+            // Ensure the ClientInitializer is not null.
+            Objects.requireNonNull(getClientInitializer())
+                    .start(new InitializeEmitter()); // Start the initialization process.
+            return false;
+        }
+        return true; // Return true if the address list is successfully initialized.
+    }
+
+    /**
+     * Handles the successful initialization of the client.
+     * <p>
+     * This method is called when the initialization process completes successfully.
+     * It updates the `addressList` with the provided server addresses, marks the
+     * initialization process as complete, and starts the client.
+     *
+     * @param addressList The list of server addresses obtained during initialization.
+     */
+    private void onInitializeSuccess(List<Address> addressList) {
         initializing = false;
         this.addressList = addressList;
         onStart();
     }
 
     /**
-     * Called when initialization fails. Resets the task manager with the given exception.
+     * Handles the failure of the client initialization process.
+     * <p>
+     * This method is called when the initialization process fails. It marks the
+     * initialization process as complete and resets the task manager with the
+     * provided exception.
      *
-     * @param e The exception that caused the failure.
+     * @param e The exception describing the reason for the initialization failure.
      */
-    void onInitializeFailed(EasyException e) {
+    private void onInitializeFailure(EasyException e) {
         initializing = false;
         taskManager.reset(e);
     }
@@ -455,9 +483,9 @@ public class EasySocketClient extends BaseSocketClient {
         if (backgroundTimestamp == 0) return true;
 
         long currentTimeMillis = System.currentTimeMillis();
-        long maxLiveTimeMillis = options.getLiveTime() * 1000L;
-        return currentTimeMillis - backgroundTimestamp <= maxLiveTimeMillis
-                && currentTimeMillis - activeTimestamp <= maxLiveTimeMillis;
+        long backgroundActiveDurationInSec = options.getBackgroundActiveDurationInSec() * 1000L;
+        return currentTimeMillis - backgroundTimestamp <= backgroundActiveDurationInSec
+                && currentTimeMillis - activeTimestamp <= backgroundActiveDurationInSec;
     }
 
     /**
@@ -471,30 +499,35 @@ public class EasySocketClient extends BaseSocketClient {
         return "EasySocketClient[" + "name=" + name + ']';
     }
 
-    /**
-     * Runnable task for initializing the client. Fetches the address list asynchronously.
-     */
-    private class InitializeRunnable implements Runnable {
-
+    private class InitializeEmitter implements ClientInitializer.Emitter {
+        /**
+         * Called when initialization succeeds. Starts the client with the new address list.
+         *
+         * @param addressList The list of server addresses.
+         */
         @Override
-        public void run() {
-            try {
-                List<Address> addressList = options.getAddressProvider()
-                        .get(EasySocketClient.this);
-                if (addressList.isEmpty()) {
-                    logger.e("address list is empty");
-                    EasyException e = EasyException.create(ErrorCode.INIT_FAILED, ErrorType.SYSTEM,
-                            suffix, "address list is empty");
-                    mainExecutor.execute(() -> onInitializeFailed(e));
-                } else {
-                    mainExecutor.execute(() -> onInitializeSuccess(addressList));
-                }
-            } catch (Exception ex) {
-                logger.e("fail to get address list", ex);
+        public void postSuccess(@NonNull List<Address> addressList) {
+            if (addressList.isEmpty()) {
+                logger.e("address list is empty");
                 EasyException e = EasyException.create(ErrorCode.INIT_FAILED, ErrorType.SYSTEM,
-                        "failed to get address list", suffix, ex);
-                mainExecutor.execute(() -> onInitializeFailed(e));
+                        suffix, "address list is empty");
+                mainExecutor.execute(() -> onInitializeFailure(e));
+            } else {
+                mainExecutor.execute(() -> onInitializeSuccess(addressList));
             }
+        }
+
+        /**
+         * Called when initialization fails. Resets the task manager with the given exception.
+         *
+         * @param t The exception that caused the failure.
+         */
+        @Override
+        public void postFailure(@NonNull Throwable t) {
+            logger.e("socket client initialize failed", t);
+            EasyException e = EasyException.create(ErrorCode.INIT_FAILED, ErrorType.SYSTEM,
+                    suffix, "socket client initialize failed", t);
+            mainExecutor.execute(() -> onInitializeFailure(e));
         }
     }
 }

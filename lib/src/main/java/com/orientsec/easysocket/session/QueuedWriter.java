@@ -3,7 +3,7 @@ package com.orientsec.easysocket.session;
 import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.EasyExecutor;
-import com.orientsec.easysocket.Options;
+import com.orientsec.easysocket.client.BaseSocketClient;
 import com.orientsec.easysocket.error.EasyException;
 import com.orientsec.easysocket.error.ErrorCode;
 import com.orientsec.easysocket.error.ErrorType;
@@ -24,36 +24,29 @@ import java.util.concurrent.Executor;
 class QueuedWriter implements Writer {
     // The session associated with this writer
     private final OperableSession session;
-
     // The socket used for writing data
     private final Socket socket;
-
     // Executor for handling write operations
     private final Executor writeExecutor;
-
     // Runner for scheduling tasks on the main thread
     private final EasyExecutor mainExecutor;
-
     // Queue for storing tasks to be written
     private final Deque<OperableTask<?>> writingQueue = new ArrayDeque<>();
-
     // Flag indicating whether a write operation is currently in progress
     private boolean isWriting = false;
 
     /**
      * Constructs a QueuedWriter instance with the specified parameters.
      *
-     * @param session      The session associated with this writer.
-     * @param socket       The socket used for writing data.
-     * @param options      The configuration options for the writer.
-     * @param mainExecutor The runner for scheduling tasks on the main thread.
+     * @param session The session associated with this writer.
+     * @param socket  The socket used for writing data.
+     * @param client  The BaseSocketClient instance providing options and executors.
      */
-    public QueuedWriter(OperableSession session, Socket socket, Options options,
-                        EasyExecutor mainExecutor) {
+    public QueuedWriter(OperableSession session, Socket socket, BaseSocketClient client) {
         this.session = session;
         this.socket = socket;
-        this.writeExecutor = options.getWriteExecutor();
-        this.mainExecutor = mainExecutor;
+        this.writeExecutor = client.getOptions().getWriteExecutor();
+        this.mainExecutor = client.getMainExecutor();
     }
 
     /**

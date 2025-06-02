@@ -13,10 +13,8 @@ import java.util.concurrent.Executor;
  * and remove scheduled tasks.
  */
 public class EasyExecutor implements Executor {
-    /**
-     * The `Handler` used to post and manage tasks on a background thread.
-     */
-    final Handler mHandler;
+    // The `Handler` used to post and manage tasks on a background thread.
+    private final Handler mHandler;
 
     /**
      * Constructs an `EasyExecutor` instance.

@@ -5,6 +5,7 @@ import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.EasyExecutor;
 import com.orientsec.easysocket.Options;
+import com.orientsec.easysocket.ReconnectPolicy;
 import com.orientsec.easysocket.session.Session;
 import com.orientsec.easysocket.utils.Logger;
 
@@ -13,8 +14,10 @@ import com.orientsec.easysocket.utils.Logger;
  * It implements the `Runnable` interface to execute reconnection tasks under specific conditions.
  */
 class ReconnectManager implements Runnable {
-    // Configuration options for the Socket client
-    private final Options options;
+    // The policy that determines whether reconnection should occur.
+    private final ReconnectPolicy reconnectPolicy;
+    // The interval in milliseconds between connection attempts.
+    private final long connectIntervalInMills;
     // Logger for logging messages
     private final Logger logger;
     // Associated Socket client instance
@@ -27,8 +30,10 @@ class ReconnectManager implements Runnable {
      */
     ReconnectManager(EasySocketClient socketClient) {
         this.socketClient = socketClient;
-        options = socketClient.getOptions();
-        logger = socketClient.logger;
+        Options options = socketClient.getOptions();
+        this.reconnectPolicy = options.getReconnectPolicy();
+        this.connectIntervalInMills = options.getConnectIntervalInMills();
+        this.logger = socketClient.logger;
     }
 
     /**
@@ -42,12 +47,14 @@ class ReconnectManager implements Runnable {
             socketClient.switchServer();
         }
         // Check the reconnection policy to determine if reconnection is needed
-        if (options.getLivePolicy().shouldReconnect(socketClient.isActive())) {
+        if (reconnectPolicy.shouldReconnect(socketClient.isActive())) {
             EasyExecutor mainExecutor = socketClient.getMainExecutor();
             mainExecutor.remove(this); // Remove the current task
-            long delay = options.getConnectIntervalInMills(); // Get the reconnection interval
-            mainExecutor.schedule(this, delay); // Schedule the reconnection task
-            logger.i("restart after " + delay + " mill seconds...");
+            mainExecutor.schedule(this, connectIntervalInMills); // Schedule the reconnection task
+            logger.i("restart after " + connectIntervalInMills + " mill seconds...");
+        } else {
+            logger.i("restart not needed, policy is " + reconnectPolicy
+                    + ", active is " + socketClient.isActive());
         }
     }
 
@@ -56,7 +63,7 @@ class ReconnectManager implements Runnable {
      */
     void reconnect() {
         // Check the reconnection policy to determine if reconnection is needed
-        if (options.getLivePolicy().shouldReconnect(socketClient.isActive())) {
+        if (reconnectPolicy.shouldReconnect(socketClient.isActive())) {
             socketClient.onStart(false); // Start the Socket client
         } else {
             logger.i("restart canceled...");

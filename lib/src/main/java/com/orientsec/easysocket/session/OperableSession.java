@@ -31,20 +31,6 @@ public interface OperableSession extends Session, TaskBuilder {
     void close(EasyException e);
 
     /**
-     * Sends an event indicating that the session is available.
-     * Notifies that the session is ready for use.
-     */
-    void postAvailable();
-
-    /**
-     * Sends an event indicating that the session has failed.
-     * Notifies that an error has occurred in the session.
-     *
-     * @param t The exception describing the reason for the failure.
-     */
-    void postFail(Throwable t);
-
-    /**
      * Retrieves the `Writer` object, which is created only after a successful connection.
      *
      * @return The `Writer` object, which can be accessed after a successful connection,

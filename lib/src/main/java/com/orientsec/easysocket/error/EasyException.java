@@ -35,6 +35,20 @@ public class EasyException extends Exception {
     }
 
     /**
+     * Constructs an EasyException with the specified code, type, message, and cause.
+     *
+     * @param code    The error code.
+     * @param type    The error type.
+     * @param message The detail message for the exception.
+     * @param cause   The cause of the exception.
+     */
+    public EasyException(int code, int type, String message, Throwable cause) {
+        super(message, cause);
+        this.code = code;
+        this.type = type;
+    }
+
+    /**
      * Returns a string representation of the exception, including its code, type, and message.
      *
      * @return A formatted string representation of the exception.
@@ -53,20 +67,6 @@ public class EasyException extends Exception {
     }
 
     /**
-     * Constructs an EasyException with the specified code, type, message, and cause.
-     *
-     * @param code    The error code.
-     * @param type    The error type.
-     * @param message The detail message for the exception.
-     * @param cause   The cause of the exception.
-     */
-    public EasyException(int code, int type, String message, Throwable cause) {
-        super(message, cause);
-        this.code = code;
-        this.type = type;
-    }
-
-    /**
      * Creates a new EasyException with a formatted message and a cause.
      *
      * @param code    The error code.
@@ -76,7 +76,8 @@ public class EasyException extends Exception {
      * @param cause   The cause of the exception.
      * @return A new EasyException instance with the formatted message and cause.
      */
-    public static EasyException create(int code, int type, String message, String suffix, Throwable cause) {
+    public static EasyException create(int code, int type, String message, String suffix,
+                                       Throwable cause) {
         String formattedMessage = String.format(Locale.getDefault(),
                 "%s (%d,%d)%s",
                 message,

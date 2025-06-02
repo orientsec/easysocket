@@ -233,27 +233,6 @@ public class SocketSession implements OperableSession, Runnable {
     }
 
     /**
-     * Marks the session as available by posting the availability task to the main thread.
-     */
-    @Override
-    public void postAvailable() {
-        mainExecutor.execute(this::onAvailable);
-    }
-
-    /**
-     * Marks the session initialization as failed and handles the error.
-     *
-     * @param cause The cause of the failure.
-     */
-    @Override
-    public void postFail(Throwable cause) {
-        logger.e("fail to initialize session");
-        EasyException e = EasyException.create(ErrorCode.SESSION_INIT_FAILED, ErrorType.CONNECT,
-                "session initializing failed", suffix, cause);
-        mainExecutor.execute(() -> onError(e));
-    }
-
-    /**
      * Prepares the session after a successful connection.
      * Initializes resources, starts the reader and writer, and updates the session state.
      *
@@ -262,13 +241,10 @@ public class SocketSession implements OperableSession, Runnable {
     private void onReady(Socket socket) {
         if (state == State.STARTING) {
             this.mSocket = socket;
-            // Perform pre-connection operations, such as resource initialization
-            socketClient.getInitializer().start(this);
             // Start the reader and writer threads
-            reader = new BlockingReader(this, socket, mainExecutor,
-                    options, socketClient.getHeadParser());
+            reader = new BlockingReader(this, socket, socketClient);
             reader.start();
-            writer = new QueuedWriter(this, socket, options, mainExecutor);
+            writer = new QueuedWriter(this, socket, socketClient);
 
             messageHandlerMap.put(PacketType.RESPONSE, taskManager);
 
@@ -276,6 +252,13 @@ public class SocketSession implements OperableSession, Runnable {
             logger.i("session start success");
 
             socketClient.onConnectionSuccess(this);
+            // Perform pre-connection operations, such as resource initialization
+            SessionInitializer initializer = socketClient.getSessionInitializer();
+            if (initializer == null) {
+                onAvailable();
+            } else {
+                initializer.start(new InitializeEmitter(), this);
+            }
         } else {
             // Session is already closed
             connectExecutor.execute(() -> {
@@ -514,5 +497,41 @@ public class SocketSession implements OperableSession, Runnable {
                 "id=" + id +
                 "address=" + address +
                 ']';
+    }
+
+    /**
+     * The `InitializeEmitter` class is an implementation of the `SessionInitializer.Emitter` interface.
+     * <p>
+     * It is responsible for handling the results of the session initialization process.
+     * This includes marking the session as available upon successful initialization
+     * or handling errors when the initialization fails.
+     */
+    private class InitializeEmitter implements SessionInitializer.Emitter {
+
+        /**
+         * Marks the session as available by posting the availability task to the main thread.
+         * <p>
+         * This method is called when the session initialization process completes successfully.
+         */
+        @Override
+        public void postSuccess() {
+            mainExecutor.execute(SocketSession.this::onAvailable);
+        }
+
+        /**
+         * Marks the session initialization as failed and handles the error.
+         * <p>
+         * This method is called when the session initialization process fails. It logs the error
+         * and transitions the session to an error state.
+         *
+         * @param cause The cause of the failure, represented as a `Throwable` object.
+         */
+        @Override
+        public void postFailure(@NonNull Throwable cause) {
+            logger.e("fail to initialize session");
+            EasyException e = EasyException.create(ErrorCode.SESSION_INIT_FAILED, ErrorType.CONNECT,
+                    "session initializing failed", suffix, cause);
+            mainExecutor.execute(() -> onError(e));
+        }
     }
 }

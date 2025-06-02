@@ -25,24 +25,16 @@ import java.util.concurrent.CopyOnWriteArraySet;
  * It provides initialization, connection handling, client management, and network state monitoring.
  */
 public class EasySocket {
-    /**
-     * The application context used for registering lifecycle and network state listeners.
-     */
+    // The application context used for registering lifecycle and network state listeners.
     private Application application;
 
-    /**
-     * A thread-safe set containing all socket client instances.
-     */
+    // A thread-safe set containing all socket client instances.
     private final Set<BaseSocketClient> socketClients = new CopyOnWriteArraySet<>();
 
-    /**
-     * The main thread executor used for scheduling tasks.
-     */
+    // The main thread executor used for scheduling tasks.
     private EasyExecutor mainExecutor;
 
-    /**
-     * The timestamp when the application entered the background.
-     */
+    // The timestamp when the application entered the background.
     private volatile long backgroundTimestamp;
 
     /**

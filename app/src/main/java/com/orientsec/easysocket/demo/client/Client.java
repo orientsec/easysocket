@@ -30,12 +30,12 @@ public class Client {
                 .name("EasySocketDemo")
                 .addressList(addresses)
                 .headParserProvider((it) -> new MyHeadParser())
-                .initializerProvider((it) -> new MySessionInitializer(this))
+                .sessionInitializerProvider((it) -> new MySessionInitializer(this))
                 .requestTimeOutInMills(10000)
                 .connectTimeOutInMills(5000)
                 .connectIntervalInMills(3000)
-                .pulseRate(30)
-                .liveTime(10)
+                .pulseDurationInSec(30)
+                .backgroundActiveDurationInSec(20)
                 .open();
     }
 
