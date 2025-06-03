@@ -193,8 +193,8 @@ public class SocketSession implements OperableSession, Runnable {
         if (packetHandler == null) {
             logger.w("no packet handler for type: " + packet.getPacketType());
         } else {
-            logger.i("receive a packet, id: " + packet.getTaskId()
-                    + " type: " + packet.getPacketType());
+            logger.d("receive a packet, taskId: " + packet.getTaskId()
+                    + " packetType: " + packet.getPacketType());
             packetHandler.handlePacket(packet);
         }
     }
@@ -225,7 +225,7 @@ public class SocketSession implements OperableSession, Runnable {
     public void close(EasyException e) {
         if (state == State.IDLE || state == State.STARTING) {
             state = State.DETACHED;
-            logger.w("session is closed", e);
+            logger.i("session is closed, error: " + e.getMessage());
             socketClient.onConnectionFailed(this, e);
         } else {
             onError(e);
@@ -264,8 +264,8 @@ public class SocketSession implements OperableSession, Runnable {
             connectExecutor.execute(() -> {
                 try {
                     socket.close();
-                } catch (IOException e) {
-                    logger.d("socket is closed", e);
+                } catch (IOException ioe) {
+                    logger.d("socket is closed ", ioe);
                 }
             });
         }
@@ -280,7 +280,7 @@ public class SocketSession implements OperableSession, Runnable {
     private void onFailed(EasyException e) {
         if (state == State.STARTING) {
             state = State.DETACHED;
-            logger.i("session start failed");
+            logger.i("session start failed, error: " + e.getMessage());
 
             socketClient.onConnectionFailed(this, e);
         }
@@ -325,12 +325,12 @@ public class SocketSession implements OperableSession, Runnable {
                 try {
                     mSocket.close();
                 } catch (IOException ioe) {
-                    logger.d("socket is closed", ioe);
+                    logger.d("socket is closed ", ioe);
                 }
             });
 
             state = State.DETACHED;
-            logger.w("session is closed", e);
+            logger.i("session is closed, error: " + e.getMessage());
 
             socketClient.onConnectionAborted(this, e);
         }
@@ -342,7 +342,7 @@ public class SocketSession implements OperableSession, Runnable {
      */
     @Override
     public void run() {
-        logger.i("socket connection is starting");
+        logger.d("socket connection is starting");
         TrafficStats.setThreadStatsTag(options.getConnectStatsTag());
         try {
             Socket socket = socketClient.getSocketFactory().createSocket();
@@ -378,10 +378,10 @@ public class SocketSession implements OperableSession, Runnable {
             long connectTime = timestamp - startTimeMill;
             connectTimeMap.put(Period.ALL, connectTime);
 
-            logger.i("socket connected in " + connectTime + "ms");
+            logger.d("socket connected in " + connectTime + "ms");
             mainExecutor.execute(() -> onReady(socket));
         } catch (Exception e) {
-            logger.e("socket connection failed", e);
+            logger.w("socket connection start failed ", e);
             EasyException error = EasyException.create(ErrorCode.SOCKET_CONNECT,
                     ErrorType.CONNECT, "socket connection failed", suffix, e);
             mainExecutor.execute(() -> onFailed(error));
@@ -528,7 +528,7 @@ public class SocketSession implements OperableSession, Runnable {
          */
         @Override
         public void postFailure(@NonNull Throwable cause) {
-            logger.e("fail to initialize session");
+            logger.e("fail to initialize session, error: " + cause.getMessage());
             EasyException e = EasyException.create(ErrorCode.SESSION_INIT_FAILED, ErrorType.CONNECT,
                     "session initializing failed", suffix, cause);
             mainExecutor.execute(() -> onError(e));

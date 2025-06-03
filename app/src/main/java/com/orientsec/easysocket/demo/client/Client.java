@@ -22,11 +22,11 @@ public class Client {
 
     private Client() {
         session = new Session();
-        Address address = new Address("192.168.0.108", 10010);
+        Address address = new Address("192.168.88.153", 10010);
         List<Address> addresses = new ArrayList<>();
         addresses.add(address);
         socketClient = new Options.Builder()
-                .debug(true)
+                .debuggable(true)
                 .name("EasySocketDemo")
                 .addressList(addresses)
                 .headParserProvider((it) -> new MyHeadParser())

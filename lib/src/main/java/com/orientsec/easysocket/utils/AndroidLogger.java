@@ -16,17 +16,12 @@ class AndroidLogger implements Logger {
     // A custom suffix appended to log messages
     private final String suffix;
 
-    // Configuration options for controlling logging behavior
-    private final Options options;
-
     /**
      * Constructs an AndroidLogger instance with the specified options and suffix.
      *
-     * @param options The configuration options for logging behavior.
      * @param suffix  A custom suffix to append to log messages.
      */
-    public AndroidLogger(Options options, String suffix) {
-        this.options = options;
+    public AndroidLogger(String suffix) {
         this.suffix = suffix;
     }
 
@@ -37,12 +32,8 @@ class AndroidLogger implements Logger {
      * @return The formatted log message.
      */
     private String formatMsg(String msg) {
-        if (options.isDetailLog()) {
-            return msg + suffix +
-                    "  Thread:[" + Thread.currentThread().getName() + "]";
-        } else {
-            return msg;
-        }
+        return msg + suffix +
+                "  Thread:[" + Thread.currentThread().getName() + "]";
     }
 
     /**

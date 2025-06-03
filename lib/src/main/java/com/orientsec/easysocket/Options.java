@@ -26,17 +26,12 @@ public class Options {
     /**
      * Indicates whether the application is in debug mode.
      */
-    private final boolean debug;
+    private final boolean debuggable;
 
     /**
      * The name of the socket client.
      */
     private final String name;
-
-    /**
-     * Indicates whether detailed logging is enabled.
-     */
-    private final boolean detailLog;
 
     /**
      * Provider for the heartbeat decoder.
@@ -167,7 +162,7 @@ public class Options {
      */
     private Options(Builder builder) {
         name = builder.name;
-        debug = builder.debug;
+        debuggable = builder.debuggable;
         callbackExecutor = builder.callbackExecutor;
         connectExecutor = builder.connectExecutor;
         codecExecutor = builder.codecExecutor;
@@ -188,7 +183,6 @@ public class Options {
         pulseDecoderProvider = builder.pulseDecoderProvider;
         pushManagerProvider = builder.pushManagerProvider;
         socketFactoryProvider = builder.socketFactoryProvider;
-        detailLog = builder.detailLog;
         connectStatsTag = builder.connectStatsTag;
         readStatsTag = builder.readStatsTag;
         writeStatsTag = builder.writeStatsTag;
@@ -198,8 +192,8 @@ public class Options {
     // Getter methods for accessing the configuration options...
 
 
-    public boolean isDebug() {
-        return debug;
+    public boolean isDebuggable() {
+        return debuggable;
     }
 
     public String getName() {
@@ -298,10 +292,6 @@ public class Options {
         return sessionInitializerProvider;
     }
 
-    public boolean isDetailLog() {
-        return detailLog;
-    }
-
     public int getConnectStatsTag() {
         return connectStatsTag;
     }
@@ -327,7 +317,7 @@ public class Options {
         // The name of the socket client.
         private String name = "";
         // Indicates whether the application is in debug mode.
-        private boolean debug;
+        private boolean debuggable;
         // Provider for the heartbeat request.
         private Provider<Request<Boolean>> pulseRequestProvider;
         // Provider for the heartbeat decoder.
@@ -370,8 +360,6 @@ public class Options {
         private int retryTimes;
         // Interval (in milliseconds) between connection attempts.
         private int connectIntervalInMills = 3000;
-        // Indicates whether detailed logging is enabled.
-        private boolean detailLog = true;
         // Tag for connection statistics.
         private int connectStatsTag = 0x1001;
         // Tag for read operation statistics.
@@ -402,8 +390,8 @@ public class Options {
          * @param val `true` to enable debug mode, `false` to disable it.
          * @return This builder instance for chaining.
          */
-        public Builder debug(boolean val) {
-            debug = val;
+        public Builder debuggable(boolean val) {
+            debuggable = val;
             return this;
         }
 
@@ -673,17 +661,6 @@ public class Options {
                         " 1000 milliseconds.");
             }
             connectIntervalInMills = val;
-            return this;
-        }
-
-        /**
-         * Enables or disables detailed logging.
-         *
-         * @param val `true` to enable detailed logging, `false` to disable it.
-         * @return This builder instance for chaining.
-         */
-        public Builder detailLog(boolean val) {
-            detailLog = val;
             return this;
         }
 

@@ -100,7 +100,7 @@ class QueuedWriter implements Writer {
             outputStream.flush();
             mainExecutor.execute(task::onSendSuccess);
         } catch (IOException e) {
-            session.getLogger().e("socket write error", e);
+            session.getLogger().w("socket write error ", e);
             EasyException ex = EasyException.create(ErrorCode.WRITE_ERROR, ErrorType.CONNECT,
                     "socket write aborted", session.getSuffix(), e);
             mainExecutor.execute(() -> {
@@ -129,6 +129,6 @@ class QueuedWriter implements Writer {
     public void cancel(@NonNull OperableTask<?> task) {
         boolean removeFromWritingQueue = writingQueue.remove(task);
         session.getLogger().i("removed task " + task.getTaskId() +
-                " from writing queue:" + removeFromWritingQueue);
+                " from writing queue: " + removeFromWritingQueue);
     }
 }

@@ -53,7 +53,7 @@ class ReconnectManager implements Runnable {
             mainExecutor.schedule(this, connectIntervalInMills); // Schedule the reconnection task
             logger.i("restart after " + connectIntervalInMills + " mill seconds...");
         } else {
-            logger.i("restart not needed, policy is " + reconnectPolicy
+            logger.d("restart not needed, policy is " + reconnectPolicy
                     + ", active is " + socketClient.isActive());
         }
     }
@@ -66,7 +66,7 @@ class ReconnectManager implements Runnable {
         if (reconnectPolicy.shouldReconnect(socketClient.isActive())) {
             socketClient.onStart(false); // Start the Socket client
         } else {
-            logger.i("restart canceled...");
+            logger.d("restart canceled...");
         }
     }
 

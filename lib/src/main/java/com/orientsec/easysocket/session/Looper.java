@@ -45,7 +45,7 @@ public abstract class Looper implements Runnable {
             thread = new Thread(this, name);
             loopTimes = 0;
             thread.start();
-            logger.i(name + " is starting");
+            logger.d(name + " is starting");
         }
     }
 
@@ -64,7 +64,7 @@ public abstract class Looper implements Runnable {
             }
         } catch (Throwable t) {
             error = t;
-            logger.e(name + " is shutting down");
+            logger.w(name + " is shutting down by error ", t);
         } finally {
             loopFinish();
         }

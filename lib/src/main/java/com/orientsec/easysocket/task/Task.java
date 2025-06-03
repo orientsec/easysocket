@@ -20,6 +20,13 @@ public interface Task<T> {
     int getTaskId();
 
     /**
+     * Retrieves the type of the task.
+     *
+     * @return The type of the task, which can be one of the predefined TaskType values.
+     */
+    TaskType getTaskType();
+
+    /**
      * Retrieves the data content of the task.
      *
      * @return A byte array representing the data, or null if no data is available.

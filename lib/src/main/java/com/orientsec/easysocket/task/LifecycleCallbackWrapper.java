@@ -26,8 +26,8 @@ public class LifecycleCallbackWrapper<T> implements LifecycleCallback<T> {
     // Logger instance for logging lifecycle events
     private final Logger logger;
 
-    // Unique identifier for the task
-    private final int taskId;
+    //Task instance associated with this callback
+    private final Task<?> task;
 
     /**
      * Constructs a `LifecycleCallbackWrapper` instance.
@@ -35,42 +35,43 @@ public class LifecycleCallbackWrapper<T> implements LifecycleCallback<T> {
      * @param callback The original callback instance to be wrapped.
      * @param executor The executor used to run callback methods.
      * @param logger   The logger instance for logging lifecycle events.
-     * @param taskId   The unique identifier for the task.
+     * @param task     Task instance associated with this callback
      */
-    public LifecycleCallbackWrapper(Callback<T> callback, Executor executor, Logger logger, int taskId) {
+    public LifecycleCallbackWrapper(Callback<T> callback, Task<?> task,
+                                    Executor executor, Logger logger) {
         this.callback = callback;
         this.executor = executor;
         this.logger = logger;
-        this.taskId = taskId;
+        this.task = task;
     }
 
     @Override
     public void onStart() {
-        logger.d("Task " + taskId + ": onStart ");
+        logger.d(prefix() + "onStart");
         executor.execute(callback::onStart);
     }
 
     @Override
     public void onSuccess(@NonNull T res) {
-        logger.d("Task " + taskId + ": onSuccess, result: " + res);
+        logger.d(prefix() + "onSuccess, result: " + res);
         executor.execute(() -> callback.onSuccess(res));
     }
 
     @Override
     public void onFailure(@NonNull Throwable t) {
-        logger.d("Task " + taskId + ": onFailure, error: " + t.getMessage());
+        logger.d(prefix() + "onFailure, error: " + t.getMessage());
         executor.execute(() -> callback.onFailure(t));
     }
 
     @Override
     public void onCanceled() {
-        logger.d("Task " + taskId + ": onCanceled ");
+        logger.d(prefix() + "onCanceled");
         executor.execute(callback::onCanceled);
     }
 
     @Override
     public void onWait() {
-        logger.d("Task " + taskId + ": onWait ");
+        logger.d(prefix() + "onWait");
         if (callback instanceof LifecycleCallback) {
             executor.execute(((LifecycleCallback<T>) callback)::onWait);
         }
@@ -78,7 +79,7 @@ public class LifecycleCallbackWrapper<T> implements LifecycleCallback<T> {
 
     @Override
     public void onResume() {
-        logger.d("Task " + taskId + ": onResume ");
+        logger.d(prefix() + "onResume");
         if (callback instanceof LifecycleCallback) {
             executor.execute(((LifecycleCallback<T>) callback)::onResume);
         }
@@ -86,7 +87,7 @@ public class LifecycleCallbackWrapper<T> implements LifecycleCallback<T> {
 
     @Override
     public void onEncodeStart() {
-        logger.d("Task " + taskId + ": onEncodeStart ");
+        logger.d(prefix() + "onEncodeStart");
         if (callback instanceof LifecycleCallback) {
             executor.execute(((LifecycleCallback<T>) callback)::onEncodeStart);
         }
@@ -94,7 +95,7 @@ public class LifecycleCallbackWrapper<T> implements LifecycleCallback<T> {
 
     @Override
     public void onEncodeSuccess() {
-        logger.d("Task " + taskId + ": onEncodeSuccess ");
+        logger.d(prefix() + "onEncodeSuccess");
         if (callback instanceof LifecycleCallback) {
             executor.execute(((LifecycleCallback<T>) callback)::onEncodeSuccess);
         }
@@ -102,7 +103,7 @@ public class LifecycleCallbackWrapper<T> implements LifecycleCallback<T> {
 
     @Override
     public void onEncodeFailure(Throwable t) {
-        logger.d("Task " + taskId + ": onEncodeFailure, error: " + t.getMessage());
+        logger.d(prefix() + "onEncodeFailure, error: " + t.getMessage());
         if (callback instanceof LifecycleCallback) {
             executor.execute(() -> ((LifecycleCallback<T>) callback).onEncodeFailure(t));
         }
@@ -110,7 +111,7 @@ public class LifecycleCallbackWrapper<T> implements LifecycleCallback<T> {
 
     @Override
     public void onSendStart() {
-        logger.d("Task " + taskId + ": onSendStart ");
+        logger.d(prefix() + "onSendStart");
         if (callback instanceof LifecycleCallback) {
             executor.execute(((LifecycleCallback<T>) callback)::onSendStart);
         }
@@ -118,7 +119,7 @@ public class LifecycleCallbackWrapper<T> implements LifecycleCallback<T> {
 
     @Override
     public void onSendSuccess() {
-        logger.d("Task " + taskId + ": onSendSuccess ");
+        logger.d(prefix() + "onSendSuccess");
         if (callback instanceof LifecycleCallback) {
             executor.execute(((LifecycleCallback<T>) callback)::onSendSuccess);
         }
@@ -126,7 +127,7 @@ public class LifecycleCallbackWrapper<T> implements LifecycleCallback<T> {
 
     @Override
     public void onSendFailure(Throwable t) {
-        logger.d("Task " + taskId + ": onSendFailure, error: " + t.getMessage());
+        logger.d(prefix() + "onSendFailure, error: " + t.getMessage());
         if (callback instanceof LifecycleCallback) {
             executor.execute(() -> ((LifecycleCallback<T>) callback).onSendFailure(t));
         }
@@ -134,7 +135,7 @@ public class LifecycleCallbackWrapper<T> implements LifecycleCallback<T> {
 
     @Override
     public void onPacketReceived(Packet packet) {
-        logger.d("Task " + taskId + ": onPacketReceived, packet: " + packet);
+        logger.d(prefix() + "onPacketReceived, packet: " + packet);
         if (callback instanceof LifecycleCallback) {
             executor.execute(() -> ((LifecycleCallback<T>) callback).onPacketReceived(packet));
         }
@@ -142,7 +143,7 @@ public class LifecycleCallbackWrapper<T> implements LifecycleCallback<T> {
 
     @Override
     public void onDecodeStart() {
-        logger.d("Task " + taskId + ": onDecodeStart ");
+        logger.d(prefix() + "onDecodeStart");
         if (callback instanceof LifecycleCallback) {
             executor.execute(((LifecycleCallback<T>) callback)::onDecodeStart);
         }
@@ -150,7 +151,7 @@ public class LifecycleCallbackWrapper<T> implements LifecycleCallback<T> {
 
     @Override
     public void onDecodeSuccess() {
-        logger.d("Task " + taskId + ": onDecodeSuccess ");
+        logger.d(prefix() + "onDecodeSuccess");
         if (callback instanceof LifecycleCallback) {
             executor.execute(((LifecycleCallback<T>) callback)::onDecodeSuccess);
         }
@@ -158,7 +159,7 @@ public class LifecycleCallbackWrapper<T> implements LifecycleCallback<T> {
 
     @Override
     public void onDecodeFailure(Throwable t) {
-        logger.d("Task " + taskId + ": onDecodeFailure, error: " + t.getMessage());
+        logger.d(prefix() + "onDecodeFailure, error: " + t.getMessage());
         if (callback instanceof LifecycleCallback) {
             executor.execute(() -> ((LifecycleCallback<T>) callback).onDecodeFailure(t));
         }
@@ -166,9 +167,13 @@ public class LifecycleCallbackWrapper<T> implements LifecycleCallback<T> {
 
     @Override
     public void onComplete() {
-        logger.d("Task " + taskId + ": onComplete ");
+        logger.d(prefix() + "onComplete");
         if (callback instanceof LifecycleCallback) {
             executor.execute(((LifecycleCallback<T>) callback)::onComplete);
         }
+    }
+
+    private String prefix() {
+        return "Task " + task.getTaskId() + ", type: " + task.getTaskType() + ", ";
     }
 }

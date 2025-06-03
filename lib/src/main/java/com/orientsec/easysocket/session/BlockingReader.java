@@ -32,6 +32,9 @@ public class BlockingReader extends Looper implements Reader {
     // Socket used for communication
     private final Socket socket;
 
+    // Maximum size of the packet to read, in bytes
+    private final long maxReadSize;
+
     // Configuration options for the reader
     private final Options options;
 
@@ -51,6 +54,7 @@ public class BlockingReader extends Looper implements Reader {
         this.socket = socket;
         this.mainExecutor = client.getMainExecutor();
         this.options = client.getOptions();
+        this.maxReadSize = options.getMaxReadSizeInKB() * 1024L;
         this.headParser = client.getHeadParser();
     }
 
@@ -65,16 +69,17 @@ public class BlockingReader extends Looper implements Reader {
         byte[] headBytes = new byte[headLength];
         readInputStream(inputStream, headBytes);
         HeadParser.Head head = headParser.parseHead(headBytes);
-        int bodyLength = head.getPacketSize();
-        if (bodyLength > options.getMaxReadSizeInKB() * 1024) {
-            throw new Exception("packet size too large: " + bodyLength);
-        } else if (bodyLength >= 0) {
-            byte[] data = new byte[bodyLength];
+        int packetSize = head.getPacketSize();
+        if (packetSize > maxReadSize) {
+            throw new Exception("packet size: " + packetSize
+                    + "is large than max size: " + maxReadSize);
+        } else if (packetSize >= 0) {
+            byte[] data = new byte[packetSize];
             readInputStream(inputStream, data);
             Packet packet = headParser.decodePacket(head, data);
             session.handlePacket(packet);
         } else {
-            throw new Exception("negative packet size : " + bodyLength);
+            throw new Exception("negative packet size: " + packetSize);
         }
     }
 

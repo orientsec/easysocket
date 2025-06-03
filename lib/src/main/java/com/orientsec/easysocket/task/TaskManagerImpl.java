@@ -59,6 +59,9 @@ public class TaskManagerImpl implements TaskManager {
         TaskImpl<?> task = taskMap.remove(packet.getTaskId());
         if (task != null) {
             task.onPacketReceived(packet);
+        } else {
+            logger.w("task manager handlePacket: task not found, taskId="
+                    + packet.getTaskId());
         }
     }
 
@@ -127,8 +130,8 @@ public class TaskManagerImpl implements TaskManager {
         boolean removeFromTaskMap = taskMap.remove(task.getTaskId()) != null;
         boolean removeFromWaitingQueue = waitingQueue.remove(task);
 
-        logger.i("cancel task:" + task.getTaskId() +
-                " removed from task map:" + removeFromTaskMap +
-                " removed from waiting queue:" + removeFromWaitingQueue);
+        logger.i("cancel task: " + task.getTaskId() +
+                " removed from task map: " + removeFromTaskMap +
+                " removed from waiting queue: " + removeFromWaitingQueue);
     }
 }

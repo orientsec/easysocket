@@ -217,7 +217,7 @@ public class EasySocketClient extends BaseSocketClient {
         if (addressList != null)
             return true; // Return true if the address list is already initialized.
         if (initializing) {
-            logger.i("client is initializing, just wait for the result");
+            logger.d("client is initializing, just wait for the result");
             return false;
         }
         // Attempt to retrieve the address list from the options.
@@ -272,7 +272,7 @@ public class EasySocketClient extends BaseSocketClient {
         state = STATE_SLEEP;
         if (session != null) {
             EasyException e = EasyException.create(ErrorCode.STOP, ErrorType.SYSTEM,
-                    session.getSuffix(), "socket client on stop");
+                    session.getSuffix(), "socket client is stopped");
             session.close(e);
         }
     }
@@ -524,7 +524,7 @@ public class EasySocketClient extends BaseSocketClient {
          */
         @Override
         public void postFailure(@NonNull Throwable t) {
-            logger.e("socket client initialize failed", t);
+            logger.e("socket client initialize failed, error: " + t.getMessage());
             EasyException e = EasyException.create(ErrorCode.INIT_FAILED, ErrorType.SYSTEM,
                     suffix, "socket client initialize failed", t);
             mainExecutor.execute(() -> onInitializeFailure(e));

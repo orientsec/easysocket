@@ -16,8 +16,8 @@ public class LogFactory {
      * otherwise, a NoLogger is returned.
      */
     public static Logger getLogger(Options options, String suffix) {
-        if (options.isDebug()) {
-            return new AndroidLogger(options, suffix);
+        if (options.isDebuggable()) {
+            return new AndroidLogger(suffix);
         } else {
             return new NoLogger();
         }

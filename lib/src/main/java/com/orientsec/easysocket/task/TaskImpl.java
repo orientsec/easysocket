@@ -139,8 +139,8 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
         this.taskId = taskId;
         this.request = request;
         this.options = socketClient.getOptions();
-        this.callback = new LifecycleCallbackWrapper<>(callback, options.getCallbackExecutor(),
-                socketClient.getLogger(), taskId);
+        this.callback = new LifecycleCallbackWrapper<>(callback, this,
+                options.getCallbackExecutor(), socketClient.getLogger());
         this.socketClient = socketClient;
         this.taskManager = socketClient.getTaskManager();
         this.mainExecutor = socketClient.getMainExecutor();
@@ -156,6 +156,16 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
     @Override
     public int getTaskId() {
         return taskId;
+    }
+
+    /**
+     * Retrieves the type of the task.
+     *
+     * @return The type of the task, which can be one of the predefined TaskType values.
+     */
+    @Override
+    public TaskType getTaskType() {
+        return taskType;
     }
 
     /**
