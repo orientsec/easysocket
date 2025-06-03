@@ -2,8 +2,6 @@ package com.orientsec.easysocket.utils;
 
 import android.util.Log;
 
-import com.orientsec.easysocket.Options;
-
 /**
  * AndroidLogger is a utility class that implements the Logger interface for logging messages
  * on the Android platform. It provides methods to log messages at different levels (error,
@@ -16,13 +14,18 @@ class AndroidLogger implements Logger {
     // A custom suffix appended to log messages
     private final String suffix;
 
+    // Minimum log level to output
+    private final int minLogLevel;
+
     /**
      * Constructs an AndroidLogger instance with the specified options and suffix.
      *
-     * @param suffix  A custom suffix to append to log messages.
+     * @param suffix      A custom suffix to append to log messages.
+     * @param minLogLevel The minimum log level to output (e.g., Log.DEBUG, Log.INFO).
      */
-    public AndroidLogger(String suffix) {
+    public AndroidLogger(String suffix, int minLogLevel) {
         this.suffix = suffix;
+        this.minLogLevel = minLogLevel;
     }
 
     /**
@@ -37,80 +40,60 @@ class AndroidLogger implements Logger {
     }
 
     /**
-     * Logs an error-level message.
+     * Checks if the log level is enabled for output.
      *
-     * @param msg The message to log.
+     * @param level The log level to check.
+     * @return True if the log level is enabled, false otherwise.
      */
+    private boolean isIgnored(int level) {
+        return level < minLogLevel;
+    }
+
     @Override
     public void e(String msg) {
+        if (isIgnored(Log.ERROR)) return;
         Log.e(TAG, formatMsg(msg));
     }
 
-    /**
-     * Logs an error-level message with an exception.
-     *
-     * @param msg The message to log.
-     * @param t   The exception to include in the log.
-     */
     @Override
     public void e(String msg, Throwable t) {
+        if (isIgnored(Log.ERROR)) return;
         Log.e(TAG, formatMsg(msg), t);
     }
 
-    /**
-     * Logs an info-level message.
-     *
-     * @param msg The message to log.
-     */
     @Override
     public void i(String msg) {
+        if (isIgnored(Log.INFO)) return;
         Log.i(TAG, formatMsg(msg));
     }
 
-    /**
-     * Logs an info-level message with an exception.
-     *
-     * @param msg The message to log.
-     * @param t   The exception to include in the log.
-     */
     @Override
     public void i(String msg, Throwable t) {
+        if (isIgnored(Log.INFO)) return;
         Log.i(TAG, formatMsg(msg), t);
     }
 
-    /**
-     * Logs a warning-level message.
-     *
-     * @param msg The message to log.
-     */
     @Override
     public void w(String msg) {
+        if (isIgnored(Log.WARN)) return;
         Log.w(TAG, formatMsg(msg));
     }
 
-    /**
-     * Logs a warning-level message with an exception.
-     *
-     * @param msg The message to log.
-     * @param t   The exception to include in the log.
-     */
     @Override
     public void w(String msg, Throwable t) {
+        if (isIgnored(Log.WARN)) return;
         Log.w(TAG, formatMsg(msg), t);
     }
 
     @Override
     public void d(String msg) {
+        if (isIgnored(Log.DEBUG)) return;
         Log.d(TAG, formatMsg(msg));
     }
 
-    /**
-     * Logs a debug-level message.
-     *
-     * @param msg The message to log.
-     */
     @Override
     public void d(String msg, Throwable t) {
+        if (isIgnored(Log.DEBUG)) return;
         Log.d(TAG, formatMsg(msg), t);
     }
 }

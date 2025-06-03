@@ -1,5 +1,7 @@
 package com.orientsec.easysocket;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -27,6 +29,10 @@ public class Options {
      * Indicates whether the application is in debug mode.
      */
     private final boolean debuggable;
+    /**
+     * The minimum log level for outputting logs.
+     */
+    private final int minLogLevel;
 
     /**
      * The name of the socket client.
@@ -133,7 +139,7 @@ public class Options {
     /**
      * The number of retry attempts for reconnection.
      */
-    private final int retryTimes;
+    private final int retryTimesPerAddress;
 
     /**
      * The interval (in milliseconds) between connection attempts.
@@ -163,6 +169,7 @@ public class Options {
     private Options(Builder builder) {
         name = builder.name;
         debuggable = builder.debuggable;
+        minLogLevel = builder.minLogLevel;
         callbackExecutor = builder.callbackExecutor;
         connectExecutor = builder.connectExecutor;
         codecExecutor = builder.codecExecutor;
@@ -174,7 +181,7 @@ public class Options {
         pulseMaxLostTimes = builder.pulseMaxLostTimes;
         backgroundActiveDurationInSec = builder.backgroundActiveDurationInSec;
         reconnectPolicy = builder.reconnectPolicy;
-        retryTimes = builder.retryTimes;
+        retryTimesPerAddress = builder.retryTimesPerAddress;
         connectIntervalInMills = builder.connectIntervalInMills;
         headParserProvider = builder.headParserProvider;
         clientInitializerProvider = builder.clientInitializerProvider;
@@ -191,9 +198,12 @@ public class Options {
 
     // Getter methods for accessing the configuration options...
 
-
     public boolean isDebuggable() {
         return debuggable;
+    }
+
+    public int getMinLogLevel() {
+        return minLogLevel;
     }
 
     public String getName() {
@@ -249,8 +259,8 @@ public class Options {
         return connectTimeOutInMills;
     }
 
-    public int getRetryTimes() {
-        return retryTimes;
+    public int getRetryTimesPerAddress() {
+        return retryTimesPerAddress;
     }
 
     public int getConnectIntervalInMills() {
@@ -318,6 +328,8 @@ public class Options {
         private String name = "";
         // Indicates whether the application is in debug mode.
         private boolean debuggable;
+        // Minimum log level for outputting logs.
+        private int minLogLevel = Log.INFO;
         // Provider for the heartbeat request.
         private Provider<Request<Boolean>> pulseRequestProvider;
         // Provider for the heartbeat decoder.
@@ -357,7 +369,7 @@ public class Options {
         // Reconnection policy for lost connections.
         private ReconnectPolicy reconnectPolicy = ReconnectPolicy.ACTIVE;
         // Number of retry attempts for reconnection.
-        private int retryTimes;
+        private int retryTimesPerAddress;
         // Interval (in milliseconds) between connection attempts.
         private int connectIntervalInMills = 3000;
         // Tag for connection statistics.
@@ -392,6 +404,21 @@ public class Options {
          */
         public Builder debuggable(boolean val) {
             debuggable = val;
+            return this;
+        }
+
+        /**
+         * Sets the minimum log level for outputting logs.
+         *
+         * @param val The minimum log level to set.
+         * @return This builder instance for chaining.
+         * @see android.util.Log  Levels: Log.VERBOSE, Log.DEBUG, Log.INFO, Log.WARN, Log.ERROR
+         */
+        public Builder minLogLevel(int val) {
+            if (val < 0) {
+                throw new IllegalArgumentException("Minimum log level must be non-negative.");
+            }
+            minLogLevel = val;
             return this;
         }
 
@@ -539,7 +566,7 @@ public class Options {
          * @return This builder instance for chaining.
          * @throws IllegalArgumentException If the value is not positive.
          */
-        public Builder maxReadSizeKB(int val) {
+        public Builder maxReadSizeInKB(int val) {
             if (val <= 0) {
                 throw new IllegalArgumentException("Max read data size in KB must be positive.");
             }
@@ -640,11 +667,11 @@ public class Options {
          * @return This builder instance for chaining.
          * @throws IllegalArgumentException If the value is negative.
          */
-        public Builder retryTimes(int val) {
+        public Builder retryTimesPerAddress(int val) {
             if (val < 0) {
                 throw new IllegalArgumentException("Retry times cannot be negative.");
             }
-            retryTimes = val;
+            retryTimesPerAddress = val;
             return this;
         }
 

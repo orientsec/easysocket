@@ -17,7 +17,7 @@ public class LogFactory {
      */
     public static Logger getLogger(Options options, String suffix) {
         if (options.isDebuggable()) {
-            return new AndroidLogger(suffix);
+            return new AndroidLogger(suffix, options.getMinLogLevel());
         } else {
             return new NoLogger();
         }

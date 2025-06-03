@@ -130,7 +130,7 @@ public class Pulse implements PacketHandler, TaskBuilder, Runnable {
     Callback<Boolean> callback = new DefaultCallback<Boolean>() {
         @Override
         public void onSuccess(@NonNull Boolean res) {
-            logger.d("client pulse result: " + res);
+            logger.i("client pulse result: " + res);
             if (res) {
                 feed();
             }
@@ -138,7 +138,7 @@ public class Pulse implements PacketHandler, TaskBuilder, Runnable {
 
         @Override
         public void onFailure(@NonNull Throwable t) {
-            logger.d("client pulse failed ", t);
+            logger.i("client pulse failed ", t);
         }
     };
 
@@ -154,10 +154,10 @@ public class Pulse implements PacketHandler, TaskBuilder, Runnable {
         codecExecutor.execute(() -> {
             try {
                 boolean success = pulseDecoder.decode(packet);
-                logger.d("server pulse result: " + success);
+                logger.i("server pulse result: " + success);
                 if (success) feed();
             } catch (Throwable t) {
-                logger.d("server pulse decode failed ", t);
+                logger.i("server pulse decode failed ", t);
             }
         });
     }

@@ -464,7 +464,7 @@ public class EasySocketClient extends BaseSocketClient {
      * Switches to the next server in the address list if the failure threshold is reached.
      */
     void switchServer() {
-        if (++failedTimes >= options.getRetryTimes()) {
+        if (++failedTimes >= options.getRetryTimesPerAddress()) {
             failedTimes = 0;
             addressIndex = (addressIndex + 1) % addressList.size();
             logger.i("switch to server: " + addressList.get(addressIndex));
