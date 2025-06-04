@@ -94,10 +94,9 @@ public class Packet {
     @Override
     @NonNull
     public String toString() {
-        return "Packet{" +
-                "taskId=" + taskId +
-                ", body=" + body +
+        return "[Packet: taskId=" + taskId +
+                ", bodyType=" + body.getClass().getSimpleName() +
                 ", packetType=" + packetType +
-                '}';
+                "]";
     }
 }

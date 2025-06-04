@@ -191,10 +191,9 @@ public class SocketSession implements OperableSession, Runnable {
         if (state == State.DETACHED) return;
         PacketHandler packetHandler = messageHandlerMap.get(packet.getPacketType());
         if (packetHandler == null) {
-            logger.w("no packet handler for type: " + packet.getPacketType());
+            logger.w("no packet handler for " + packet.getPacketType());
         } else {
-            logger.d("receive a packet, taskId: " + packet.getTaskId()
-                    + " packetType: " + packet.getPacketType());
+            logger.d("receive a packet: " + packet);
             packetHandler.handlePacket(packet);
         }
     }

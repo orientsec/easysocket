@@ -60,8 +60,7 @@ public class TaskManagerImpl implements TaskManager {
         if (task != null) {
             task.onPacketReceived(packet);
         } else {
-            logger.w("task manager handlePacket: task not found, taskId="
-                    + packet.getTaskId());
+            logger.w("task manager handlePacket: task not found, " + packet);
         }
     }
 

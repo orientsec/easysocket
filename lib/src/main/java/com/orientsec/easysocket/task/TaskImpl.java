@@ -139,8 +139,7 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
         this.taskId = taskId;
         this.request = request;
         this.options = socketClient.getOptions();
-        this.callback = new LifecycleCallbackWrapper<>(callback, this,
-                options.getCallbackExecutor(), socketClient.getLogger());
+        this.callback = new LifecycleCallbackWrapper<>(callback, this, socketClient);
         this.socketClient = socketClient;
         this.taskManager = socketClient.getTaskManager();
         this.mainExecutor = socketClient.getMainExecutor();

@@ -1,5 +1,7 @@
 package com.orientsec.easysocket.demo.client;
 
+import android.util.Log;
+
 import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.SocketClient;
@@ -27,6 +29,7 @@ public class Client {
         addresses.add(address);
         socketClient = new Options.Builder()
                 .debuggable(true)
+                .minLogLevel(Log.DEBUG)
                 .name("EasySocketDemo")
                 .addressList(addresses)
                 .headParserProvider((it) -> new MyHeadParser())
