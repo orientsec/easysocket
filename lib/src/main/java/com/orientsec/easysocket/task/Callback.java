@@ -1,9 +1,9 @@
-package com.orientsec.easysocket.request;
+package com.orientsec.easysocket.task;
 
 import androidx.annotation.NonNull;
 
 /**
- * A generic callback interface for handling various stages of a request lifecycle.
+ * A generic callback interface for handling various stages of a task lifecycle.
  *
  * @param <T> The type of the response object.
  */

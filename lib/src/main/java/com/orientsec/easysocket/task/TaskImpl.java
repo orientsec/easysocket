@@ -9,7 +9,6 @@ import com.orientsec.easysocket.client.BaseSocketClient;
 import com.orientsec.easysocket.error.EasyException;
 import com.orientsec.easysocket.error.ErrorCode;
 import com.orientsec.easysocket.error.ErrorType;
-import com.orientsec.easysocket.request.Callback;
 import com.orientsec.easysocket.request.Request;
 import com.orientsec.easysocket.session.OperableSession;
 import com.orientsec.easysocket.session.Writer;

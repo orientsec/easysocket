@@ -6,12 +6,10 @@
 package com.orientsec.easysocket.task;
 
 import com.orientsec.easysocket.Packet;
-import com.orientsec.easysocket.request.Callback;
 
 /**
  * Defines the `LifecycleCallback` interface, which extends `Callback<T>`.
- * This interface provides lifecycle callbacks for various stages of socket communication,
- * such as connection, encoding, sending, receiving, decoding, and completion.
+ * This interface provides lifecycle callbacks for various stages of task.
  *
  * @param <T> The type of the result expected from the callback.
  */

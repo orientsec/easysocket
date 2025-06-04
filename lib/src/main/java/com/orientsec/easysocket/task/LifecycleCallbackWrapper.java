@@ -5,7 +5,6 @@ import androidx.annotation.NonNull;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
 import com.orientsec.easysocket.client.BaseSocketClient;
-import com.orientsec.easysocket.request.Callback;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.concurrent.Executor;

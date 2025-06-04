@@ -5,7 +5,7 @@ import android.util.Log;
 import com.orientsec.easysocket.Address;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.SocketClient;
-import com.orientsec.easysocket.request.Callback;
+import com.orientsec.easysocket.task.Callback;
 
 import java.util.ArrayList;
 import java.util.List;

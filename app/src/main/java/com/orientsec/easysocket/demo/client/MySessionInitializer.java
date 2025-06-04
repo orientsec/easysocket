@@ -3,8 +3,8 @@ package com.orientsec.easysocket.demo.client;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.request.Callback;
-import com.orientsec.easysocket.request.DefaultCallback;
+import com.orientsec.easysocket.task.Callback;
+import com.orientsec.easysocket.task.DefaultCallback;
 import com.orientsec.easysocket.session.SessionInitializer;
 import com.orientsec.easysocket.task.TaskBuilder;
 

@@ -17,7 +17,7 @@ import com.orientsec.easysocket.error.EasyException;
 import com.orientsec.easysocket.error.ErrorCode;
 import com.orientsec.easysocket.error.ErrorType;
 import com.orientsec.easysocket.push.PushManager;
-import com.orientsec.easysocket.request.Callback;
+import com.orientsec.easysocket.task.Callback;
 import com.orientsec.easysocket.request.Request;
 import com.orientsec.easysocket.task.Task;
 import com.orientsec.easysocket.task.TaskImpl;

@@ -9,7 +9,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.orientsec.easysocket.demo.client.Client;
-import com.orientsec.easysocket.request.DefaultCallback;
+import com.orientsec.easysocket.task.DefaultCallback;
 
 public class MainActivity extends AppCompatActivity {
     private TextView textView;

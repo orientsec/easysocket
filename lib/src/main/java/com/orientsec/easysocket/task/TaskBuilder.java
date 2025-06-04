@@ -2,7 +2,6 @@ package com.orientsec.easysocket.task;
 
 import androidx.annotation.NonNull;
 
-import com.orientsec.easysocket.request.Callback;
 import com.orientsec.easysocket.request.Request;
 
 /**
