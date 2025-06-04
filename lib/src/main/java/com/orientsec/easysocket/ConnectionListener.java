@@ -17,14 +17,14 @@ public interface ConnectionListener {
      *
      * @param session The session associated with the connection.
      */
-    void onConnectionStart(@NonNull final Session session);
+    void onConnecting(@NonNull final Session session);
 
     /**
      * Called when a connection is successfully established.
      *
      * @param session The session associated with the successful connection.
      */
-    void onConnectionSuccess(@NonNull final Session session);
+    void onConnected(@NonNull final Session session);
 
     /**
      * Called when a connection attempt fails.
@@ -33,7 +33,7 @@ public interface ConnectionListener {
      * @param session The session associated with the failed connection.
      * @param e       The exception describing the failure.
      */
-    void onConnectionFailed(@NonNull final Session session, @NonNull EasyException e);
+    void onConnectFailed(@NonNull final Session session, @NonNull EasyException e);
 
     /**
      * Called when the client successfully logs into the server.
@@ -43,7 +43,7 @@ public interface ConnectionListener {
      *
      * @param session The session associated with the connection.
      */
-    void onConnectionAvailable(@NonNull final Session session);
+    void onAvailable(@NonNull final Session session);
 
     /**
      * Called when the connection is terminated.
@@ -51,5 +51,5 @@ public interface ConnectionListener {
      * @param session The session associated with the terminated connection.
      * @param e       The exception describing the reason for disconnection.
      */
-    void onConnectionAborted(@NonNull final Session session, @NonNull EasyException e);
+    void onDisconnected(@NonNull final Session session, @NonNull EasyException e);
 }

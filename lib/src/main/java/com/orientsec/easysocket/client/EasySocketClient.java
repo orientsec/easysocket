@@ -299,12 +299,12 @@ public class EasySocketClient extends BaseSocketClient {
      * @param session The session that started the connection.
      */
     @Override
-    public void onConnectionStart(@NonNull Session session) {
+    public void onConnecting(@NonNull Session session) {
         assert session == this.session;
         if (!connectionListeners.isEmpty()) {
             callbackExecutor.execute(() -> {
                 for (ConnectionListener listener : connectionListeners) {
-                    listener.onConnectionStart(session);
+                    listener.onConnecting(session);
                 }
             });
         }
@@ -316,12 +316,12 @@ public class EasySocketClient extends BaseSocketClient {
      * @param session The session that established the connection.
      */
     @Override
-    public void onConnectionSuccess(@NonNull final Session session) {
+    public void onConnected(@NonNull final Session session) {
         assert session == this.session;
         if (!connectionListeners.isEmpty()) {
             callbackExecutor.execute(() -> {
                 for (ConnectionListener listener : connectionListeners) {
-                    listener.onConnectionSuccess(session);
+                    listener.onConnected(session);
                 }
             });
         }
@@ -334,7 +334,7 @@ public class EasySocketClient extends BaseSocketClient {
      * @param e       The exception that caused the failure.
      */
     @Override
-    public void onConnectionFailed(@NonNull final Session session, @NonNull EasyException e) {
+    public void onConnectFailed(@NonNull final Session session, @NonNull EasyException e) {
         assert session == this.session;
         this.session = null;
         taskManager.reset(e);
@@ -343,7 +343,7 @@ public class EasySocketClient extends BaseSocketClient {
         if (!connectionListeners.isEmpty()) {
             callbackExecutor.execute(() -> {
                 for (ConnectionListener listener : connectionListeners) {
-                    listener.onConnectionFailed(session, e);
+                    listener.onConnectFailed(session, e);
                 }
             });
         }
@@ -356,7 +356,7 @@ public class EasySocketClient extends BaseSocketClient {
      * @param e       The exception that caused the abortion.
      */
     @Override
-    public void onConnectionAborted(@NonNull final Session session, @NonNull EasyException e) {
+    public void onDisconnected(@NonNull final Session session, @NonNull EasyException e) {
         assert session == this.session;
         this.session = null;
         taskManager.reset(e);
@@ -365,7 +365,7 @@ public class EasySocketClient extends BaseSocketClient {
         if (!connectionListeners.isEmpty()) {
             callbackExecutor.execute(() -> {
                 for (ConnectionListener listener : connectionListeners) {
-                    listener.onConnectionAborted(session, e);
+                    listener.onDisconnected(session, e);
                 }
             });
         }
@@ -377,7 +377,7 @@ public class EasySocketClient extends BaseSocketClient {
      * @param session The session that became available.
      */
     @Override
-    public void onConnectionAvailable(@NonNull final Session session) {
+    public void onAvailable(@NonNull final Session session) {
         assert session == this.session;
         failedTimes = 0;
         taskManager.ready();
@@ -385,7 +385,7 @@ public class EasySocketClient extends BaseSocketClient {
         if (!connectionListeners.isEmpty()) {
             callbackExecutor.execute(() -> {
                 for (ConnectionListener listener : connectionListeners) {
-                    listener.onConnectionAvailable(session);
+                    listener.onAvailable(session);
                 }
             });
         }

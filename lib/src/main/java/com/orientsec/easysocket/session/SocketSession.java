@@ -209,7 +209,7 @@ public class SocketSession implements OperableSession, Runnable {
             state = State.STARTING;
             logger.i("session is opening");
 
-            socketClient.onConnectionStart(this);
+            socketClient.onConnecting(this);
         }
     }
 
@@ -225,7 +225,7 @@ public class SocketSession implements OperableSession, Runnable {
         if (state == State.IDLE || state == State.STARTING) {
             state = State.DETACHED;
             logger.i("session is closed, error: " + e.getMessage());
-            socketClient.onConnectionFailed(this, e);
+            socketClient.onConnectFailed(this, e);
         } else {
             onError(e);
         }
@@ -250,7 +250,7 @@ public class SocketSession implements OperableSession, Runnable {
             state = State.CONNECTED;
             logger.i("session start success");
 
-            socketClient.onConnectionSuccess(this);
+            socketClient.onConnected(this);
             // Perform pre-connection operations, such as resource initialization
             SessionInitializer initializer = socketClient.getSessionInitializer();
             if (initializer == null) {
@@ -281,7 +281,7 @@ public class SocketSession implements OperableSession, Runnable {
             state = State.DETACHED;
             logger.i("session start failed, error: " + e.getMessage());
 
-            socketClient.onConnectionFailed(this, e);
+            socketClient.onConnectFailed(this, e);
         }
     }
 
@@ -304,7 +304,7 @@ public class SocketSession implements OperableSession, Runnable {
             serverAvailable = true;
             logger.i("session is available");
 
-            socketClient.onConnectionAvailable(this);
+            socketClient.onAvailable(this);
         }
     }
 
@@ -331,7 +331,7 @@ public class SocketSession implements OperableSession, Runnable {
             state = State.DETACHED;
             logger.i("session is closed, error: " + e.getMessage());
 
-            socketClient.onConnectionAborted(this, e);
+            socketClient.onDisconnected(this, e);
         }
     }
 
