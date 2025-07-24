@@ -50,6 +50,15 @@ public interface LifecycleCallback<T> extends Callback<T> {
     void onEncodeFailure(Throwable t);
 
     /**
+     * Called when the task is reset.
+     * This method notifies the caller that the task has been reset.
+     *
+     * @param failedTimes The number of times the task has failed.
+     * @param t           The exception containing error details.
+     */
+    void onReset(int failedTimes, Throwable t);
+
+    /**
      * Called when data sending starts.
      * This method notifies the caller that the data sending process has started.
      * It may be triggered after the task ends.

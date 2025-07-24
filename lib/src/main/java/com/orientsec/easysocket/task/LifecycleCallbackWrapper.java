@@ -110,6 +110,16 @@ public class LifecycleCallbackWrapper<T> implements LifecycleCallback<T> {
     }
 
     @Override
+    public void onReset(int failedTimes, Throwable t) {
+        if (isDebuggable)
+            logger.d(prefix() + "onReset, failedTimes: " + failedTimes
+                    + ", error: " + t.getMessage());
+        if (callback instanceof LifecycleCallback) {
+            executor.execute(() -> ((LifecycleCallback<T>) callback).onReset(failedTimes, t));
+        }
+    }
+
+    @Override
     public void onSendStart() {
         if (isDebuggable) logger.d(prefix() + "onSendStart");
         if (callback instanceof LifecycleCallback) {

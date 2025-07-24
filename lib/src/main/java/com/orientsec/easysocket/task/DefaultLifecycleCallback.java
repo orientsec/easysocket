@@ -37,6 +37,11 @@ public class DefaultLifecycleCallback<T> implements LifecycleCallback<T> {
     }
 
     @Override
+    public void onReset(int failedTimes, Throwable t) {
+
+    }
+
+    @Override
     public void onSendStart() {
 
     }

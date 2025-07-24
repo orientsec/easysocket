@@ -100,6 +100,10 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
     private OperableSession session;
     // The writer responsible for writing the task to the socket.
     private Writer writer;
+    // Indicates whether the task has sent data to the socket.
+    private boolean hasSentData;
+    // The number of times the task has been retried.
+    private int retryTimes = 0;
 
     /**
      * Constructs a new TaskImpl instance with the specified task ID, request, callback, and socket client.
@@ -379,6 +383,7 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
      */
     @Override
     public void onSendStart() {
+        hasSentData = true;
         callback.onSendStart();
     }
 
@@ -462,14 +467,36 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
         }
     }
 
+    @Override
+    public boolean onReset(@NonNull Throwable t) {
+        // If the task is already completed, it cannot be reset
+        if (isCompleted()) return false;
+
+        if (taskType != TaskType.REQUEST // If the task is not a request task, it cannot be reset
+                // If data has already been sent, it cannot be reset
+                || hasSentData
+                // If the retry count has reached the maximum, it cannot be reset
+                || retryTimes > options.getTaskRetryTimes()
+                // If it is a system exception, it cannot be reset
+                || (t instanceof EasyException && ((EasyException) t).type == ErrorType.SYSTEM)) {
+            onError(t);
+            return false;
+        }
+
+        retryTimes++;
+        data = null;
+        callback.onReset(retryTimes, t);
+        callback.onWait();
+        return true;
+    }
+
     /**
      * Handles errors that occur during task execution. This method marks the task
      * as failed and notifies the callback with the error.
      *
      * @param t The throwable representing the error.
      */
-    @Override
-    public void onError(@NonNull Throwable t) {
+    private void onError(@NonNull Throwable t) {
         if (!isCompleted()) {
             if (isTiming) {
                 isTiming = false;

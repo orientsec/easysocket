@@ -32,13 +32,14 @@ public interface OperableTask<T> extends Task<T> {
     void onPacketReceived(Packet packet);
 
     /**
-     * Called when an error occurs during task execution.
+     * Called when an error occurs during task execution to determine if the task should be reset.
      * This method should be executed on the main thread.
      *
-     * @param t The throwable representing the error.
+     * @param t The throwable representing the error that occurred during task execution.
+     * @return true if the task should be reset, false otherwise.
      */
     @MainThread
-    void onError(@NonNull Throwable t);
+    boolean onReset(@NonNull Throwable t);
 
     /**
      * Called when the task starts sending data.

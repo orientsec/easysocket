@@ -160,6 +160,10 @@ public class Options {
      * A tag used to identify write operation statistics.
      */
     private final int writeStatsTag;
+    /**
+     * The number of retry attempts for each task.
+     */
+    private final int taskRetryTimes;
 
     /**
      * Constructs an `Options` instance using the provided builder.
@@ -194,6 +198,7 @@ public class Options {
         readStatsTag = builder.readStatsTag;
         writeStatsTag = builder.writeStatsTag;
         addressList = builder.addressList;
+        taskRetryTimes = builder.taskRetryTimes;
     }
 
     // Getter methods for accessing the configuration options...
@@ -319,6 +324,10 @@ public class Options {
         return addressList;
     }
 
+    public int getTaskRetryTimes() {
+        return taskRetryTimes;
+    }
+
     /**
      * Builder class for constructing `Options` instances.
      * Provides methods for setting various configuration parameters.
@@ -378,6 +387,8 @@ public class Options {
         private int readStatsTag = 0x1002;
         // Tag for write operation statistics.
         private int writeStatsTag = 0x1003;
+        // Number of retry attempts for a task
+        public int taskRetryTimes = 2;
 
         /**
          * Default constructor for the `Builder` class.
@@ -721,6 +732,21 @@ public class Options {
          */
         public Builder writeStatsTag(int val) {
             writeStatsTag = val;
+            return this;
+        }
+
+        /**
+         * Sets the number of retry attempts for tasks.
+         *
+         * @param val The number of attempts to set.
+         * @return This builder instance for chaining.
+         * @throws IllegalArgumentException If the value is negative.
+         */
+        public Builder taskRetryTimes(int val) {
+            if (val < 0) {
+                throw new IllegalArgumentException("Task retry times cannot be negative.");
+            }
+            taskRetryTimes = val;
             return this;
         }
 

@@ -5,9 +5,9 @@ plugins {
 
 android {
     namespace = "com.orientsec.easysocket"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
-        minSdk = 21
+        minSdk = 24
         lint.targetSdk = 35
 
         testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"

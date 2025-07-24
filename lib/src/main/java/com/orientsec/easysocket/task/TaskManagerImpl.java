@@ -71,11 +71,21 @@ public class TaskManagerImpl implements TaskManager {
      */
     @Override
     public void reset(@NonNull EasyException e) {
-        for (TaskImpl<?> task : taskMap.values()) {
-            task.onError(e);
+        // 创建一个临时列表来避免在遍历过程中修改集合
+        Map<Integer, TaskImpl<?>> tasksToKeep = new HashMap<>();
+        for (Map.Entry<Integer, TaskImpl<?>> entry : taskMap.entrySet()) {
+            TaskImpl<?> task = entry.getValue();
+            // 假设 onReset 返回 boolean 值，表示是否应该保留任务
+            if (task.onReset(e)) {
+                tasksToKeep.put(entry.getKey(), task);
+            }
         }
         taskMap.clear();
+        taskMap.putAll(tasksToKeep);
+
+        // 清空等待队列并重新添加需要保留的任务
         waitingQueue.clear();
+        waitingQueue.addAll(tasksToKeep.values());
     }
 
     /**

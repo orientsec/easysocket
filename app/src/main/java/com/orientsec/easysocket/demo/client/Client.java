@@ -24,7 +24,7 @@ public class Client {
 
     private Client() {
         session = new Session();
-        Address address = new Address("192.168.88.153", 10010);
+        Address address = new Address("192.168.88.66", 10010);
         List<Address> addresses = new ArrayList<>();
         addresses.add(address);
         socketClient = new Options.Builder()
