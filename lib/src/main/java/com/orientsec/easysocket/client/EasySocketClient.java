@@ -1,6 +1,8 @@
 package com.orientsec.easysocket.client;
 
 
+import static java.util.Objects.requireNonNull;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -23,7 +25,6 @@ import com.orientsec.easysocket.task.TaskManager;
 import com.orientsec.easysocket.task.TaskManagerImpl;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Executor;
@@ -84,8 +85,9 @@ public class EasySocketClient extends BaseSocketClient {
     private int state = STATE_ACTIVE;
     private long activeTimestamp; // Timestamp of the last activation (e.g., a request was made).
     private SocketSession session; // Represents the current socket session.
+    private Address currentAddress; // The currently active server address.
     private List<Address> addressList; // List of server addresses.
-    private boolean initializing; // Indicates if initialization is in progress.
+    private boolean isInitializing; // Indicates if initialization is in progress.
     private int failedTimes = 0; // Number of connection failures (excluding disconnections).
     private int addressIndex; // Index of the current server in the address list.
     private long sessionId; // Unique identifier for the session.
@@ -172,6 +174,27 @@ public class EasySocketClient extends BaseSocketClient {
     }
 
     /**
+     * Sets the list of server addresses.
+     * If the client is currently initializing, the address list is set and initialization is
+     * finished.
+     *
+     * @param addressList The list of addresses to be set.
+     */
+    @Override
+    public void setAddressList(@NonNull List<Address> addressList) {
+        if (addressList.isEmpty())
+            throw new IllegalArgumentException("address list must not be empty");
+        mainExecutor.execute(() -> {
+            addressIndex = 0;
+            this.addressList = addressList;
+            if (isInitializing) {
+                isInitializing = false;
+                onStart();
+            }
+        });
+    }
+
+    /**
      * Starts the client. This method delegates to {@link #onStart(boolean)} with `true`.
      */
     @Override
@@ -197,7 +220,9 @@ public class EasySocketClient extends BaseSocketClient {
             activeTimestamp = System.currentTimeMillis();
         }
         if (session == null && initialize()) {
-            Address currentAddress = addressList.get(addressIndex);
+            if (currentAddress == null) {
+                currentAddress = addressList.get(addressIndex);
+            }
             session = new SocketSession(this, currentAddress, addressIndex, sessionId++);
             session.open();
         }
@@ -216,7 +241,7 @@ public class EasySocketClient extends BaseSocketClient {
     private boolean initialize() {
         if (addressList != null)
             return true; // Return true if the address list is already initialized.
-        if (initializing) {
+        if (isInitializing) {
             logger.d("client is initializing, just wait for the result");
             return false;
         }
@@ -224,9 +249,9 @@ public class EasySocketClient extends BaseSocketClient {
         addressList = options.getAddressList();
         if (addressList == null) {
             // Mark the client as initializing.
-            initializing = true;
+            isInitializing = true;
             // Ensure the ClientInitializer is not null.
-            Objects.requireNonNull(getClientInitializer())
+            requireNonNull(getClientInitializer())
                     .start(new InitializeEmitter()); // Start the initialization process.
             return false;
         }
@@ -243,9 +268,11 @@ public class EasySocketClient extends BaseSocketClient {
      * @param addressList The list of server addresses obtained during initialization.
      */
     private void onInitializeSuccess(List<Address> addressList) {
-        initializing = false;
-        this.addressList = addressList;
-        onStart();
+        if (isInitializing) {
+            isInitializing = false;
+            this.addressList = addressList;
+            onStart();
+        }
     }
 
     /**
@@ -258,8 +285,10 @@ public class EasySocketClient extends BaseSocketClient {
      * @param e The exception describing the reason for the initialization failure.
      */
     private void onInitializeFailure(EasyException e) {
-        initializing = false;
-        taskManager.reset(e);
+        if (isInitializing) {
+            isInitializing = false;
+            taskManager.reset(e);
+        }
     }
 
     /**
@@ -467,7 +496,8 @@ public class EasySocketClient extends BaseSocketClient {
         if (++failedTimes >= options.getRetryTimesPerAddress()) {
             failedTimes = 0;
             addressIndex = (addressIndex + 1) % addressList.size();
-            logger.i("switch to server: " + addressList.get(addressIndex));
+            currentAddress = addressList.get(addressIndex);
+            logger.i("switch to server: " + currentAddress);
         }
     }
 

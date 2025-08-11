@@ -108,4 +108,11 @@ public interface SocketClient extends TaskBuilder {
      */
     @Nullable
     List<Address> getAddressList();
+
+    /**
+     * Sets the list of server addresses.
+     *
+     * @param addressList The list of addresses to be set.
+     */
+    void setAddressList(@NonNull List<Address> addressList);
 }
