@@ -314,10 +314,12 @@ public class EasySocketClient extends BaseSocketClient {
         if (isShutdown()) return;
         logger.i("shutdown socket client");
         state = STATE_SHUTDOWN;
+        EasyException e = EasyException.create(ErrorCode.SHUTDOWN, ErrorType.SYSTEM,
+                session.getSuffix(), "socket client on shutdown");
         if (session != null) {
-            EasyException e = EasyException.create(ErrorCode.SHUTDOWN, ErrorType.SYSTEM,
-                    session.getSuffix(), "socket client on shutdown");
             session.close(e);
+        } else {
+            taskManager.reset(e);
         }
         EasySocket.getInstance().removeSocketClient(this);
     }

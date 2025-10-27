@@ -476,7 +476,7 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
                 // If data has already been sent, it cannot be reset
                 || hasSentData
                 // If the retry count has reached the maximum, it cannot be reset
-                || retryTimes > options.getTaskRetryTimes()
+                || retryTimes >= options.getTaskRetryTimes()
                 // If it is a system exception, it cannot be reset
                 || (t instanceof EasyException && ((EasyException) t).type == ErrorType.SYSTEM)) {
             onError(t);
