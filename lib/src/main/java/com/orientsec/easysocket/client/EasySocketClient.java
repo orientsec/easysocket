@@ -315,7 +315,7 @@ public class EasySocketClient extends BaseSocketClient {
         logger.i("shutdown socket client");
         state = STATE_SHUTDOWN;
         EasyException e = EasyException.create(ErrorCode.SHUTDOWN, ErrorType.SYSTEM,
-                session.getSuffix(), "socket client on shutdown");
+                suffix, "socket client on shutdown");
         if (session != null) {
             session.close(e);
         } else {
