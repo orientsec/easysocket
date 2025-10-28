@@ -301,7 +301,7 @@ public class EasySocketClient extends BaseSocketClient {
         state = STATE_SLEEP;
         if (session != null) {
             EasyException e = EasyException.create(ErrorCode.STOP, ErrorType.SYSTEM,
-                    session.getSuffix(), "socket client is stopped");
+                    "socket client is stopped", session.getSuffix());
             session.close(e);
         }
     }
@@ -315,7 +315,7 @@ public class EasySocketClient extends BaseSocketClient {
         logger.i("shutdown socket client");
         state = STATE_SHUTDOWN;
         EasyException e = EasyException.create(ErrorCode.SHUTDOWN, ErrorType.SYSTEM,
-                suffix, "socket client on shutdown");
+                "socket client on shutdown", suffix);
         if (session != null) {
             session.close(e);
         } else {
@@ -542,7 +542,7 @@ public class EasySocketClient extends BaseSocketClient {
             if (addressList.isEmpty()) {
                 logger.e("address list is empty");
                 EasyException e = EasyException.create(ErrorCode.INIT_FAILED, ErrorType.SYSTEM,
-                        suffix, "address list is empty");
+                        "address list is empty", suffix);
                 mainExecutor.execute(() -> onInitializeFailure(e));
             } else {
                 mainExecutor.execute(() -> onInitializeSuccess(addressList));
@@ -558,7 +558,7 @@ public class EasySocketClient extends BaseSocketClient {
         public void postFailure(@NonNull Throwable t) {
             logger.e("socket client initialize failed, error: " + t.getMessage());
             EasyException e = EasyException.create(ErrorCode.INIT_FAILED, ErrorType.SYSTEM,
-                    suffix, "socket client initialize failed", t);
+                    "socket client initialize failed", suffix, t);
             mainExecutor.execute(() -> onInitializeFailure(e));
         }
     }

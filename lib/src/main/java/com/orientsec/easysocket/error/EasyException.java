@@ -58,7 +58,7 @@ public class EasyException extends Exception {
     public String toString() {
         String message = getLocalizedMessage(); // Or getMessage()
         return String.format(Locale.getDefault(),
-                "%s (Code: %d, Type: %d)%s",
+                "%s (Code: %d, Type: %d) %s",
                 getClass().getName(),
                 code,
                 type,
@@ -79,7 +79,7 @@ public class EasyException extends Exception {
     public static EasyException create(int code, int type, String message, String suffix,
                                        Throwable cause) {
         String formattedMessage = String.format(Locale.getDefault(),
-                "%s (%d,%d)%s",
+                "%s (%d, %d) {%s}",
                 message,
                 type,
                 code,
@@ -99,7 +99,7 @@ public class EasyException extends Exception {
      */
     public static EasyException create(int code, int type, String message, String suffix) {
         String formattedMessage = String.format(Locale.getDefault(),
-                "%s (%d,%d)%s",
+                "%s (%d, %d) {%s}",
                 message,
                 type,
                 code,

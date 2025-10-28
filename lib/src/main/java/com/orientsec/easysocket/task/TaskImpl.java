@@ -308,7 +308,7 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
         BaseSocketClient socketClient = this.socketClient;
         if (socketClient.isShutdown()) {
             Throwable t = EasyException.create(ErrorCode.SHUTDOWN, ErrorType.SYSTEM,
-                    socketClient.suffix, "Socket client is shutdown");
+                    "socket client is shutdown", socketClient.suffix);
             onError(t);
         } else {
             callback.onStart();
@@ -349,7 +349,7 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
             data = request.encode(taskId);
             if (data.length == 0) {
                 Throwable t = EasyException.create(ErrorCode.REQUEST_DATA_EMPTY,
-                        ErrorType.TASK, socketClient.suffix, "Request data is empty");
+                        ErrorType.TASK, "request data is empty", socketClient.suffix);
                 callback.onEncodeFailure(t);
                 mainExecutor.execute(() -> {
                     taskManager.removeTask(this);
@@ -420,7 +420,7 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
         isTiming = false;
         taskManager.removeTask(this);
         Throwable t = EasyException.create(ErrorCode.RESPONSE_TIME_OUT, ErrorType.TASK,
-                socketClient.suffix, "Response time out");
+                "response time out", socketClient.suffix);
         onError(t);
     }
 
