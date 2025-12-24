@@ -84,6 +84,7 @@ class QueuedWriter implements Writer {
         }
 
         OperableTask<?> nextTask = writingQueue.removeFirst();
+        nextTask.onSendStart();
         writeExecutor.execute(() -> write(nextTask));
     }
 
@@ -93,7 +94,6 @@ class QueuedWriter implements Writer {
      * @param task The task containing the data to be written.
      */
     private void write(OperableTask<?> task) {
-        mainExecutor.execute(task::onSendStart);
         try {
             OutputStream outputStream = socket.getOutputStream();
             outputStream.write(task.getData());
