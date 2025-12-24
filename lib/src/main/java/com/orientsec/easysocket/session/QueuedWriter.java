@@ -80,7 +80,7 @@ class QueuedWriter implements Writer {
      * If the queue is empty, marks the writer as not writing.
      */
     private void scheduleNextWrite() {
-        OperableTask<?> nextTask = writingQueue.peekFirst();
+        OperableTask<?> nextTask = writingQueue.pollFirst();
         if (nextTask == null) {
             isWriting = false;
         } else {
