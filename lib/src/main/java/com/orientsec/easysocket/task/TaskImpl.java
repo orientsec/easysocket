@@ -98,8 +98,6 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
     private final TaskManager taskManager;
     //  The session associated with this task.
     private OperableSession session;
-    // The writer responsible for writing the task to the socket.
-    private Writer writer;
     // Indicates whether the task has sent data to the socket.
     private boolean hasSentData;
     // The number of times the task has been retried.
@@ -280,7 +278,13 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
                 mainExecutor.remove(this);
             }
             taskManager.cancelTask(this);
-            if (writer != null) writer.cancel(this);
+            if (session != null) {
+                Writer writer = session.getWriter();
+                if (writer != null) {
+                    writer.cancel(this);
+                }
+                session = null;
+            }
             completeType = CompleteType.CANCELED;
             callback.onCanceled();
         }
@@ -374,8 +378,8 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
      */
     private void onSubmit() {
         if (isCompleted()) return;
-        writer = Objects.requireNonNull(session.getWriter());
-        writer.submit(this);
+        if (data.length == 0) return; // task has been reset
+        Objects.requireNonNull(session.getWriter()).submit(this);
     }
 
     /**
@@ -463,6 +467,7 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
         if (!isCompleted()) {
             response = res;
             completeType = CompleteType.SUCCESS;
+            session = null;
             callback.onSuccess(res);
         }
     }
@@ -484,7 +489,8 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
         }
 
         retryTimes++;
-        data = null;
+        session = null;
+        data = new byte[0];
         callback.onReset(retryTimes, t);
         callback.onWait();
         return true;
@@ -504,6 +510,7 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
             }
             this.error = t;
             completeType = CompleteType.FAILURE;
+            session = null;
             callback.onFailure(t);
         }
     }

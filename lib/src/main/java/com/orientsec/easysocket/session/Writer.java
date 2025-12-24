@@ -1,5 +1,6 @@
 package com.orientsec.easysocket.session;
 
+import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.task.OperableTask;
@@ -15,6 +16,7 @@ public interface Writer {
      *
      * @param task The task to be submitted, must not be null.
      */
+    @MainThread
     void submit(@NonNull OperableTask<?> task);
 
     /**
@@ -22,5 +24,6 @@ public interface Writer {
      *
      * @param task The task to be canceled.
      */
+    @MainThread
     void cancel(OperableTask<?> task);
 }

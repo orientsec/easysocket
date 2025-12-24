@@ -66,10 +66,12 @@ class QueuedWriter implements Writer {
      * @param task The task to be added to the queue.
      */
     private void enqueue(@NonNull OperableTask<?> task) {
-        writingQueue.add(task);
-        if (!isWriting) {
+        if (isWriting) {
+            writingQueue.add(task); // Adds task to the writing queue
+        } else {
             isWriting = true;
-            scheduleNextWrite();
+            task.onSendStart();
+            writeExecutor.execute(() -> write(task));
         }
     }
 
@@ -78,14 +80,13 @@ class QueuedWriter implements Writer {
      * If the queue is empty, marks the writer as not writing.
      */
     private void scheduleNextWrite() {
-        if (writingQueue.isEmpty()) {
+        OperableTask<?> nextTask = writingQueue.peekFirst();
+        if (nextTask == null) {
             isWriting = false;
-            return;
+        } else {
+            nextTask.onSendStart();
+            writeExecutor.execute(() -> write(nextTask));
         }
-
-        OperableTask<?> nextTask = writingQueue.removeFirst();
-        nextTask.onSendStart();
-        writeExecutor.execute(() -> write(nextTask));
     }
 
     /**
@@ -98,7 +99,11 @@ class QueuedWriter implements Writer {
             OutputStream outputStream = socket.getOutputStream();
             outputStream.write(task.getData());
             outputStream.flush();
-            mainExecutor.execute(task::onSendSuccess);
+            mainExecutor.execute(() -> {
+                task.onSendSuccess();
+                // Schedules the next write operation on the main thread
+                scheduleNextWrite();
+            });
         } catch (IOException e) {
             session.getLogger().w("socket write error ", e);
             EasyException ex = EasyException.create(ErrorCode.WRITE_ERROR, ErrorType.CONNECT,
@@ -107,9 +112,6 @@ class QueuedWriter implements Writer {
                 task.onSendFailure(ex);
                 session.close(ex);
             });
-        } finally {
-            // Schedules the next write operation on the main thread
-            mainExecutor.execute(this::scheduleNextWrite);
         }
     }
 
