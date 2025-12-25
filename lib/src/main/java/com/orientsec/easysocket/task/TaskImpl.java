@@ -2,9 +2,9 @@ package com.orientsec.easysocket.task;
 
 import androidx.annotation.NonNull;
 
+import com.orientsec.easysocket.EasyExecutor;
 import com.orientsec.easysocket.Options;
 import com.orientsec.easysocket.Packet;
-import com.orientsec.easysocket.EasyExecutor;
 import com.orientsec.easysocket.client.BaseSocketClient;
 import com.orientsec.easysocket.error.EasyException;
 import com.orientsec.easysocket.error.ErrorCode;
@@ -13,7 +13,6 @@ import com.orientsec.easysocket.request.Request;
 import com.orientsec.easysocket.session.OperableSession;
 import com.orientsec.easysocket.session.Writer;
 
-import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -97,9 +96,11 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
     // The task manager responsible for managing this task.
     private final TaskManager taskManager;
     //  The session associated with this task.
-    private OperableSession session;
+    private final OperableSession session;
     // Indicates whether the task has sent data to the socket.
     private boolean hasSentData;
+    // The number of attempts made to send data to the socket.
+    private int attempt = 0;
     // The number of times the task has been retried.
     private int retryTimes = 0;
 
@@ -278,16 +279,20 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
                 mainExecutor.remove(this);
             }
             taskManager.cancelTask(this);
-            if (session != null) {
-                Writer writer = session.getWriter();
-                if (writer != null) {
-                    writer.cancel(this);
-                }
-                session = null;
+            Writer writer = getWriter();
+            if (writer != null) {
+                writer.cancel(this);
             }
             completeType = CompleteType.CANCELED;
             callback.onCanceled();
         }
+    }
+
+    private Writer getWriter() {
+        if (session != null) return session.getWriter(); //PULSE or INITIALIZE
+        OperableSession session = socketClient.getSession();
+        if (session != null && session.isAvailable()) return session.getWriter();
+        return null;
     }
 
     /**
@@ -320,14 +325,13 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
             if (taskType == TaskType.REQUEST) {
                 socketClient.start();
                 if (socketClient.isAvailable()) {
-                    this.session = Objects.requireNonNull(socketClient.getSession());
-                    codecExecutor.execute(this::onEncode);
+                    encode();
                 } else {
                     taskManager.addTaskToWaitingQueue(this);
                     callback.onWait();
                 }
             } else {
-                codecExecutor.execute(this::onEncode);
+                encode();
             }
         }
     }
@@ -338,19 +342,23 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
     @Override
     public void onResume() {
         if (isCompleted()) return;
-        this.session = Objects.requireNonNull(socketClient.getSession());
         callback.onResume();
-        codecExecutor.execute(this::onEncode);
+        encode();
+    }
+
+    private void encode() {
+        int attempt = ++this.attempt;
+        codecExecutor.execute(() -> onEncode(attempt));
     }
 
     /**
      * Encodes the request message. This is executed on the codec thread.
      * If encoding fails, the task is marked as failed and the error is reported.
      */
-    private void onEncode() {
+    private void onEncode(int attempt) {
         callback.onEncodeStart();
         try {
-            data = request.encode(taskId);
+            byte[] data = request.encode(taskId);
             if (data.length == 0) {
                 Throwable t = EasyException.create(ErrorCode.REQUEST_DATA_EMPTY,
                         ErrorType.TASK, "request data is empty", socketClient.suffix);
@@ -361,7 +369,7 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
                 });
             } else {
                 callback.onEncodeSuccess();
-                mainExecutor.execute(this::onSubmit);
+                mainExecutor.execute(() -> onSubmit(attempt, data));
             }
         } catch (Throwable t) {
             callback.onEncodeFailure(t);
@@ -376,10 +384,13 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
      * Submits the task to the writer for execution.
      * This method is called after the request data has been successfully encoded.
      */
-    private void onSubmit() {
+    private void onSubmit(int attempt, byte[] data) {
         if (isCompleted()) return;
-        if (data.length == 0) return; // task has been reset
-        Objects.requireNonNull(session.getWriter()).submit(this);
+        if (attempt != this.attempt) return; // task has resumed, ignore this submit
+        Writer writer = getWriter();
+        if (writer == null) return; // session is closed
+        this.data = data;
+        writer.submit(this);
     }
 
     /**
@@ -467,7 +478,6 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
         if (!isCompleted()) {
             response = res;
             completeType = CompleteType.SUCCESS;
-            session = null;
             callback.onSuccess(res);
         }
     }
@@ -489,7 +499,6 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
         }
 
         retryTimes++;
-        session = null;
         data = new byte[0];
         callback.onReset(retryTimes, t);
         callback.onWait();
@@ -510,7 +519,6 @@ public class TaskImpl<T> implements OperableTask<T>, Runnable {
             }
             this.error = t;
             completeType = CompleteType.FAILURE;
-            session = null;
             callback.onFailure(t);
         }
     }
