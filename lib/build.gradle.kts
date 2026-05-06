@@ -1,0 +1,48 @@
+plugins {
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.maven.publish)
+}
+
+android {
+    namespace = "com.orientsec.easysocket"
+    compileSdk = 36
+    defaultConfig {
+        minSdk = 24
+        lint.targetSdk = 35
+
+        testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
+
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation(libs.androidx.annotation)
+    implementation(libs.androidx.lifecycle.common.jvm)
+    implementation(libs.androidx.lifecycle.process)
+    testImplementation(libs.junit)
+}
+
+publishing {
+    publications {
+        register<MavenPublication>("release") {
+            groupId = "com.orientsec"
+            artifactId = "easysocket"
+            version = "1.0.0"
+            afterEvaluate {
+                from(components["release"])
+            }
+        }
+    }
+}

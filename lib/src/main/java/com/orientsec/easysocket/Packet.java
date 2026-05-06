@@ -1,27 +1,36 @@
 package com.orientsec.easysocket;
 
-
 import androidx.annotation.NonNull;
 
 import com.orientsec.easysocket.request.Request;
 
-
 /**
- * Product: EasySocket
- * Package: com.orientsec.easysocket
- * Time: 2017/12/26 9:13
- * Author: Fredric
- * coding is art not science
+ * Represents a data packet used in the EasySocket library.
+ * A `Packet` encapsulates the task ID, message body, and message type,
+ * and is used for communication between the client and server.
  */
-
 public class Packet {
 
+    /**
+     * Constructs a `Packet` with the specified packet type, task ID, and body.
+     *
+     * @param packetType The type of the packet, indicating its purpose or category.
+     * @param taskId     The unique identifier for the task associated with this packet.
+     * @param body       The content of the packet, which can be of any type.
+     */
     public Packet(@NonNull PacketType packetType, int taskId, @NonNull Object body) {
         this.taskId = taskId;
         this.packetType = packetType;
         this.body = body;
     }
 
+    /**
+     * Constructs a `Packet` with the specified packet type and body.
+     * The task ID is set to 0 by default.
+     *
+     * @param packetType The type of the packet, indicating its purpose or category.
+     * @param body       The content of the packet, which can be of any type.
+     */
     public Packet(@NonNull PacketType packetType, @NonNull Object body) {
         this.packetType = packetType;
         this.body = body;
@@ -29,37 +38,38 @@ public class Packet {
     }
 
     /**
-     * 消息id
+     * The unique identifier for the task associated with this packet.
      */
     private final int taskId;
+
     /**
-     * 包体
+     * The content of the packet, which can be of any type.
      */
     @NonNull
     private final Object body;
 
     /**
-     * 消息类型
+     * The type of the packet, indicating its purpose or category.
      */
     @NonNull
     private final PacketType packetType;
 
     /**
-     * 获取任务id
-     * 每一个任务的id是唯一的，通过taskId，客户端可以匹配每个请求的返回
+     * Retrieves the task ID of the packet.
+     * Each task ID is unique, allowing the client to match requests with their responses.
      *
-     * @return taskId
+     * @return The task ID of the packet.
      */
     public int getTaskId() {
         return taskId;
     }
 
     /**
-     * 获取包体内容，类型可以自定义。
-     * 在业务层{@link Request#decode(Packet)} (Object)}进行解码、反序列化。
-     * 可以根据自定义协议，返回任意类型的结构。
+     * Retrieves the content of the packet.
+     * The content type is customizable and can be decoded or deserialized
+     * in the business layer using {@link Request#decode(Packet)}.
      *
-     * @return 协议消息体
+     * @return The body of the packet.
      */
     @NonNull
     public Object getBody() {
@@ -67,22 +77,26 @@ public class Packet {
     }
 
     /**
-     * 获取消息类型
+     * Retrieves the type of the packet.
      *
-     * @return 消息类型
+     * @return The type of the packet.
      */
     @NonNull
     public PacketType getPacketType() {
         return packetType;
     }
 
+    /**
+     * Returns a string representation of the packet, including its task ID, body, and type.
+     *
+     * @return A string representation of the packet.
+     */
     @Override
     @NonNull
     public String toString() {
-        return "Packet{" +
-                "taskId=" + taskId +
-                ", body=" + body +
+        return "[Packet: taskId=" + taskId +
+                ", bodyType=" + body.getClass().getSimpleName() +
                 ", packetType=" + packetType +
-                '}';
+                "]";
     }
 }

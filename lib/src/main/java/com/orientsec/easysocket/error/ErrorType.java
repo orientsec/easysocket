@@ -1,20 +1,35 @@
 package com.orientsec.easysocket.error;
 
+/**
+ * Defines various error types used in the EasySocket library.
+ * These error types categorize different kinds of issues that may occur
+ * during the operation of the system, such as system state errors,
+ * connection errors, and task-related errors.
+ */
 public class ErrorType {
     /**
-     * 各类系统状态错误：
-     * 1.连接被主动断开，如：app进入后台超过设置的休眠时间，或者主动调用shutdown。
-     * 2.请求task数量超限，任务无法处理。
+     * Represents system state errors.
+     * This includes:
+     * 1. Connection actively disconnected, e.g., when the app enters the background
+     * for a duration exceeding the configured sleep time, or when shutdown is called explicitly.
      */
     public static final int SYSTEM = 1;
+
     /**
-     * 服务器连接错误。
-     * 包括socket连接，数据校验失败，包头解析失败，魔法数不匹配
-     * 等各类问题导致连接断开。
+     * Represents server connection errors.
+     * This includes issues such as:
+     * - Socket connection failures.
+     * - Data validation failures.
+     * - Header parsing failures.
+     * - Mismatched magic numbers.
+     * These issues typically result in the connection being terminated.
      */
     public static final int CONNECT = 2;
+
     /**
-     * 无响应
+     * Represents task-related errors where no response is received.
+     * This error type is used when a task fails to get a response
+     * due to issues such as timeouts or unprocessed requests.
      */
-    public static final int RESPONSE = 3;
+    public static final int TASK = 3;
 }

@@ -14,22 +14,14 @@ public class SimpleRequest extends Request<String> {
     private final String param;
 
     SimpleRequest(String param, Session session) {
-        this.cmd = 2;
-        this.session = session;
-        this.param = param;
+        this(2, param, session);
     }
 
-    public SimpleRequest(String param, int cmd, Session session) {
-        this.cmd = cmd;
-        this.session = session;
-        this.param = param;
-    }
 
-    public SimpleRequest(String param, int cmd, boolean init, Session session) {
-        super(init ? INITIALIZE : 0);
-        this.cmd = cmd;
-        this.session = session;
+    public SimpleRequest(int cmd, String param, Session session) {
         this.param = param;
+        this.session = session;
+        this.cmd = cmd;
     }
 
     @Override

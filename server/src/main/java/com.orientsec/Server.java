@@ -6,13 +6,6 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
-/**
- * Product: EasySocket
- * Package: com.orientsec
- * Time: 2018/01/25 09:32
- * Author: Fredric
- * coding is art not science
- */
 public class Server {
     public void start(int port) {
         EventLoopGroup bossGroup = new NioEventLoopGroup();
@@ -29,6 +22,7 @@ public class Server {
             ChannelFuture channelFuture = serverBootstrap.bind(port).sync();
             channelFuture.channel().closeFuture().sync();
         } catch (Exception e) {
+            System.out.println("ServerBootstrap error");
             e.printStackTrace();
         } finally {
             workerGroup.shutdownGracefully();
@@ -44,6 +38,7 @@ public class Server {
         @Override
         protected void initChannel(T channel) throws Exception {
             channel.pipeline().addLast(new LengthFieldBasedFrameDecoder(200 * 1024, 0, 4, 12, 4));
+            channel.pipeline().addLast(new ConnectHandler());
             channel.pipeline().addLast(new ServerHandler());
         }
 

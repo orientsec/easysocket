@@ -3,7 +3,7 @@ package com.orientsec.easysocket.demo.client;
 import com.orientsec.easysocket.HeadParser;
 import com.orientsec.easysocket.PacketType;
 
-class MyHead extends HeadParser.Head {
+public class MyHead extends HeadParser.Head {
     private final int taskId;
     private final PacketType packetType;
 

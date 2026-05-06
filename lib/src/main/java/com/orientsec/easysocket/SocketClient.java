@@ -3,106 +3,116 @@ package com.orientsec.easysocket;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.orientsec.easysocket.client.Session;
+import com.orientsec.easysocket.session.Session;
 import com.orientsec.easysocket.push.PushManager;
-import com.orientsec.easysocket.task.TaskFactory;
+import com.orientsec.easysocket.task.TaskBuilder;
 import com.orientsec.easysocket.utils.Logger;
 
 import java.util.List;
 
-
 /**
- * Product: EasySocket
- * Package: com.orientsec.easysocket
- * Time: 2017/12/27 14:03
- * Author: Fredric
- * coding is art not science
+ * This interface defines the contract for a socket client.
+ * It extends the {@link TaskBuilder} interface, allowing for the creation and execution of tasks.
+ * The SocketClient provides methods for managing the connection lifecycle (start, stop, shutdown),
+ * checking connection status (isShutdown, isConnected, isAvailable),
+ * managing connection listeners, accessing the push manager, options, logger, session, and address
+ * list.
  */
-public interface SocketClient extends TaskFactory {
+public interface SocketClient extends TaskBuilder {
     /**
-     * 启动连接, 如果连接已经启动，无效果。
+     * Starts and active the connection. If the connection is already started, this has no effect.
      */
     void start();
 
     /**
-     * 停止当前连接。
+     * Stops the current connection.
      */
     void stop();
 
     /**
-     * 关闭连接, 连接关闭之后不再可用。
+     * Shuts down the connection. After shutdown, the connection is no longer available.
      */
     void shutdown();
 
     /**
-     * 连接是否关闭
+     * Checks if the connection is shut down.
      *
-     * @return 连接是否关闭
+     * @return True if the connection is shut down, false otherwise.
      */
     boolean isShutdown();
 
     /**
-     * 是否连接
+     * Checks if the client is connected.
      *
-     * @return 是否连接
+     * @return True if the client is connected, false otherwise.
      */
     boolean isConnected();
 
     /**
-     * 连接是否可达
+     * Checks if the connection is available.
      *
-     * @return 是否可达
+     * @return True if the connection is available, false otherwise.
      */
     boolean isAvailable();
 
     /**
-     * 添加连接事件监听器
+     * Adds a connection event listener.
      *
-     * @param listener 监听器
+     * @param listener The listener to be added.
      */
-    void addConnectListener(@NonNull ConnectionListener listener);
+    void addConnectionListener(@NonNull ConnectionListener listener);
 
     /**
-     * 移除连接事件监听器
+     * Removes a connection event listener.
      *
-     * @param listener 监听器
+     * @param listener The listener to be removed.
      */
-    void removeConnectListener(@NonNull ConnectionListener listener);
+    void removeConnectionListener(@NonNull ConnectionListener listener);
 
     /**
-     * 获取推送管理器
+     * Retrieves the push manager associated with the client.
      *
-     * @return 推送管理器。
+     * @return The push manager, or null if not available.
      */
-    @NonNull
+    @Nullable
     PushManager<?, ?> getPushManager();
 
     /**
-     * 获取当前连接所属的EasySocket。
+     * Retrieves the options associated with the current connection.
      *
-     * @return EasySocket。
+     * @return The options object.
      */
     @NonNull
     Options getOptions();
 
     /**
-     * 获取客户端Logger。
+     * Retrieves the logger for the client.
      *
-     * @return Logger。
+     * @return The logger instance.
      */
+    @NonNull
     Logger getLogger();
 
     /**
-     * 获取当前连接会话。
+     * Retrieves the current session of the connection.
      *
-     * @return 当前session。
+     * @return The current session, or null if no session exists.
      */
     @Nullable
     Session getSession();
 
     /**
-     * @return 站点列表。
+     * Retrieves the list of server addresses.
+     *
+     * @return The list of addresses, or null if not available.
      */
     @Nullable
     List<Address> getAddressList();
+
+    /**
+     * Sets the list of server addresses.
+     *
+     * @param addressList The list of addresses to be set.
+     */
+    void setAddressList(@NonNull List<Address> addressList);
 }
