@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.maven.publish)
 }
 
@@ -31,6 +32,7 @@ dependencies {
     implementation(libs.androidx.annotation)
     implementation(libs.androidx.lifecycle.common.jvm)
     implementation(libs.androidx.lifecycle.process)
+    implementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.junit)
 }
 
