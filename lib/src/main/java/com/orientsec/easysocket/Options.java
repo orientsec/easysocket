@@ -116,6 +116,11 @@ public class Options {
     private final int connectTimeOutInMills;
 
     /**
+     * The timeout duration (in seconds) for io read and write.
+     */
+    private final int soTimeOutInMills;
+
+    /**
      * The frequency (in seconds) of heartbeat messages.
      */
     private final int pulseIntervalInSec;
@@ -181,6 +186,7 @@ public class Options {
         maxReadSizeInKB = builder.maxReadSizeInKB;
         requestTimeOutInMills = builder.requestTimeOutInMills;
         connectTimeOutInMills = builder.connectTimeOutInMills;
+        soTimeOutInMills = builder.soTimeOutInMills;
         pulseIntervalInSec = builder.pulseDurationInSec;
         pulseMaxLostTimes = builder.pulseMaxLostTimes;
         backgroundActiveDurationInSec = builder.backgroundActiveDurationInSec;
@@ -262,6 +268,10 @@ public class Options {
 
     public int getConnectTimeOutInMills() {
         return connectTimeOutInMills;
+    }
+
+    public int getSoTimeOutInMills() {
+        return soTimeOutInMills;
     }
 
     public int getRetryTimesPerAddress() {
@@ -369,6 +379,8 @@ public class Options {
         private int requestTimeOutInMills = 5000;
         // Timeout duration (in milliseconds) for connections.
         private int connectTimeOutInMills = 5000;
+        // Timeout duration (in milliseconds) for io.
+        private int soTimeOutInMills = 5000;
         // Frequency (in seconds) of heartbeat messages.
         private int pulseDurationInSec = 60;
         // Number of consecutive heartbeat failures allowed.
@@ -612,6 +624,21 @@ public class Options {
                 throw new IllegalArgumentException("Connect time out must be positive.");
             }
             connectTimeOutInMills = val;
+            return this;
+        }
+
+        /**
+         * Sets the timeout duration (in milliseconds) for connections.
+         *
+         * @param val The timeout duration to set.
+         * @return This builder instance for chaining.
+         * @throws IllegalArgumentException If the value is not positive.
+         */
+        public Builder soTimeOutInMills(int val) {
+            if (val <= 0) {
+                throw new IllegalArgumentException("So time out must be positive.");
+            }
+            soTimeOutInMills = val;
             return this;
         }
 

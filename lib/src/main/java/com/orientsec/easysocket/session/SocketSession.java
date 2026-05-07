@@ -345,6 +345,7 @@ public class SocketSession implements OperableSession, Runnable {
         TrafficStats.setThreadStatsTag(options.getConnectStatsTag());
         try {
             Socket socket = socketClient.getSocketFactory().createSocket();
+            socket.setSoTimeout(options.getSoTimeOutInMills());
             // Disable Nagle's algorithm to send TCP packets immediately
             socket.setTcpNoDelay(true);
             socket.setKeepAlive(true);
