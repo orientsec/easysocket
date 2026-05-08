@@ -33,6 +33,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.constraint.layout)
     implementation(project(":lib"))
+    implementation(project(":lib-socket"))
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

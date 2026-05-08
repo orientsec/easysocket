@@ -1,50 +1,212 @@
 package com.orientsec.easysocket
 
+import com.orientsec.easysocket.client.ClientInitializer
+import com.orientsec.easysocket.push.PushManager
+import com.orientsec.easysocket.request.Decoder
+import com.orientsec.easysocket.request.Request
+import com.orientsec.easysocket.session.SessionFactory
+import com.orientsec.easysocket.session.SessionInitializer
+import com.orientsec.easysocket.session.ktor.KtorSessionFactory
+import com.orientsec.easysocket.utils.NoTrafficProfiler
+import com.orientsec.easysocket.utils.Platform
+import com.orientsec.easysocket.utils.TrafficProfiler
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 
 /**
  * Represents the configuration options for the EasySocket library.
+ * This class provides various settings for socket connections, including
+ * connection timeouts, heartbeat configurations, reconnection policies, and
+ * coroutine settings.
  */
 class Options private constructor(
     val name: String,
-    val debuggable: Boolean,
-    val addressList: List<Address>,
-    val requestTimeoutMillis: Long,
-    val connectTimeoutMillis: Long,
+    val isDebuggable: Boolean,
+    val minLogLevel: Int,
+    val pulseRequestProvider: Provider<Request<Boolean>>?,
+    val pulseDecoderProvider: Provider<Decoder<Boolean>>?,
+    val headParserProvider: Provider<HeadParser>,
+    val pushManagerProvider: Provider<PushManager<*, *>>?,
+    val clientInitializerProvider: Provider<ClientInitializer>?,
+    val sessionInitializerProvider: Provider<SessionInitializer>?,
+    val sessionFactory: SessionFactory,
+    val trafficProfiler: TrafficProfiler,
+    val codecDispatcher: CoroutineDispatcher,
+    val callbackDispatcher: CoroutineDispatcher,
+    val addressList: List<Address>?,
+    val maxReadSizeKb: Int,
+    val requestTimeoutMillis: Int,
+    val connectTimeoutMillis: Int,
     val pulseIntervalSeconds: Int,
     val pulseMaxLostTimes: Int,
-    val connectionDispatcher: CoroutineDispatcher,
-    val callbackDispatcher: CoroutineDispatcher
+    val backgroundActiveDurationSeconds: Int,
+    val reconnectPolicy: ReconnectPolicy,
+    val retryTimesPerAddress: Int,
+    val connectIntervalMillis: Int,
+    val connectStatsTag: Int,
+    val readStatsTag: Int,
+    val writeStatsTag: Int,
+    val taskRetryTimes: Int
 ) {
+
+    companion object {
+        /**
+         * DSL function for building [Options].
+         */
+        inline fun build(block: Builder.() -> Unit): Options = Builder().apply(block).build()
+    }
+
     class Builder {
-        private var name: String = ""
-        private var debuggable: Boolean = false
-        private var addressList: List<Address> = emptyList()
-        private var requestTimeoutMillis: Long = 5000
-        private var connectTimeoutMillis: Long = 5000
-        private var pulseIntervalSeconds: Int = 60
-        private var pulseMaxLostTimes: Int = 2
-        private var connectionDispatcher: CoroutineDispatcher = Dispatchers.Default
-        private var callbackDispatcher: CoroutineDispatcher = Dispatchers.Main
+        var name: String = ""
+        var isDebuggable: Boolean = false
+        var minLogLevel: Int = Platform.LogLevel.INFO
+            set(value) {
+                require(value >= 0) { "Minimum log level must be non-negative." }
+                field = value
+            }
 
-        fun name(name: String) = apply { this.name = name }
-        fun debuggable(debuggable: Boolean) = apply { this.debuggable = debuggable }
-        fun addressList(addressList: List<Address>) = apply { this.addressList = addressList }
-        fun requestTimeoutMillis(timeout: Long) = apply { this.requestTimeoutMillis = timeout }
-        fun connectTimeoutMillis(timeout: Long) = apply { this.connectTimeoutMillis = timeout }
-        fun pulseIntervalSeconds(interval: Int) = apply { this.pulseIntervalSeconds = interval }
-        fun pulseMaxLostTimes(times: Int) = apply { this.pulseMaxLostTimes = times }
-        fun connectionDispatcher(dispatcher: CoroutineDispatcher) = apply { this.connectionDispatcher = dispatcher }
-        fun callbackDispatcher(dispatcher: CoroutineDispatcher) = apply { this.callbackDispatcher = dispatcher }
+        var pulseRequestProvider: Provider<Request<Boolean>>? = null
+        var pulseDecoderProvider: Provider<Decoder<Boolean>>? = null
+        var headParserProvider: Provider<HeadParser>? = null
+        var pushManagerProvider: Provider<PushManager<*, *>>? = null
+        var clientInitializerProvider: Provider<ClientInitializer>? = null
+        var sessionInitializerProvider: Provider<SessionInitializer>? = null
+        var sessionFactory: SessionFactory? = null
+        var trafficProfiler: TrafficProfiler = NoTrafficProfiler
+        var codecDispatcher: CoroutineDispatcher = Dispatchers.Default
+        var callbackDispatcher: CoroutineDispatcher = Platform.mainDispatcher
 
+        var addressList: List<Address>? = null
+            set(value) {
+                require(value == null || value.isNotEmpty()) { "Address list cannot be empty." }
+                field = value
+            }
+
+        var maxReadSizeKb: Int = 1024
+            set(value) {
+                require(value > 0) { "Max read data size in KB must be positive." }
+                field = value
+            }
+
+        var requestTimeoutMillis: Int = 5000
+            set(value) {
+                require(value > 0) { "Request time out must be positive." }
+                field = value
+            }
+
+        var connectTimeoutMillis: Int = 5000
+            set(value) {
+                require(value > 0) { "Connect time out must be positive." }
+                field = value
+            }
+
+        var pulseIntervalSeconds: Int = 60
+            set(value) {
+                require(value >= 30) { "Pulse rate must be at least 30 seconds." }
+                field = value
+            }
+
+        var pulseMaxLostTimes: Int = 2
+            set(value) {
+                require(value >= 0) { "Pulse lost times cannot be negative." }
+                field = value
+            }
+
+        var backgroundActiveDurationSeconds: Int = 30
+            set(value) {
+                require(value >= 0) { "Live time must be positive." }
+                field = value
+            }
+
+        var reconnectPolicy: ReconnectPolicy = ReconnectPolicy.ACTIVE
+        var retryTimesPerAddress: Int = 0
+            set(value) {
+                require(value >= 0) { "Retry times cannot be negative." }
+                field = value
+            }
+
+        var connectIntervalMillis: Int = 3000
+            set(value) {
+                require(value > 1000) { "Connect interval must be greater than 1000 milliseconds." }
+                field = value
+            }
+
+        var connectStatsTag: Int = 0x1001
+        var readStatsTag: Int = 0x1002
+        var writeStatsTag: Int = 0x1003
+        var taskRetryTimes: Int = 2
+            set(value) {
+                require(value >= 0) { "Task retry times cannot be negative." }
+                field = value
+            }
+
+        /**
+         * Builds and returns an [Options] instance with the configured settings.
+         */
         fun build(): Options {
-            if (addressList.isEmpty()) throw IllegalArgumentException("Address list cannot be empty")
+            val headParser = headParserProvider
+                ?: throw IllegalArgumentException("Head parser provider has not been set.")
+            if (addressList == null && clientInitializerProvider == null) {
+                throw IllegalArgumentException(
+                    "address list or client initializer provider " +
+                            "should be set."
+                )
+            }
+
             return Options(
-                name, debuggable, addressList, requestTimeoutMillis,
-                connectTimeoutMillis, pulseIntervalSeconds, pulseMaxLostTimes,
-                connectionDispatcher, callbackDispatcher
+                name = name,
+                isDebuggable = isDebuggable,
+                minLogLevel = minLogLevel,
+                pulseRequestProvider = pulseRequestProvider,
+                pulseDecoderProvider = pulseDecoderProvider,
+                headParserProvider = headParser,
+                pushManagerProvider = pushManagerProvider,
+                clientInitializerProvider = clientInitializerProvider,
+                sessionInitializerProvider = sessionInitializerProvider,
+                sessionFactory = sessionFactory
+                    ?: throw IllegalArgumentException("Session factory must be set."),
+                trafficProfiler = trafficProfiler,
+                codecDispatcher = codecDispatcher,
+                callbackDispatcher = callbackDispatcher,
+                addressList = addressList,
+                maxReadSizeKb = maxReadSizeKb,
+                requestTimeoutMillis = requestTimeoutMillis,
+                connectTimeoutMillis = connectTimeoutMillis,
+                pulseIntervalSeconds = pulseIntervalSeconds,
+                pulseMaxLostTimes = pulseMaxLostTimes,
+                backgroundActiveDurationSeconds = backgroundActiveDurationSeconds,
+                reconnectPolicy = reconnectPolicy,
+                retryTimesPerAddress = retryTimesPerAddress,
+                connectIntervalMillis = connectIntervalMillis,
+                connectStatsTag = connectStatsTag,
+                readStatsTag = readStatsTag,
+                writeStatsTag = writeStatsTag,
+                taskRetryTimes = taskRetryTimes
             )
+        }
+
+        /**
+         * Configures the builder to use Ktor-based session factory.
+         */
+        fun useKtorDefaults(): Builder {
+            this.sessionFactory = KtorSessionFactory()
+            return this
+        }
+
+        /**
+         * Builds the options and opens a new [SocketClient].
+         */
+        fun open(): SocketClient {
+            return EasySocket.open(build())
         }
     }
 }
+
+/**
+ * The `Provider` interface defines a generic contract for providing instances of a specific type.
+ * Implementations of this interface are responsible for supplying objects, typically based on
+ * the provided `SocketClient` instance.
+ *
+ * @param T The type of object that this provider supplies.
+ */
+typealias Provider<T> = (SocketClient) -> T

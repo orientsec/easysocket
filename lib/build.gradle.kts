@@ -1,7 +1,43 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.maven.publish)
+}
+
+kotlin {
+    androidTarget {
+        publishLibraryVariants("release")
+    }
+    
+    // 增加编译器选项以压制 expect/actual class 警告
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
+    jvm()
+
+    sourceSets {
+        val commonMain by getting {
+            dependencies {
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.ktor.network)
+                implementation(libs.ktor.network.tls)
+            }
+        }
+        val commonTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
+        val androidMain by getting {
+            dependencies {
+                implementation(libs.androidx.annotation)
+                implementation(libs.androidx.lifecycle.common.jvm)
+                implementation(libs.androidx.lifecycle.process)
+            }
+        }
+        val jvmMain by getting
+    }
 }
 
 android {
@@ -9,31 +45,11 @@ android {
     compileSdk = 36
     defaultConfig {
         minSdk = 24
-        lint.targetSdk = 35
-
-        testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
-
     }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
-        }
-    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-}
-
-dependencies {
-    implementation(libs.androidx.annotation)
-    implementation(libs.androidx.lifecycle.common.jvm)
-    implementation(libs.androidx.lifecycle.process)
-    implementation(libs.kotlinx.coroutines.core)
-    testImplementation(libs.junit)
 }
 
 publishing {
@@ -42,9 +58,7 @@ publishing {
             groupId = "com.orientsec"
             artifactId = "easysocket"
             version = "1.0.0"
-            afterEvaluate {
-                from(components["release"])
-            }
+            // Multiplatform publishing is handled differently, usually done automatically for all targets
         }
     }
 }
