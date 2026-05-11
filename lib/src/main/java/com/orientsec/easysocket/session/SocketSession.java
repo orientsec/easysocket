@@ -345,7 +345,6 @@ public class SocketSession implements OperableSession, Runnable {
         TrafficStats.setThreadStatsTag(options.getConnectStatsTag());
         try {
             Socket socket = socketClient.getSocketFactory().createSocket();
-            socket.setSoTimeout(options.getSoTimeOutInMills());
             // Disable Nagle's algorithm to send TCP packets immediately
             socket.setTcpNoDelay(true);
             socket.setKeepAlive(true);
@@ -368,10 +367,12 @@ public class SocketSession implements OperableSession, Runnable {
 
             // STEP 3: SSL handshake
             if (socket instanceof SSLSocket) {
+                socket.setSoTimeout(options.getSslTimeOutInMills());
                 ((SSLSocket) socket).startHandshake();
                 currentTimeMillis = System.currentTimeMillis();
                 connectTimeMap.put(Period.SSL, currentTimeMillis - timestamp);
                 timestamp = currentTimeMillis;
+                socket.setSoTimeout(0);
             }
 
             // Total connection time

@@ -118,7 +118,7 @@ public class Options {
     /**
      * The timeout duration (in seconds) for io read and write.
      */
-    private final int soTimeOutInMills;
+    private final int sslTimeOutInMills;
 
     /**
      * The frequency (in seconds) of heartbeat messages.
@@ -186,7 +186,7 @@ public class Options {
         maxReadSizeInKB = builder.maxReadSizeInKB;
         requestTimeOutInMills = builder.requestTimeOutInMills;
         connectTimeOutInMills = builder.connectTimeOutInMills;
-        soTimeOutInMills = builder.soTimeOutInMills;
+        sslTimeOutInMills = builder.sslTimeOutInMills;
         pulseIntervalInSec = builder.pulseDurationInSec;
         pulseMaxLostTimes = builder.pulseMaxLostTimes;
         backgroundActiveDurationInSec = builder.backgroundActiveDurationInSec;
@@ -270,8 +270,8 @@ public class Options {
         return connectTimeOutInMills;
     }
 
-    public int getSoTimeOutInMills() {
-        return soTimeOutInMills;
+    public int getSslTimeOutInMills() {
+        return sslTimeOutInMills;
     }
 
     public int getRetryTimesPerAddress() {
@@ -380,7 +380,7 @@ public class Options {
         // Timeout duration (in milliseconds) for connections.
         private int connectTimeOutInMills = 5000;
         // Timeout duration (in milliseconds) for io.
-        private int soTimeOutInMills = 5000;
+        private int sslTimeOutInMills = 5000;
         // Frequency (in seconds) of heartbeat messages.
         private int pulseDurationInSec = 60;
         // Number of consecutive heartbeat failures allowed.
@@ -634,11 +634,11 @@ public class Options {
          * @return This builder instance for chaining.
          * @throws IllegalArgumentException If the value is not positive.
          */
-        public Builder soTimeOutInMills(int val) {
+        public Builder sslTimeOutInMills(int val) {
             if (val <= 0) {
                 throw new IllegalArgumentException("So time out must be positive.");
             }
-            soTimeOutInMills = val;
+            sslTimeOutInMills = val;
             return this;
         }
 
