@@ -4,23 +4,33 @@ import com.orientsec.easysocket.utils.Logger
 import kotlinx.coroutines.*
 
 /**
- * An abstract class that provides a looping mechanism for executing tasks using Coroutines.
- * This class manages the lifecycle of the loop within a [CoroutineScope].
+ * 循环读取的抽象基类，提供基于协程的循环读取机制。
+ *
+ * 在 [CoroutineScope] 中启动一个协程，持续执行 [read] 操作，
+ * 直到协程被取消或发生异常。适用于需要持续从 Socket 读取数据的场景。
+ *
+ * 生命周期：
+ * 1. [start] - 启动循环读取
+ * 2. [beforeLoop] -> [read] (循环) -> [loopFinish] - 读取流程
+ * 3. [shutdown] - 停止循环读取
+ *
+ * @param logger 日志记录器
+ * @param scope 协程作用域
  */
 abstract class LoopReader(private val logger: Logger, private val scope: CoroutineScope) : Reader {
-    // Job for managing the loop coroutine
+    /** 循环读取的协程任务 */
     private var job: Job? = null
 
-    // The number of times the loop has executed
+    /** 循环已执行的次数 */
     var loopTimes: Long = 0
         private set
 
-    // The error that caused the loop to stop, if any
+    /** 导致循环停止的错误，如果正常停止则为 null */
     protected var error: Throwable? = null
 
     /**
-     * Starts the loop within the provided [CoroutineScope].
-     * If the loop is already running, this method does nothing.
+     * 启动循环读取。
+     * 如果循环已在运行，则不执行任何操作。
      */
     @Synchronized
     override fun start() {
@@ -35,7 +45,8 @@ abstract class LoopReader(private val logger: Logger, private val scope: Corouti
     }
 
     /**
-     * The main loop logic executed in the coroutine.
+     * 循环读取的主逻辑。
+     * 依次执行 [beforeLoop]、循环 [read]，最后执行 [loopFinish]。
      */
     private suspend fun runLoop() {
         try {
@@ -45,11 +56,14 @@ abstract class LoopReader(private val logger: Logger, private val scope: Corouti
                 loopTimes++
             }
         } catch (_: CancellationException) {
+            // 协程被取消，正常退出
             logger.d("${javaClass.simpleName} was cancelled")
         } catch (t: Throwable) {
+            // 发生异常，记录错误
             error = t
             logger.w("${javaClass.simpleName} is shutting down by error ", t)
         } finally {
+            // 确保循环结束回调一定被执行
             withContext(NonCancellable) {
                 loopFinish()
             }
@@ -57,20 +71,23 @@ abstract class LoopReader(private val logger: Logger, private val scope: Corouti
     }
 
     /**
-     * Called before the loop starts.
+     * 循环开始前的初始化操作。
+     * 子类可在此方法中执行初始化逻辑，如打开输入流等。
      *
-     * @throws Exception If an error occurs during setup.
+     * @throws Exception 如果初始化过程中发生错误
      */
     @Throws(Exception::class)
     protected abstract fun beforeLoop()
 
     /**
-     * Called when the loop finishes.
+     * 循环结束后的清理操作。
+     * 无论是正常结束还是异常结束，此方法都会被调用。
+     * 子类可在此方法中执行资源释放、错误通知等操作。
      */
     protected abstract fun loopFinish()
 
     /**
-     * Stops the loop and cancels the coroutine.
+     * 停止循环读取，取消协程任务。
      */
     @Synchronized
     override fun shutdown() {
@@ -79,9 +96,9 @@ abstract class LoopReader(private val logger: Logger, private val scope: Corouti
     }
 
     /**
-     * Checks whether the loop is currently running.
+     * 检查循环是否正在运行。
      *
-     * @return `true` if the loop is running, `false` otherwise.
+     * @return true 如果循环正在运行
      */
     fun isRunning(): Boolean {
         return job?.isActive == true
