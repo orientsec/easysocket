@@ -153,6 +153,7 @@ object EasySocket {
         networkObserver?.stop()
         lifecycleObserver?.stop()
         scope.cancel()
+        dispatcher.close()
         networkObserver = null
         lifecycleObserver = null
     }

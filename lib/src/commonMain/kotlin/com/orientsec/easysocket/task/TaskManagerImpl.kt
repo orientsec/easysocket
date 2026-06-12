@@ -15,6 +15,8 @@ import com.orientsec.easysocket.utils.Logger
  * 5. 连接断开时重置任务状态
  * 6. 连接可用时恢复等待中的任务
  *
+ * 所有调用均通过单线程调度器串行执行，无需同步机制。
+ *
  * @param logger 日志记录器
  */
 class TaskManagerImpl(private val logger: Logger) : TaskManager {
@@ -29,11 +31,9 @@ class TaskManagerImpl(private val logger: Logger) : TaskManager {
 
     /**
      * 生成唯一的任务 ID。
-     * 使用自增计数器确保唯一性。
      *
      * @return 新的任务 ID
      */
-    @Synchronized
     override fun generateTaskId(): Int {
         return ++uniqueTaskId
     }
@@ -45,7 +45,6 @@ class TaskManagerImpl(private val logger: Logger) : TaskManager {
      *
      * @param packet 接收到的响应包
      */
-    @Synchronized
     override fun handlePacket(packet: Packet) {
         val task = taskMap.remove(packet.taskId)
         if (task != null) {
@@ -63,7 +62,6 @@ class TaskManagerImpl(private val logger: Logger) : TaskManager {
      *
      * @param e 导致重置的异常
      */
-    @Synchronized
     override fun reset(e: EasyException) {
         val tasksToKeep: MutableMap<Int, TaskImpl<*>> = mutableMapOf()
         for ((key, task) in taskMap) {
@@ -74,7 +72,6 @@ class TaskManagerImpl(private val logger: Logger) : TaskManager {
         taskMap.clear()
         taskMap.putAll(tasksToKeep)
 
-        // 清空等待队列，将可重试的任务重新加入
         waitingQueue.clear()
         waitingQueue.addAll(tasksToKeep.values)
     }
@@ -84,7 +81,6 @@ class TaskManagerImpl(private val logger: Logger) : TaskManager {
      * 恢复所有等待队列中的任务。
      * 在连接成功并完成初始化后调用。
      */
-    @Synchronized
     override fun ready() {
         while (waitingQueue.isNotEmpty()) {
             val task = waitingQueue.removeFirst()
@@ -98,7 +94,6 @@ class TaskManagerImpl(private val logger: Logger) : TaskManager {
      *
      * @param task 要等待的任务
      */
-    @Synchronized
     override fun addTaskToWaitingQueue(task: TaskImpl<*>) {
         waitingQueue.addLast(task)
     }
@@ -108,7 +103,6 @@ class TaskManagerImpl(private val logger: Logger) : TaskManager {
      *
      * @param task 要添加的任务
      */
-    @Synchronized
     override fun addTask(task: TaskImpl<*>) {
         taskMap[task.taskId] = task
     }
@@ -118,7 +112,6 @@ class TaskManagerImpl(private val logger: Logger) : TaskManager {
      *
      * @param task 要移除的任务
      */
-    @Synchronized
     override fun removeTask(task: Task<*>) {
         taskMap.remove(task.taskId)
     }
@@ -129,11 +122,9 @@ class TaskManagerImpl(private val logger: Logger) : TaskManager {
      *
      * @param task 要取消的任务
      */
-    @Synchronized
     override fun cancelTask(task: TaskImpl<*>) {
         val removeFromTaskMap = taskMap.remove(task.taskId) != null
         val removeFromWaitingQueue = waitingQueue.remove(task)
-
         logger.i(
             "cancel task: " + task.taskId +
                     " removed from task map: " + removeFromTaskMap +

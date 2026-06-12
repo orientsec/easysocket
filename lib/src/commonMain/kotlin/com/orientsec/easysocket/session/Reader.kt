@@ -16,5 +16,9 @@ interface Reader {
     @Throws(Exception::class)
     suspend fun read()
 
+    /**
+     * Shuts down the reader and releases any associated resources.
+     * This method is responsible for stopping the message processing and cleaning up.
+     */
     fun shutdown()
 }

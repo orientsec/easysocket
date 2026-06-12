@@ -27,13 +27,13 @@ actual object Platform {
 
     /** JVM 平台的日志级别常量，尚未实现 */
     actual object LogLevel {
-        actual const val DEBUG: Int
+        actual val DEBUG: Int
             get() = TODO("Not yet implemented")
-        actual const val INFO: Int
+        actual val INFO: Int
             get() = TODO("Not yet implemented")
-        actual const val WARN: Int
+        actual val WARN: Int
             get() = TODO("Not yet implemented")
-        actual const val ERROR: Int
+        actual val ERROR: Int
             get() = TODO("Not yet implemented")
     }
 }

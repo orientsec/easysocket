@@ -9,7 +9,14 @@ import com.orientsec.easysocket.error.ErrorType
 import com.orientsec.easysocket.request.Request
 import com.orientsec.easysocket.session.OperableSession
 import com.orientsec.easysocket.session.Writer
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * 请求任务的实现类，基于 Kotlin 协程实现。
@@ -27,12 +34,15 @@ import kotlinx.coroutines.*
  *
  * @param T 响应数据类型
  */
+@OptIn(ExperimentalAtomicApi::class)
 class TaskImpl<T> : OperableTask<T> {
     /** 是否已执行过，防止重复执行 */
-    private var executed = false
+    private val executed = AtomicBoolean(false)
 
     /** 所属的 Socket 客户端 */
     private val socketClient: BaseSocketClient
+
+    private val scope: CoroutineScope
 
     /** 请求对象 */
     private val request: Request<T>
@@ -74,7 +84,7 @@ class TaskImpl<T> : OperableTask<T> {
     private val resultDeferred = CompletableDeferred<T>()
 
     /** 用于等待响应包的 CompletableDeferred */
-    private var packetDeferred = CompletableDeferred<Packet>()
+    private var packetDeferred: CompletableDeferred<Packet>? = null
 
     /** 是否已成功发送数据（发送后不再允许重试） */
     private var hasSentData = false
@@ -123,14 +133,20 @@ class TaskImpl<T> : OperableTask<T> {
         this.socketClient = socketClient
         this.taskManager = socketClient.getTaskManager()
         this.session = session
+        this.scope = socketClient.scope
     }
 
     /** 任务是否已完成 */
     override val isCompleted: Boolean get() = resultDeferred.isCompleted
+
     /** 任务是否成功完成 */
-    override val isSuccess: Boolean get() = resultDeferred.isCompleted && !resultDeferred.isCancelled && error == null
+    override val isSuccess: Boolean
+        get() = resultDeferred.isCompleted
+                && !resultDeferred.isCancelled && error == null
+
     /** 任务是否失败 */
     override val isFailure: Boolean get() = error != null
+
     /** 任务是否已取消 */
     override val isCanceled: Boolean get() = resultDeferred.isCancelled
 
@@ -143,15 +159,32 @@ class TaskImpl<T> : OperableTask<T> {
 
     /**
      * 执行任务。
-     * 每个任务只能执行一次，重复执行会抛出异常。
+     * 将任务分发到串行调度器执行，确保线程安全。
      */
-    @Synchronized
     override fun execute() {
-        if (!executed) {
-            executed = true
-            doExecute()
-        } else {
-            throw IllegalStateException("Task is already executed")
+        if (!executed.compareAndSet(expectedValue = false, newValue = true)) return
+        scope.launch {
+            if (socketClient.isShutdown()) {
+                EasyException(
+                    ErrorCode.SHUTDOWN,
+                    ErrorType.SYSTEM,
+                    "socket client is shutdown",
+                    socketClient.suffix
+                ).let { onError(it) }
+                return@launch
+            }
+            callback.onStart()
+            taskManager.addTask(this@TaskImpl)
+
+            if (taskType == TaskType.REQUEST) {
+                socketClient.start()
+                if (!socketClient.isAvailable()) {
+                    taskManager.addTaskToWaitingQueue(this@TaskImpl)
+                    callback.onWait()
+                    return@launch
+                }
+            }
+            startEncoding()
         }
     }
 
@@ -163,36 +196,19 @@ class TaskImpl<T> : OperableTask<T> {
      * @throws Throwable 任务执行过程中的异常
      */
     override suspend fun await(): T {
-        if (!executed) {
-            execute()
-        }
+        execute()
         return resultDeferred.await()
     }
 
     /**
      * 任务恢复执行。
-     * 当连接变为可用时，由任务管理器调用此方法恢复等待中的任务。
+     * 当连接变为可用时，由任务管理器在串行调度器中调用。
      */
     override fun onResume() {
         callback.onResume()
-        doExecute()
-    }
-
-    /**
-     * 执行任务的核心逻辑。
-     * 通过 onStart 驱动状态流转，如果不需要等待连接则直接开始编码。
-     */
-    private fun doExecute() {
-        try {
-            packetDeferred = CompletableDeferred()
-            val isWait = onStart()
-            if (!isWait) {
-                startEncoding()
-            }
-        } catch (t: Throwable) {
-            if (!onReset(t)) {
-                onError(t)
-            }
+        taskManager.addTask(this@TaskImpl)
+        socketClient.scope.launch {
+            startEncoding()
         }
     }
 
@@ -200,77 +216,42 @@ class TaskImpl<T> : OperableTask<T> {
      * 启动编码流程。
      * 在协程中执行请求编码，然后将编码后的数据提交给 Writer。
      */
-    private fun startEncoding() {
-        socketClient.scope.launch {
-            try {
-                // 编码请求数据
-                callback.onEncodeStart()
-                val encodedData = withContext(options.codecDispatcher) {
-                    request.encode(taskId)
-                }
-                if (encodedData.isEmpty()) {
-                    throw EasyException(
-                        ErrorCode.REQUEST_DATA_EMPTY,
-                        ErrorType.TASK,
-                        "request data is empty",
-                        socketClient.suffix
-                    )
-                }
-                data = encodedData
-                callback.onEncodeSuccess()
-
-                // 提交给 Writer 发送
-                val writer = getWriter() ?: throw EasyException(
-                    ErrorCode.SOCKET_CONNECT,
-                    ErrorType.CONNECT,
-                    "no available session",
-                    socketClient.suffix
-                )
-                writer.submit(this@TaskImpl)
-            } catch (t: Throwable) {
-                if (t is CancellationException) {
-                    onCancel()
-                } else if (!onReset(t)) {
-                    onError(t)
-                }
+    private suspend fun startEncoding() {
+        // 编码请求数据
+        callback.onEncodeStart()
+        val encodedData = try {
+            withContext(options.codecDispatcher) {
+                request.encode(taskId)
             }
+        } catch (t: Throwable) {
+            onError(t)
+            return
         }
-    }
-
-    /**
-     * 任务启动处理。
-     * 检查客户端状态，注册任务到管理器，如果连接不可用则进入等待队列。
-     *
-     * @return true 如果任务需要等待连接，false 如果可以继续执行
-     * @throws EasyException 如果客户端已关闭
-     */
-    private fun onStart(): Boolean {
-        if (socketClient.isShutdown()) {
-            throw EasyException(
-                ErrorCode.SHUTDOWN,
-                ErrorType.SYSTEM,
-                "socket client is shutdown",
+        if (encodedData.isEmpty()) {
+            EasyException(
+                ErrorCode.REQUEST_DATA_EMPTY,
+                ErrorType.TASK,
+                "request data is empty",
                 socketClient.suffix
-            )
+            ).let { onError(it) }
+            return
         }
-        callback.onStart()
-        taskManager.addTask(this)
+        data = encodedData
+        callback.onEncodeSuccess()
 
-        // 普通请求需要等待连接可用
-        if (taskType == TaskType.REQUEST) {
-            socketClient.start()
-            if (!socketClient.isAvailable()) {
-                taskManager.addTaskToWaitingQueue(this)
-                callback.onWait()
-                return true
-            }
+        // 提交给 Writer 发送
+        val writer = getWriter()
+        if (writer == null) {
+            // session失效，没有可用的 Writer，记录日志并返回
+            socketClient.logger.i("no available writer, taskId: $taskId")
+            return
         }
-        return false
+        writer.submit(this@TaskImpl)
     }
 
     /**
      * 数据开始发送时的回调。
-     * 标记已发送数据，此后不再允许重试。
+     * 在串行调度器中标记已发送数据。
      */
     override fun onSendStart() {
         hasSentData = true
@@ -287,27 +268,27 @@ class TaskImpl<T> : OperableTask<T> {
         socketClient.scope.launch {
             try {
                 withTimeout(options.requestTimeoutMillis.toLong()) {
+                    val packetDeferred = CompletableDeferred<Packet>()
+                    this@TaskImpl.packetDeferred = packetDeferred
                     val packet = packetDeferred.await()
                     handleResponse(packet)
                 }
+            } catch (_: TimeoutCancellationException) {
+                EasyException(
+                    ErrorCode.RESPONSE_TIME_OUT, ErrorType.TASK,
+                    "response time out", socketClient.suffix
+                ).let { onError(it) }
             } catch (t: Throwable) {
-                if (t !is CancellationException) {
-                    if (!onReset(t)) {
-                        onError(t)
-                    }
-                }
+                onError(t)
             }
         }
     }
 
     /**
      * 数据发送失败时的回调。
-     *
-     * @param t 失败原因
      */
     override fun onSendFailure(t: Throwable) {
         callback.onSendFailure(t)
-        packetDeferred.completeExceptionally(t)
     }
 
     /**
@@ -317,7 +298,7 @@ class TaskImpl<T> : OperableTask<T> {
      * @param packet 接收到的数据包
      */
     override fun onPacketReceived(packet: Packet) {
-        packetDeferred.complete(packet)
+        packetDeferred?.complete(packet)
     }
 
     /**
@@ -363,6 +344,7 @@ class TaskImpl<T> : OperableTask<T> {
         if (!isCompleted) {
             this.error = t
             taskManager.removeTask(this)
+            packetDeferred?.cancel()
             resultDeferred.completeExceptionally(t)
             callback.onFailure(t)
         }
@@ -370,22 +352,18 @@ class TaskImpl<T> : OperableTask<T> {
 
     /**
      * 取消任务。
-     * 从管理器和写入队列中移除，取消所有等待中的 Deferred。
+     * 异步分发到串行调度器执行。
      */
     override fun cancel() {
-        onCancel()
-    }
-
-    /**
-     * 取消任务的内部实现。
-     */
-    private fun onCancel() {
-        if (!isCompleted) {
-            taskManager.cancelTask(this)
-            getWriter()?.cancel(this)
-            packetDeferred.cancel()
-            resultDeferred.cancel()
-            callback.onCanceled()
+        if (isCompleted) return
+        socketClient.scope.launch {
+            if (!isCompleted) {
+                taskManager.cancelTask(this@TaskImpl)
+                getWriter()?.cancel(this@TaskImpl)
+                packetDeferred?.cancel()
+                resultDeferred.cancel()
+                callback.onCanceled()
+            }
         }
     }
 
@@ -419,6 +397,7 @@ class TaskImpl<T> : OperableTask<T> {
             || retryTimes >= options.taskRetryTimes
             || (t is EasyException && t.type == ErrorType.SYSTEM)
         ) {
+            onError(t)
             return false
         }
         retryTimes++

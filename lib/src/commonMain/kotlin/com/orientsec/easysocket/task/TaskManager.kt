@@ -4,64 +4,62 @@ import com.orientsec.easysocket.PacketHandler
 import com.orientsec.easysocket.error.EasyException
 
 /**
- * Interface for managing tasks and their lifecycle in the EasySocket framework.
- * This interface extends `PacketHandler` and provides methods for generating task IDs,
- * resetting the task manager, and managing tasks (e.g., adding, removing, or canceling tasks).
+ * 任务管理器接口，管理请求任务的生命周期。
+ *
+ * 继承 [PacketHandler] 用于处理响应包的分发，
+ * 提供任务 ID 生成、任务注册/移除/取消、等待队列管理等功能。
  */
 interface TaskManager : PacketHandler {
 
     /**
-     * Generates a unique task ID to identify different tasks.
+     * 生成唯一的任务 ID。
      *
-     * @return The generated task ID as an integer.
+     * @return 新的任务 ID
      */
     fun generateTaskId(): Int
 
     /**
-     * Resets the task manager.
-     * This method is called on the main thread to reset the task manager's state
-     * in case of an exception.
+     * 重置任务管理器。
+     * 在连接断开或失败时调用，尝试重置所有活跃任务。
      *
-     * @param e The exception that caused the reset.
+     * @param e 导致重置的异常
      */
     fun reset(e: EasyException)
 
     /**
-     * Prepares the task manager for operation.
-     * This method is called on the main thread after resource initialization and login,
-     * transitioning the task manager to a ready state.
+     * 标记任务管理器为就绪状态。
+     * 恢复所有等待队列中的任务。
+     * 在连接成功并完成初始化后调用。
      */
     fun ready()
 
     /**
-     * Adds a task to the waiting queue.
-     * This method is called on the main thread when a task cannot be executed immediately.
+     * 将任务添加到等待队列。
+     * 当连接不可用时调用，任务会在连接可用后被恢复。
      *
-     * @param task The task to be added to the waiting queue.
+     * @param task 要等待的任务
      */
     fun addTaskToWaitingQueue(task: TaskImpl<*>)
 
     /**
-     * Adds a task to the task manager.
-     * This method is called on the main thread to register a task for management.
+     * 将任务添加到活跃任务映射。
      *
-     * @param task The task to be added.
+     * @param task 要添加的任务
      */
     fun addTask(task: TaskImpl<*>)
 
     /**
-     * Removes a task from the task manager.
-     * This method is called on the main thread to delete a specific task from management.
+     * 从活跃任务映射中移除任务。
      *
-     * @param task The task to be removed.
+     * @param task 要移除的任务
      */
     fun removeTask(task: Task<*>)
 
     /**
-     * Cancels a specific task.
-     * This method is called on the main thread to cancel a task that is being managed.
+     * 取消指定任务。
+     * 同时从任务映射和等待队列中移除。
      *
-     * @param task The task to be canceled.
+     * @param task 要取消的任务
      */
     fun cancelTask(task: TaskImpl<*>)
 }

@@ -6,6 +6,8 @@ import com.orientsec.easysocket.error.EasyException
 import com.orientsec.easysocket.error.ErrorCode
 import com.orientsec.easysocket.error.ErrorType
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import sun.jvm.hotspot.HelloWorld.e
 
 /**
  * 通用的读取逻辑基类。
@@ -38,7 +40,7 @@ open class CommonReader(
      * 执行一次完整的消息读取。
      * 流程：读取协议头 -> 解析协议头 -> 读取消息体 -> 解码数据包 -> 分发处理
      */
-    override suspend fun read() {
+    override suspend fun read() = withContext(client.options.codecDispatcher) {
         // 1. 读取协议头
         val headLength = headParser.headSize()
         val headBytes = ByteArray(headLength)
@@ -77,12 +79,11 @@ open class CommonReader(
      * 如果读取循环因错误而退出，关闭当前会话。
      */
     override fun loopFinish() {
-        val e = EasyException(
-            ErrorCode.READ_EXIT, ErrorType.CONNECT,
-            "socket read aborted", session.suffix, error
-        )
         if (isRunning()) {
-            client.scope.launch { session.close(e) }
+            EasyException(
+                ErrorCode.READ_EXIT, ErrorType.CONNECT,
+                "socket read aborted", session.suffix, error
+            ).let { session.close(it) }
         }
     }
 

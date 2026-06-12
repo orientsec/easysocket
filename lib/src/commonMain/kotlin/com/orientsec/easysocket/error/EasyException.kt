@@ -1,87 +1,66 @@
 package com.orientsec.easysocket.error
 
 /**
- * Represents a custom exception for the EasySocket library.
- * This exception includes additional fields for error code and type,
- * along with utility methods for creating formatted exceptions.
+ * EasySocket 库的统一异常类。
+ *
+ * 包含错误码、错误类型和附加上下文信息，便于问题定位和日志追踪。
+ * [suffix] 会自动包含在 [toString] 输出中，方便日志追踪定位。
+ *
+ * 使用示例：
+ * ```kotlin
+ * // 无异常原因
+ * val e = EasyException(ErrorCode.STOP, ErrorType.SYSTEM, "client stopped", suffix)
+ *
+ * // 带异常原因
+ * val e = EasyException(ErrorCode.STOP, ErrorType.SYSTEM, "client stopped", suffix, cause)
+ * ```
  */
 open class EasyException : Exception {
-    /**
-     * The error code associated with this exception.
-     */
+    /** 错误码，标识具体的错误类型 */
     val code: Int
 
-    /**
-     * The error type associated with this exception.
-     */
+    /** 错误类型，标识错误所属的类别（系统/连接/任务） */
     val type: Int
 
+    /** 附加上下文信息，通常包含会话和客户端标识，便于日志追踪 */
+    val suffix: String
+
     /**
-     * Constructs an EasyException with the specified code, type, and message.
+     * 构造 EasyException。
      *
-     * @param code    The error code.
-     * @param type    The error type.
-     * @param message The detail message for the exception.
+     * @param code    错误码
+     * @param type    错误类型
+     * @param message 详细错误信息
+     * @param suffix  附加上下文信息
      */
-    constructor(code: Int, type: Int, message: String?) : super(message) {
+    constructor(code: Int, type: Int, message: String, suffix: String) : super(message) {
         this.code = code
         this.type = type
+        this.suffix = suffix
     }
 
     /**
-     * Constructs an EasyException with the specified code, type, message, and cause.
+     * 构造 EasyException，带异常原因。
      *
-     * @param code    The error code.
-     * @param type    The error type.
-     * @param message The detail message for the exception.
-     * @param cause   The cause of the exception.
+     * @param code    错误码
+     * @param type    错误类型
+     * @param message 详细错误信息
+     * @param suffix  附加上下文信息
+     * @param cause   导致此异常的原始异常
      */
-    constructor(code: Int, type: Int, message: String?, cause: Throwable?) : super(message, cause) {
+    constructor(
+        code: Int,
+        type: Int,
+        message: String,
+        suffix: String,
+        cause: Throwable?
+    ) : super(message, cause) {
         this.code = code
         this.type = type
+        this.suffix = suffix
     }
 
-    /**
-     * Returns a string representation of the exception, including its code, type, and message.
-     *
-     * @return A formatted string representation of the exception.
-     */
     override fun toString(): String {
-        val message = message
-        return "EasyException (Code: $code, Type: $type)${if (message != null) ": $message" else ""}"
-    }
-
-    companion object {
-        /**
-         * Creates a new EasyException with a formatted message and a cause.
-         *
-         * @param code    The error code.
-         * @param type    The error type.
-         * @param message The base message for the exception.
-         * @param suffix  Additional context to append to the message.
-         * @param cause   The cause of the exception.
-         * @return A new EasyException instance with the formatted message and cause.
-         */
-        operator fun invoke(
-            code: Int, type: Int, message: String, suffix: String,
-            cause: Throwable?
-        ): EasyException {
-            val formattedMessage = "$message ($type, $code) {$suffix}"
-            return EasyException(code, type, formattedMessage, cause)
-        }
-
-        /**
-         * Creates a new EasyException with a formatted message.
-         *
-         * @param code    The error code.
-         * @param type    The error type.
-         * @param message The base message for the exception.
-         * @param suffix  Additional context to append to the message.
-         * @return A new EasyException instance with the formatted message.
-         */
-        operator fun invoke(code: Int, type: Int, message: String, suffix: String): EasyException {
-            val formattedMessage = "$message ($type, $code) {$suffix}"
-            return EasyException(code, type, formattedMessage)
-        }
+        return "EasyException: $message ($type, $code) {$suffix}"
     }
 }

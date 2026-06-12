@@ -136,8 +136,7 @@ class Pulse(
         override fun onSuccess(res: Boolean) {
             logger.i("client pulse result: $res")
             if (res) {
-                // 心跳成功，重置丢失计数
-                scope.launch { lostTimes = 0 }
+                lostTimes = 0
             }
         }
 
