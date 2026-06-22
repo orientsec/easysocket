@@ -17,6 +17,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * 请求任务的实现类，基于 Kotlin 协程实现。
@@ -66,7 +67,6 @@ class TaskImpl<T> : OperableTask<T> {
     private val session: OperableSession?
 
     /** 编码后的请求数据 */
-    @Volatile
     override var data: ByteArray? = null
         private set
 
@@ -267,7 +267,7 @@ class TaskImpl<T> : OperableTask<T> {
         // 数据写入成功后，启动超时监控等待响应
         socketClient.scope.launch {
             try {
-                withTimeout(options.requestTimeoutMillis.toLong()) {
+                withTimeout(options.requestTimeoutMills.milliseconds) {
                     val packetDeferred = CompletableDeferred<Packet>()
                     this@TaskImpl.packetDeferred = packetDeferred
                     val packet = packetDeferred.await()

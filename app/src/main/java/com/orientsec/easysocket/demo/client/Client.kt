@@ -21,8 +21,8 @@ object Client {
             addressList = addresses
             headParserProvider = { MyHeadParser() }
             sessionInitializerProvider = { MySessionInitializer(this@Client) }
-            requestTimeoutMillis = 10000
-            connectTimeoutMillis = 5000
+            requestTimeoutMills = 10000
+            connectTimeoutMills = 5000
             connectIntervalMillis = 3000
             pulseIntervalSeconds = 30
             backgroundActiveDurationSeconds = 20

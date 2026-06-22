@@ -13,6 +13,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * EasySocket 客户端的具体实现类。
@@ -31,6 +33,7 @@ import kotlinx.coroutines.sync.withLock
  * SLEEP -> ACTIVE (调用 start)
  * ```
  */
+@OptIn(ExperimentalAtomicApi::class)
 class EasySocketClient(options: Options, scope: CoroutineScope) :
     BaseSocketClient(options, scope) {
 
@@ -50,12 +53,14 @@ class EasySocketClient(options: Options, scope: CoroutineScope) :
     private val listenersMutex = Mutex()
 
     /** 当前客户端状态：STATE_ACTIVE、STATE_SLEEP 或 STATE_SHUTDOWN */
-    private var state = STATE_ACTIVE
+    private val state = AtomicInt(STATE_ACTIVE)
 
     /** 客户端变为活跃状态的时间戳 */
+    @Volatile
     private var activeTimestamp: Long = 0
 
     /** 当前活跃的 Socket 会话 */
+    @Volatile
     private var socketSession: OperableSession? = null
 
     /** 服务器地址列表 */
@@ -139,14 +144,10 @@ class EasySocketClient(options: Options, scope: CoroutineScope) :
      * 启动连接。
      * 如果客户端处于活跃状态，会尝试创建新会话并连接。
      *
-     * @param active 是否标记为活跃状态，true 会更新活跃时间戳
      */
-    fun onStart(active: Boolean = true) {
-        if (isShutdown()) return
-        if (active) {
-            state = STATE_ACTIVE
-            activeTimestamp = Platform.currentTimeMillis()
-        }
+    fun onStart() {
+        if (state.load() != STATE_ACTIVE) return
+
         // 准备地址列表后创建会话
         if (socketSession == null && prepareAddressList()) {
             val address = addressList[addressIndex]
@@ -294,6 +295,22 @@ class EasySocketClient(options: Options, scope: CoroutineScope) :
      */
     override fun start() {
         if (isShutdown()) return
+        activeTimestamp = Platform.currentTimeMillis()
+
+        while (true) {
+            val current = state.load()
+            if (current == STATE_SHUTDOWN) return
+
+            if (current == STATE_ACTIVE) {
+                if (socketSession != null) return
+                break // 继续启动协程
+            } else if (current == STATE_SLEEP) {
+                if (state.compareAndSet(STATE_SLEEP, STATE_ACTIVE)) {
+                    break // 成功切换，启动协程
+                }
+                // CAS 失败，循环重试
+            }
+        }
         scope.launch { onStart() }
     }
 
@@ -303,17 +320,17 @@ class EasySocketClient(options: Options, scope: CoroutineScope) :
      * 可以通过 [start] 重新激活。
      */
     override fun stop() {
-        if (isShutdown()) return
-        scope.launch {
-            if (isShutdown()) return@launch
-            logger.i("stop socket client")
-            state = STATE_SLEEP
-            socketSession?.let {
-                val e = EasyException(
-                    ErrorCode.STOP, ErrorType.SYSTEM,
-                    "socket client is stopped", it.suffix
-                )
-                it.close(e)
+        if (state.compareAndSet(STATE_ACTIVE, STATE_SLEEP)) {
+            scope.launch {
+                if (state.load() != STATE_SLEEP) return@launch
+                logger.i("stop socket client")
+                socketSession?.let {
+                    val e = EasyException(
+                        ErrorCode.STOP, ErrorType.SYSTEM,
+                        "socket client is stopped", it.suffix
+                    )
+                    it.close(e)
+                }
             }
         }
     }
@@ -324,17 +341,21 @@ class EasySocketClient(options: Options, scope: CoroutineScope) :
      * 当前会话会被关闭，客户端从全局列表中移除。
      */
     override fun shutdown() {
-        if (isShutdown()) return
-        scope.launch {
-            if (isShutdown()) return@launch
-            logger.i("shutdown socket client")
-            state = STATE_SHUTDOWN
-            val e = EasyException(
-                ErrorCode.SHUTDOWN, ErrorType.SYSTEM,
-                "socket client on shutdown", suffix
-            )
-            socketSession?.close(e) ?: taskManager.reset(e)
-            EasySocket.removeSocketClient(this@EasySocketClient)
+        while (true) {
+            val current = state.load()
+            if (current == STATE_SHUTDOWN) return
+            if (state.compareAndSet(current, STATE_SHUTDOWN)) {
+                scope.launch {
+                    logger.i("shutdown socket client")
+                    val e = EasyException(
+                        ErrorCode.SHUTDOWN, ErrorType.SYSTEM,
+                        "socket client on shutdown", suffix
+                    )
+                    socketSession?.close(e) ?: taskManager.reset(e)
+                    EasySocket.removeSocketClient(this@EasySocketClient)
+                }
+                break
+            }
         }
     }
 
@@ -345,7 +366,7 @@ class EasySocketClient(options: Options, scope: CoroutineScope) :
      * @return true 如果已关闭
      */
     override fun isShutdown(): Boolean {
-        return state == STATE_SHUTDOWN
+        return state.load() == STATE_SHUTDOWN
     }
 
     /**
@@ -371,7 +392,7 @@ class EasySocketClient(options: Options, scope: CoroutineScope) :
      * 如果客户端处于活跃状态且没有活跃会话，则立即尝试重连。
      */
     override fun onNetworkAvailable() {
-        if (state == STATE_ACTIVE && socketSession == null) {
+        if (state.load() == STATE_ACTIVE && socketSession == null) {
             reconnectManager.reconnect()
         }
     }
@@ -398,7 +419,7 @@ class EasySocketClient(options: Options, scope: CoroutineScope) :
      * @return true 如果客户端活跃
      */
     fun isActive(): Boolean {
-        if (state != STATE_ACTIVE) return false
+        if (state.load() != STATE_ACTIVE) return false
 
         val backgroundTimestamp = EasySocket.getBackgroundTimestamp()
         // 前台状态，始终活跃
@@ -418,8 +439,10 @@ class EasySocketClient(options: Options, scope: CoroutineScope) :
     companion object {
         /** 活跃状态：客户端正常运行 */
         private const val STATE_ACTIVE = 0
+
         /** 休眠状态：客户端已停止，但可重新启动 */
         private const val STATE_SLEEP = 1
+
         /** 关闭状态：客户端已关闭，不可再使用 */
         private const val STATE_SHUTDOWN = 2
     }

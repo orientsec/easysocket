@@ -8,6 +8,8 @@ import io.ktor.network.sockets.openWriteChannel
 import io.ktor.utils.io.ByteWriteChannel
 import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * 基于 Ktor 的写入器实现。
@@ -44,7 +46,7 @@ private class KtorByteWriter(
      *
      * @param data 要写入的字节数组
      */
-    override suspend fun write(data: ByteArray) {
+    override suspend fun write(data: ByteArray) = withContext(Dispatchers.IO) {
         writeChannel.writeFully(data)
     }
 

@@ -9,6 +9,8 @@ import io.ktor.network.sockets.openReadChannel
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.cancel
 import io.ktor.utils.io.readFully
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * 基于 Ktor 的读取器实现。
@@ -45,7 +47,7 @@ private class KtorByteReader(
      *
      * @param data 目标字节数组
      */
-    override suspend fun readFully(data: ByteArray) {
+    override suspend fun readFully(data: ByteArray) = withContext(Dispatchers.IO) {
         readChannel.readFully(data)
     }
 

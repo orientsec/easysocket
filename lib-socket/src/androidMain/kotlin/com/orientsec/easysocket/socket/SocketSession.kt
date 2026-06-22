@@ -17,6 +17,8 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.SocketAddress
 import javax.net.ssl.SSLSocket
+import kotlin.system.measureTimeMillis
+import kotlin.time.measureTimedValue
 
 /**
  * 基于传统 Java Socket 的 Session 实现。
@@ -46,71 +48,174 @@ class SocketSession(
     /**
      * 执行具体的连接逻辑。
      * 使用传统 Java Socket API 建立 TCP 连接，如果需要则进行 SSL 握手。
-     * 连接过程中会标记 Socket 流量并记录各阶段耗时。
+     * 连接过程中会记录各阶段（DNS、CONNECT、SSL）的耗时。
      *
      * @return true 如果连接成功，false 如果连接失败
      */
     override suspend fun performConnect(): Boolean {
         logger.d("socket connection is starting")
-        val socket = withContext(Dispatchers.IO) {
-            val s = try {
-                socketFactory.createSocket()
-            } catch (e: Exception) {
-                logger.w("socket connection start failed ", e)
-                onFailed(
-                    EasyException(
-                        ErrorCode.SOCKET_CONNECT,
-                        ErrorType.CONNECT,
-                        "socket connection failed",
-                        suffix,
-                        e
-                    )
-                )
-                return@withContext null
-            }
-            try {
-                // 标记 Socket 流量
-                options.trafficProfiler.tagSocket(s)
-                // 配置 Socket 参数
-                s.tcpNoDelay = true
-                s.keepAlive = true
-                s.setPerformancePreferences(1, 2, 0)
+        val startTimeInMills = Platform.currentTimeMillis()
+        val connectResult = withContext(Dispatchers.IO) {
+            // 1. DNS 解析
+            val dnsResult = dns()
+            if (dnsResult is ConnectResult.Failure) return@withContext dnsResult
+            dnsResult as ConnectResult.Success
+            connectTimeMap[Period.DNS] = dnsResult.timeInMills
+            val socketAddress: SocketAddress = dnsResult.value
 
-                val startTimeMill = Platform.currentTimeMillis()
-                var timestamp = startTimeMill
+            // 2. TCP 连接阶段
+            val socketResult = connect(socketAddress)
+            if (socketResult is ConnectResult.Failure) return@withContext socketResult
+            socketResult as ConnectResult.Success
+            connectTimeMap[Period.CONNECT] = socketResult.timeInMills
+            val socket = socketResult.value
 
-                // 步骤 1: DNS 解析 + TCP 连接
-                val socketAddress: SocketAddress = InetSocketAddress(address.host, address.port)
-                connectTimeMap[Period.DNS] = Platform.currentTimeMillis() - timestamp
-                timestamp = Platform.currentTimeMillis()
-
-                s.connect(socketAddress, options.connectTimeoutMillis)
-                connectTimeMap[Period.CONNECT] = Platform.currentTimeMillis() - timestamp
-                timestamp = Platform.currentTimeMillis()
-
-                // 步骤 2: SSL 握手（如果需要）
-                if (s is SSLSocket) {
-                    s.startHandshake()
-                    connectTimeMap[Period.SSL] = Platform.currentTimeMillis() - timestamp
-                    timestamp = Platform.currentTimeMillis()
+            // 3. SSL 握手阶段
+            if (address.isSsl) {
+                ssl(socket).also {
+                    if (it is ConnectResult.Success) {
+                        connectTimeMap[Period.SSL] = it.timeInMills
+                    }
                 }
-
-                // 记录总连接耗时
-                connectTimeMap[Period.ALL] = timestamp - startTimeMill
-                logger.d("socket connected in " + (timestamp - startTimeMill) + "ms")
-                s
-            } catch (e: Exception) {
-                // 连接失败，取消流量标记并关闭 Socket
-                options.trafficProfiler.untagSocket(s)
-                try {
-                    s.close()
-                } catch (_: Exception) {
-                }
-                throw e
+            } else {
+                socketResult
             }
         }
-        this.mSocket = socket
-        return socket != null
+
+        return when (connectResult) {
+            is ConnectResult.Failure -> {
+                logger.w("socket connection failed", connectResult.error)
+                EasyException(
+                    connectResult.errorCode,
+                    ErrorType.CONNECT,
+                    "socket connection failed",
+                    suffix,
+                    connectResult.error
+                ).let { onFailed(it) }
+                false
+            }
+
+            is ConnectResult.Success -> {
+                logger.d(
+                    "socket connected in " +
+                            "${Platform.currentTimeMillis() - startTimeInMills}ms"
+                )
+                this.mSocket = connectResult.value
+                true
+            }
+        }
+    }
+
+    private fun dns(): ConnectResult<SocketAddress> {
+        // 1. DNS 解析
+        return try {
+            measureTimedValue {
+                InetSocketAddress(address.host, address.port)
+            }.let {
+                ConnectResult.success(
+                    value = it.value,
+                    timeInMills = it.duration.inWholeMilliseconds
+                )
+            }
+        } catch (e: Exception) {
+            ConnectResult.failure(
+                error = e,
+                errorCode = ErrorCode.DNS_ANALYZE
+            )
+        }
+    }
+
+    // 2. TCP 连接阶段
+    private fun connect(socketAddress: SocketAddress): ConnectResult<Socket> {
+        val socket = try {
+            socketFactory.createSocket()
+        } catch (e: Exception) {
+            return ConnectResult.failure(
+                error = e,
+                errorCode = ErrorCode.SOCKET_CREATE
+            )
+        }
+        options.trafficProfiler.tagSocket(socket)
+        socket.tcpNoDelay = true
+        socket.keepAlive = true
+        socket.setPerformancePreferences(1, 2, 0)
+        return try {
+            val timeInMills = measureTimeMillis {
+                socket.connect(socketAddress, options.connectTimeoutMills)
+            }
+            ConnectResult.success(socket, timeInMills)
+        } catch (e: Exception) {
+            options.trafficProfiler.untagSocket(socket)
+            try {
+                socket.close()
+            } catch (_: Exception) {
+            }
+            ConnectResult.failure(
+                error = e,
+                errorCode = ErrorCode.SOCKET_CONNECT
+            )
+        }
+    }
+
+    private fun ssl(socket: Socket): ConnectResult<Socket> {
+        if (socket !is SSLSocket) {
+            options.trafficProfiler.untagSocket(socket)
+            try {
+                socket.close()
+            } catch (_: Exception) {
+            }
+            return ConnectResult.failure(
+                error = IllegalStateException("Not an SSLSocket"),
+                errorCode = ErrorCode.TLS_ERROR
+            )
+        }
+
+        return try {
+            socket.soTimeout = options.tlsTimeoutMills
+            val timeInMills = measureTimeMillis {
+                socket.startHandshake()
+            }
+            socket.soTimeout = 0
+            ConnectResult.success(value = socket, timeInMills = timeInMills)
+        } catch (e: Exception) {
+            options.trafficProfiler.untagSocket(socket)
+            try {
+                socket.close()
+            } catch (_: Exception) {
+            }
+            val errorCode = if (e is java.net.SocketTimeoutException) ErrorCode.TLS_TIMEOUT
+            else ErrorCode.TLS_ERROR
+            ConnectResult.failure(error = e, errorCode = errorCode)
+        }
+    }
+
+    /**
+     * 连接结果封装类。
+     */
+    private sealed class ConnectResult<out T> {
+        class Success<T>(
+            val value: T,
+            val timeInMills: Long
+        ) : ConnectResult<T>()
+
+
+        class Failure(
+            val error: Exception,
+            val errorCode: Int,
+        ) : ConnectResult<Nothing>()
+
+        companion object {
+            fun <T> success(
+                value: T,
+                timeInMills: Long
+            ): Success<T> {
+                return Success(value, timeInMills)
+            }
+
+            fun failure(error: Exception, errorCode: Int): Failure {
+                return Failure(error, errorCode)
+            }
+        }
     }
 
     /**

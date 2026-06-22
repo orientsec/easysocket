@@ -28,7 +28,6 @@ open class CommonQueuedWriter(
     private val writingQueue = ArrayDeque<OperableTask<*>>()
 
     /** 是否已关闭 */
-    @Volatile
     private var isShutdown = false
 
     /**

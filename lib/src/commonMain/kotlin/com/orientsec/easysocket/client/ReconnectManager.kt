@@ -58,7 +58,7 @@ internal class ReconnectManager(private val socketClient: EasySocketClient) {
      */
     fun reconnect() {
         if (reconnectPolicy.shouldReconnect(socketClient.isActive())) {
-            socketClient.onStart(false) // 启动连接，但不更新活跃时间戳
+            socketClient.onStart() // 启动连接，但不更新活跃时间戳
         } else {
             logger.i("restart canceled...")
         }

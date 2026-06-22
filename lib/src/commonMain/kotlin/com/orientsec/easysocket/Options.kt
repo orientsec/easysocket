@@ -64,9 +64,11 @@ class Options private constructor(
     /** 单次读取最大数据量（KB），防止读取超大包导致 OOM */
     val maxReadSizeKb: Int,
     /** 请求超时时间（毫秒），发送成功后等待响应的最大时间 */
-    val requestTimeoutMillis: Int,
+    val requestTimeoutMills: Int,
     /** 连接超时时间（毫秒） */
-    val connectTimeoutMillis: Int,
+    val connectTimeoutMills: Int,
+    /** Tls超时时间（毫秒） */
+    val tlsTimeoutMills: Int,
     /** 心跳间隔时间（秒），最小 30 秒 */
     val pulseIntervalSeconds: Int,
     /** 心跳最大丢失次数，超过后认为连接断开 */
@@ -106,8 +108,10 @@ class Options private constructor(
     class Builder {
         /** 连接名称，用于日志标识 */
         var name: String = ""
+
         /** 是否启用调试模式 */
         var isDebuggable: Boolean = false
+
         /** 最低日志输出级别，默认 INFO */
         var minLogLevel: Int = Platform.LogLevel.INFO
             set(value) {
@@ -117,22 +121,31 @@ class Options private constructor(
 
         /** 心跳请求提供者 */
         var pulseRequestProvider: Provider<Request<Boolean>>? = null
+
         /** 心跳响应解码器提供者 */
         var pulseDecoderProvider: Provider<Decoder<Boolean>>? = null
+
         /** 协议头解析器提供者，必须设置 */
         var headParserProvider: Provider<HeadParser>? = null
+
         /** 推送消息管理器提供者 */
         var pushManagerProvider: Provider<PushManager<*, *>>? = null
+
         /** 客户端初始化器提供者 */
         var clientInitializerProvider: Provider<ClientInitializer>? = null
+
         /** 会话初始化器提供者 */
         var sessionInitializerProvider: Provider<SessionInitializer>? = null
+
         /** 会话工厂，必须设置 */
         var sessionFactory: SessionFactory? = null
+
         /** 流量统计器，默认为空实现 */
         var trafficProfiler: TrafficProfiler = NoTrafficProfiler
+
         /** 编解码调度器，默认使用 Dispatchers.Default */
         var codecDispatcher: CoroutineDispatcher = Dispatchers.Default
+
         /** 回调调度器，默认使用平台主线程调度器 */
         var callbackDispatcher: CoroutineDispatcher = Platform.mainDispatcher
 
@@ -151,16 +164,23 @@ class Options private constructor(
             }
 
         /** 请求超时时间（毫秒），默认 5000ms */
-        var requestTimeoutMillis: Int = 5000
+        var requestTimeoutMills: Int = 5000
             set(value) {
                 require(value > 0) { "Request time out must be positive." }
                 field = value
             }
 
         /** 连接超时时间（毫秒），默认 5000ms */
-        var connectTimeoutMillis: Int = 5000
+        var connectTimeoutMills: Int = 5000
             set(value) {
                 require(value > 0) { "Connect time out must be positive." }
+                field = value
+            }
+
+        /** 连接超时时间（毫秒），默认 5000ms */
+        var tlsTimeoutMillis: Int = 5000
+            set(value) {
+                require(value > 0) { "TLS time out must be positive." }
                 field = value
             }
 
@@ -187,6 +207,7 @@ class Options private constructor(
 
         /** 重连策略，默认 ACTIVE（仅前台重连） */
         var reconnectPolicy: ReconnectPolicy = ReconnectPolicy.ACTIVE
+
         /** 每个地址的重试次数，默认 0（不重试直接切换） */
         var retryTimesPerAddress: Int = 0
             set(value) {
@@ -203,10 +224,13 @@ class Options private constructor(
 
         /** 连接操作的流量统计标签 */
         var connectStatsTag: Int = 0x1001
+
         /** 读取操作的流量统计标签 */
         var readStatsTag: Int = 0x1002
+
         /** 写入操作的流量统计标签 */
         var writeStatsTag: Int = 0x1003
+
         /** 任务重试次数，默认 2 次 */
         var taskRetryTimes: Int = 2
             set(value) {
@@ -246,8 +270,9 @@ class Options private constructor(
                 callbackDispatcher = callbackDispatcher,
                 addressList = addressList,
                 maxReadSizeKb = maxReadSizeKb,
-                requestTimeoutMillis = requestTimeoutMillis,
-                connectTimeoutMillis = connectTimeoutMillis,
+                requestTimeoutMills = requestTimeoutMills,
+                connectTimeoutMills = connectTimeoutMills,
+                tlsTimeoutMills = tlsTimeoutMillis,
                 pulseIntervalSeconds = pulseIntervalSeconds,
                 pulseMaxLostTimes = pulseMaxLostTimes,
                 backgroundActiveDurationSeconds = backgroundActiveDurationSeconds,

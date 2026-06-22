@@ -15,9 +15,11 @@ import io.ktor.network.sockets.Socket
 import io.ktor.network.sockets.aSocket
 import io.ktor.network.tls.tls
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * 基于 Ktor 网络引擎的 Session 实现。
@@ -39,11 +41,9 @@ class KtorSession(
 ) : AbstractSession(socketClient, address, addressIndex, id) {
 
     /** 底层 Ktor Socket 实例 */
-    @Volatile
     private var mSocket: Socket? = null
 
     /** Ktor SelectorManager，管理 IO 选择器线程，需要在关闭时释放 */
-    @Volatile
     private var mSelectorManager: SelectorManager? = null
 
     /**
@@ -54,63 +54,84 @@ class KtorSession(
      */
     override suspend fun performConnect(): Boolean {
         logger.d("ktor connection is starting")
-        val selector = SelectorManager(Dispatchers.IO)
-        val result = withContext(Dispatchers.IO) {
-            try {
-                val startTimeMill = Platform.currentTimeMillis()
-                var timestamp = startTimeMill
+        val connectResult = withContext(Dispatchers.IO) {
+            val selector = SelectorManager(Dispatchers.IO)
+            val startTime = Platform.currentTimeMillis()
+            var lastTime = startTime
 
-                // 步骤 1: 建立 TCP 连接（带超时控制）
-                val socket = withTimeout(options.connectTimeoutMillis.toLong()) {
+            // 1. TCP 连接阶段
+            val tcpSocket = try {
+                withTimeout(options.connectTimeoutMills.milliseconds) {
                     aSocket(selector).tcp().connect(address.host, address.port) {
                         keepAlive = true
                         noDelay = true
                     }
                 }
-                var currentTimeMillis = Platform.currentTimeMillis()
-                connectTimeMap[Period.CONNECT] = currentTimeMillis - timestamp
-                timestamp = currentTimeMillis
-
-                // 步骤 2: TLS 握手（如果需要，带超时控制）
-                val finalSocket = if (address.isSsl) {
-                    val s = withTimeout(options.connectTimeoutMillis.toLong()) {
-                        socket.tls(socketClient.scope.coroutineContext)
-                    }
-                    currentTimeMillis = Platform.currentTimeMillis()
-                    connectTimeMap[Period.SSL] = currentTimeMillis - timestamp
-                    timestamp = currentTimeMillis
-                    s
-                } else {
-                    socket
-                }
-
-                // 记录总连接耗时
-                val connectTime = timestamp - startTimeMill
-                connectTimeMap[Period.ALL] = connectTime
-                logger.d("ktor connected in ${connectTime}ms")
-
-                finalSocket to selector
             } catch (e: Exception) {
                 selector.close()
-                logger.w("ktor connection start failed ", e)
-                onFailed(
-                    EasyException(
-                        ErrorCode.SOCKET_CONNECT,
-                        ErrorType.CONNECT,
-                        "ktor connection failed",
-                        suffix,
-                        e
-                    )
-                )
-                null
+                val errorCode = if (e is TimeoutCancellationException) ErrorCode.SOCKET_CONNECT
+                else ErrorCode.SOCKET_CONNECT
+                return@withContext ConnectResult(error = e, errorCode = errorCode)
             }
-        } ?: return false
 
-        // 成功后，在调用者的协程上下文中进行赋值，确保线程安全
-        this.mSocket = result.first
-        this.mSelectorManager = result.second
+            var now = Platform.currentTimeMillis()
+            connectTimeMap[Period.CONNECT] = now - lastTime
+            lastTime = now
+
+            // 2. TLS 握手阶段
+            if (address.isSsl) {
+                try {
+                    val tlsSocket = withTimeout(options.tlsTimeoutMills.milliseconds) {
+                        tcpSocket.tls(socketClient.scope.coroutineContext)
+                    }
+                    now = Platform.currentTimeMillis()
+                    connectTimeMap[Period.SSL] = now - lastTime
+                    connectTimeMap[Period.ALL] = now - startTime
+                    logger.d(
+                        "ktor connected (SSL) in " +
+                                "${Platform.currentTimeMillis() - startTime}ms"
+                    )
+                    ConnectResult(socket = tlsSocket, selector = selector)
+                } catch (e: Exception) {
+                    selector.close()
+                    tcpSocket.close()
+                    val errorCode = if (e is TimeoutCancellationException) ErrorCode.TLS_TIMEOUT
+                    else ErrorCode.TLS_ERROR
+                    ConnectResult(error = e, errorCode = errorCode)
+                }
+            } else {
+                connectTimeMap[Period.ALL] = now - startTime
+                logger.d("ktor connected in ${now - startTime}ms")
+                ConnectResult(socket = tcpSocket, selector = selector)
+            }
+        }
+
+        val error = connectResult.error
+        if (error != null) {
+            logger.w("ktor connection failed", error)
+            onFailed(
+                EasyException(
+                    connectResult.errorCode,
+                    ErrorType.CONNECT,
+                    "ktor connection failed",
+                    suffix,
+                    error
+                )
+            )
+            return false
+        }
+
+        this.mSocket = connectResult.socket
+        this.mSelectorManager = connectResult.selector
         return true
     }
+
+    private class ConnectResult(
+        val socket: Socket? = null,
+        val selector: SelectorManager? = null,
+        val error: Exception? = null,
+        val errorCode: Int = ErrorCode.SOCKET_CONNECT
+    )
 
     /**
      * 创建 Ktor 读取器。

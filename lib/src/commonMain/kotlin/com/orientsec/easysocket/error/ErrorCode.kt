@@ -58,4 +58,21 @@ object ErrorCode {
      * Indicates that a write operation has failed.
      */
     const val WRITE_ERROR = 205
+
+    /**
+     * Indicates a TLS handshake error.
+     */
+    const val TLS_ERROR = 206
+
+    /**
+     * Indicates a TLS handshake timeout.
+     */
+    const val TLS_TIMEOUT = 207
+
+    /**
+     * Indicates a socket creation error.
+     */
+    const val SOCKET_CREATE = 208
+
+    const val DNS_ANALYZE = 209
 }
