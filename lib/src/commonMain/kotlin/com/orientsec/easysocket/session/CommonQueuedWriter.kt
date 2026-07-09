@@ -6,7 +6,6 @@ import com.orientsec.easysocket.error.ErrorType
 import com.orientsec.easysocket.task.OperableTask
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import sun.jvm.hotspot.HelloWorld.e
 
 /**
  * 通用的顺序写队列管理器。

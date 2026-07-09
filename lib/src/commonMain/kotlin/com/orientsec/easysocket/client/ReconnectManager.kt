@@ -2,6 +2,7 @@ package com.orientsec.easysocket.client
 
 import com.orientsec.easysocket.session.Session
 import kotlinx.coroutines.*
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * 重连管理器，负责处理连接失败或断开后的自动重连逻辑。
@@ -41,7 +42,7 @@ internal class ReconnectManager(private val socketClient: EasySocketClient) {
             stop() // 取消之前待执行的重连任务
             reconnectJob = socketClient.scope.launch {
                 logger.i("restart after $connectIntervalMillis mill seconds...")
-                delay(connectIntervalMillis)
+                delay(connectIntervalMillis.milliseconds)
                 reconnect()
             }
         } else {
