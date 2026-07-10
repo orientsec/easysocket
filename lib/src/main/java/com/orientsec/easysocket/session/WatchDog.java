@@ -27,20 +27,22 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Manages the heartbeat mechanism for maintaining the connection.
  * This class implements `PacketHandler`, `TaskBuilder`, and `Runnable` interfaces.
  */
-public class Pulse implements PacketHandler, TaskBuilder, Runnable {
+public class WatchDog implements PacketHandler, TaskBuilder, Runnable {
     // The socket client associated with this heartbeat manager
     private final BaseSocketClient socketClient;
+    // The interval in milliseconds before the watchdog wakes up.
+    private final long delayInMills;
+    // The interval (in milliseconds) between actions when the watchdog is awake.
+    private final long retryIntervalInMills;
     // The maximum number of consecutive heartbeat failures allowed
     // before the session is considered invalid.
-    private final int maxLostTimes;
-    // The interval in milliseconds between consecutive heartbeat messages.
-    private final long intervalInMills;
+    private final int retryTimes;
     // The session associated with this heartbeat manager
     private final OperableSession session;
     // EasyExecutor for scheduling tasks
     private final EasyExecutor mainExecutor;
     // Counter for tracking the number of consecutive heartbeat failures
-    private final AtomicInteger lostTimes = new AtomicInteger();
+    private final AtomicInteger barkTimes = new AtomicInteger();
     // Executor for handling codec-related tasks
     private final Executor codecExecutor;
     // Logger instance for logging messages
@@ -53,22 +55,26 @@ public class Pulse implements PacketHandler, TaskBuilder, Runnable {
      * @param session      The session associated with this heartbeat manager.
      * @param mainExecutor The EasyExecutor for scheduling tasks.
      */
-    Pulse(BaseSocketClient socketClient, OperableSession session, EasyExecutor mainExecutor) {
+    WatchDog(BaseSocketClient socketClient, OperableSession session, EasyExecutor mainExecutor) {
         this.socketClient = socketClient;
         this.session = session;
         this.mainExecutor = mainExecutor;
         Options options = socketClient.getOptions();
         this.codecExecutor = options.getCodecExecutor();
-        this.intervalInMills = options.getPulseIntervalInSec() * 1000L;
-        this.maxLostTimes = options.getPulseMaxLostTimes();
+        this.delayInMills = options.getPulseDelayInSec() * 1000L;
+        this.retryIntervalInMills = options.getPulseRetryIntervalInMills() * 1000L;
+        this.retryTimes = options.getPulseRetryTimes();
         logger = session.getLogger();
     }
 
     /**
-     * Resets the heartbeat failure counter to zero.
+     * Resets the heartbeat failure counter and restarts the watchdog timer.
+     * This method is called whenever data is received.
      */
-    private void feed() {
-        lostTimes.set(0);
+    void feed() {
+        barkTimes.set(0);
+        mainExecutor.remove(this);
+        mainExecutor.schedule(this, delayInMills);
     }
 
     /**
@@ -76,7 +82,7 @@ public class Pulse implements PacketHandler, TaskBuilder, Runnable {
      * This method is called after a successful connection is established.
      */
     void start() {
-        mainExecutor.schedule(this, intervalInMills);
+        feed();
     }
 
     /**
@@ -88,24 +94,29 @@ public class Pulse implements PacketHandler, TaskBuilder, Runnable {
     }
 
     /**
-     * Sends a heartbeat message.
-     * If the number of consecutive heartbeat failures exceeds the allowed limit,
-     * the session is closed.
+     * Executes the watchdog action.
+     * If the watchdog is awake, it performs actions sequentially:
+     * 1. Send first heartbeat.
+     * 2. Send second heartbeat.
+     * 3. Close the session.
      */
     public void run() {
-        if (lostTimes.getAndAdd(1) > maxLostTimes) {
-            // Close the session if the heartbeat failure count exceeds the limit
-            logger.i("pulse failed times up, session invalid");
+        int times = barkTimes.getAndIncrement();
+        if (times > retryTimes) {
+            // Close the session if no data received after 2 heartbeat attempts
+            logger.i("watchdog biting, pulse failed " + times + " times, session invalid");
             EasyException e = EasyException.create(ErrorCode.PULSE_TIME_OUT, ErrorType.CONNECT,
                     "pulse time out", session.getSuffix());
             session.close(e);
         } else {
             Request<Boolean> pulseRequest = socketClient.getPulseRequest();
             if (pulseRequest == null) {
-                logger.w("no pulse request");
+                logger.w("no pulse request for watchdog");
             } else {
+                logger.i("watchdog sending pulse");
                 buildTask(pulseRequest, callback).execute();
-                start();
+                // Schedule the next action
+                mainExecutor.schedule(this, retryIntervalInMills);
             }
         }
     }
@@ -130,15 +141,12 @@ public class Pulse implements PacketHandler, TaskBuilder, Runnable {
     Callback<Boolean> callback = new DefaultCallback<Boolean>() {
         @Override
         public void onSuccess(@NonNull Boolean res) {
-            logger.i("client pulse result: " + res);
-            if (res) {
-                feed();
-            }
+            logger.i("pulse result: " + res + ", type: request-response");
         }
 
         @Override
         public void onFailure(@NonNull Throwable t) {
-            logger.i("client pulse failed ", t);
+            logger.i("pulse failed, type: request-response", t);
         }
     };
 
@@ -154,10 +162,9 @@ public class Pulse implements PacketHandler, TaskBuilder, Runnable {
         codecExecutor.execute(() -> {
             try {
                 boolean success = pulseDecoder.decode(packet);
-                logger.i("server pulse result: " + success);
-                if (success) feed();
+                logger.i("pulse result: " + success + ", type: ping-pong");
             } catch (Throwable t) {
-                logger.i("server pulse decode failed ", t);
+                logger.i("pulse decode failed, type: ping-pong", t);
             }
         });
     }

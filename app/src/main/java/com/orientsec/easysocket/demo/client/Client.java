@@ -37,7 +37,7 @@ public class Client {
                 .requestTimeOutInMills(10000)
                 .connectTimeOutInMills(5000)
                 .connectIntervalInMills(3000)
-                .pulseDurationInSec(30)
+                .pulseDelayInSec(30)
                 .backgroundActiveDurationInSec(20)
                 .open();
     }

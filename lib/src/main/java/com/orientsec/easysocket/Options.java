@@ -123,13 +123,18 @@ public class Options {
     /**
      * The frequency (in seconds) of heartbeat messages.
      */
-    private final int pulseIntervalInSec;
+    private final int pulseDelayInSec;
+
+    /**
+     * The interval (in milliseconds) between actions when the watchdog is awake.
+     */
+    private final int pulseRetryIntervalInMills;
 
     /**
      * The number of consecutive heartbeat failures allowed before considering
      * the connection lost.
      */
-    private final int pulseMaxLostTimes;
+    private final int pulseRetryTimes;
 
     /**
      * The duration (in seconds) the client remains active in the background.
@@ -157,15 +162,6 @@ public class Options {
     private final int connectStatsTag;
 
     /**
-     * A tag used to identify read operation statistics.
-     */
-    private final int readStatsTag;
-
-    /**
-     * A tag used to identify write operation statistics.
-     */
-    private final int writeStatsTag;
-    /**
      * The number of retry attempts for each task.
      */
     private final int taskRetryTimes;
@@ -187,8 +183,9 @@ public class Options {
         requestTimeOutInMills = builder.requestTimeOutInMills;
         connectTimeOutInMills = builder.connectTimeOutInMills;
         sslTimeOutInMills = builder.sslTimeOutInMills;
-        pulseIntervalInSec = builder.pulseDurationInSec;
-        pulseMaxLostTimes = builder.pulseMaxLostTimes;
+        pulseDelayInSec = builder.pulseDelayInSec;
+        pulseRetryIntervalInMills = builder.pulseRetryIntervalInMills;
+        pulseRetryTimes = builder.pulseRetryTimes;
         backgroundActiveDurationInSec = builder.backgroundActiveDurationInSec;
         reconnectPolicy = builder.reconnectPolicy;
         retryTimesPerAddress = builder.retryTimesPerAddress;
@@ -201,8 +198,6 @@ public class Options {
         pushManagerProvider = builder.pushManagerProvider;
         socketFactoryProvider = builder.socketFactoryProvider;
         connectStatsTag = builder.connectStatsTag;
-        readStatsTag = builder.readStatsTag;
-        writeStatsTag = builder.writeStatsTag;
         addressList = builder.addressList;
         taskRetryTimes = builder.taskRetryTimes;
     }
@@ -249,12 +244,16 @@ public class Options {
         return requestTimeOutInMills;
     }
 
-    public int getPulseIntervalInSec() {
-        return pulseIntervalInSec;
+    public int getPulseDelayInSec() {
+        return pulseDelayInSec;
     }
 
-    public int getPulseMaxLostTimes() {
-        return pulseMaxLostTimes;
+    public int getPulseRetryIntervalInMills() {
+        return pulseRetryIntervalInMills;
+    }
+
+    public int getPulseRetryTimes() {
+        return pulseRetryTimes;
     }
 
     public int getBackgroundActiveDurationInSec() {
@@ -321,14 +320,6 @@ public class Options {
         return connectStatsTag;
     }
 
-    public int getReadStatsTag() {
-        return readStatsTag;
-    }
-
-    public int getWriteStatsTag() {
-        return writeStatsTag;
-    }
-
     @Nullable
     public List<Address> getAddressList() {
         return addressList;
@@ -381,10 +372,12 @@ public class Options {
         private int connectTimeOutInMills = 5000;
         // Timeout duration (in milliseconds) for io.
         private int sslTimeOutInMills = 5000;
-        // Frequency (in seconds) of heartbeat messages.
-        private int pulseDurationInSec = 60;
+        // The interval between receive the last packet from server and the first heartbeat.
+        private int pulseDelayInSec = 60;
+        // The interval (in milliseconds) between heartbeats when the watchdog is awake.
+        private int pulseRetryIntervalInMills = 2000;
         // Number of consecutive heartbeat failures allowed.
-        private int pulseMaxLostTimes = 2;
+        private int pulseRetryTimes = 2;
         // Duration (in seconds) the client remains active in the background.
         private int backgroundActiveDurationInSec = 30;
         // Reconnection policy for lost connections.
@@ -395,10 +388,6 @@ public class Options {
         private int connectIntervalInMills = 3000;
         // Tag for connection statistics.
         private int connectStatsTag = 0x1001;
-        // Tag for read operation statistics.
-        private int readStatsTag = 0x1002;
-        // Tag for write operation statistics.
-        private int writeStatsTag = 0x1003;
         // Number of retry attempts for a task
         public int taskRetryTimes = 2;
 
@@ -649,11 +638,26 @@ public class Options {
          * @return This builder instance for chaining.
          * @throws IllegalArgumentException If the value is less than 30 seconds.
          */
-        public Builder pulseDurationInSec(int val) {
+        public Builder pulseDelayInSec(int val) {
             if (val < 30) {
                 throw new IllegalArgumentException("Pulse rate must be at least 30 seconds.");
             }
-            pulseDurationInSec = val;
+            pulseDelayInSec = val;
+            return this;
+        }
+
+        /**
+         * Sets the interval (in milliseconds) between actions when the watchdog is awake.
+         *
+         * @param val The interval to set.
+         * @return This builder instance for chaining.
+         * @throws IllegalArgumentException If the value is less than 1000 milliseconds.
+         */
+        public Builder pulseRetryIntervalInMills(int val) {
+            if (val < 1000) {
+                throw new IllegalArgumentException("Pulse action interval must be at least 1000 milliseconds.");
+            }
+            pulseRetryIntervalInMills = val;
             return this;
         }
 
@@ -664,11 +668,11 @@ public class Options {
          * @return This builder instance for chaining.
          * @throws IllegalArgumentException If the value is negative.
          */
-        public Builder pulseMaxLostTimes(int val) {
+        public Builder pulseRetryTimes(int val) {
             if (val < 0) {
                 throw new IllegalArgumentException("Pulse lost times cannot be negative.");
             }
-            pulseMaxLostTimes = val;
+            pulseRetryTimes = val;
             return this;
         }
 
@@ -737,28 +741,6 @@ public class Options {
          */
         public Builder connectStatsTag(int val) {
             connectStatsTag = val;
-            return this;
-        }
-
-        /**
-         * Sets the tag for read operation statistics.
-         *
-         * @param val The tag to set.
-         * @return This builder instance for chaining.
-         */
-        public Builder readStatsTag(int val) {
-            readStatsTag = val;
-            return this;
-        }
-
-        /**
-         * Sets the tag for write operation statistics.
-         *
-         * @param val The tag to set.
-         * @return This builder instance for chaining.
-         */
-        public Builder writeStatsTag(int val) {
-            writeStatsTag = val;
             return this;
         }
 

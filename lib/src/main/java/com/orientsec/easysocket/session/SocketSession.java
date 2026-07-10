@@ -31,6 +31,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -86,7 +87,7 @@ public class SocketSession implements OperableSession, Runnable {
     private boolean serverAvailable = false;
 
     // Heartbeat manager for the session
-    private Pulse pulse;
+    private WatchDog watchDog;
 
     // Map of message handlers for processing packets
     private final Map<PacketType, PacketHandler> messageHandlerMap = new HashMap<>();
@@ -189,6 +190,9 @@ public class SocketSession implements OperableSession, Runnable {
      */
     private void onPacket(@NonNull Packet packet) {
         if (state == State.DETACHED) return;
+        if (watchDog != null) {
+            watchDog.feed();
+        }
         PacketHandler packetHandler = messageHandlerMap.get(packet.getPacketType());
         if (packetHandler == null) {
             logger.w("no packet handler for " + packet.getPacketType());
@@ -263,6 +267,7 @@ public class SocketSession implements OperableSession, Runnable {
             connectExecutor.execute(() -> {
                 try {
                     socket.close();
+                    TrafficStats.untagSocket(socket);
                 } catch (IOException ioe) {
                     logger.d("socket is closed ", ioe);
                 }
@@ -292,10 +297,10 @@ public class SocketSession implements OperableSession, Runnable {
     private void onAvailable() {
         if (state == State.CONNECTED) {
             // Start the heartbeat
-            pulse = new Pulse(socketClient, this, mainExecutor);
-            pulse.start();
+            watchDog = new WatchDog(socketClient, this, mainExecutor);
+            watchDog.start();
             // Register handlers for heartbeat and push messages
-            messageHandlerMap.put(PacketType.PULSE, pulse);
+            messageHandlerMap.put(PacketType.PULSE, watchDog);
             PushManager<?, ?> pushManager = socketClient.getPushManager();
             if (pushManager != null) {
                 messageHandlerMap.put(PacketType.PUSH, pushManager);
@@ -315,14 +320,15 @@ public class SocketSession implements OperableSession, Runnable {
      */
     private void onError(EasyException e) {
         if (state == State.CONNECTED || state == State.AVAILABLE) {
-            if (pulse != null) {
-                pulse.stop();
+            if (watchDog != null) {
+                watchDog.stop();
             }
             reader.shutdown();
             writer.cancelAll();
             connectExecutor.execute(() -> {
                 try {
                     mSocket.close();
+                    TrafficStats.untagSocket(mSocket);
                 } catch (IOException ioe) {
                     logger.d("socket is closed ", ioe);
                 }
@@ -342,13 +348,20 @@ public class SocketSession implements OperableSession, Runnable {
     @Override
     public void run() {
         logger.d("socket connection is starting");
-        TrafficStats.setThreadStatsTag(options.getConnectStatsTag());
+        Socket socket = null;
         try {
-            Socket socket = socketClient.getSocketFactory().createSocket();
+            Socket s = socketClient.getSocketFactory().createSocket();
+            socket = s;
+            TrafficStats.setThreadStatsTag(options.getConnectStatsTag());
+            try {
+                TrafficStats.tagSocket(s);
+            } catch (SocketException e) {
+                logger.d("tag socket failed", e);
+            }
             // Disable Nagle's algorithm to send TCP packets immediately
-            socket.setTcpNoDelay(true);
-            socket.setKeepAlive(true);
-            socket.setPerformancePreferences(1, 2, 0);
+            s.setTcpNoDelay(true);
+            s.setKeepAlive(true);
+            s.setPerformancePreferences(1, 2, 0);
 
             long startTimeMill = System.currentTimeMillis();
             long timestamp = startTimeMill;
@@ -360,19 +373,19 @@ public class SocketSession implements OperableSession, Runnable {
             timestamp = currentTimeMillis;
 
             // STEP 2: Connection establishment
-            socket.connect(socketAddress, options.getConnectTimeOutInMills());
+            s.connect(socketAddress, options.getConnectTimeOutInMills());
             currentTimeMillis = System.currentTimeMillis();
             connectTimeMap.put(Period.CONNECT, currentTimeMillis - timestamp);
             timestamp = currentTimeMillis;
 
             // STEP 3: SSL handshake
-            if (socket instanceof SSLSocket) {
-                socket.setSoTimeout(options.getSslTimeOutInMills());
-                ((SSLSocket) socket).startHandshake();
+            if (s instanceof SSLSocket) {
+                s.setSoTimeout(options.getSslTimeOutInMills());
+                ((SSLSocket) s).startHandshake();
                 currentTimeMillis = System.currentTimeMillis();
                 connectTimeMap.put(Period.SSL, currentTimeMillis - timestamp);
                 timestamp = currentTimeMillis;
-                socket.setSoTimeout(0);
+                s.setSoTimeout(0);
             }
 
             // Total connection time
@@ -380,14 +393,23 @@ public class SocketSession implements OperableSession, Runnable {
             connectTimeMap.put(Period.ALL, connectTime);
 
             logger.d("socket connected in " + connectTime + "ms");
-            mainExecutor.execute(() -> onReady(socket));
+            mainExecutor.execute(() -> onReady(s));
         } catch (Exception e) {
             logger.w("socket connection start failed ", e);
             EasyException error = EasyException.create(ErrorCode.SOCKET_CONNECT,
                     ErrorType.CONNECT, "socket connection failed", suffix, e);
             mainExecutor.execute(() -> onFailed(error));
+            if (socket != null) {
+                try {
+                    socket.close();
+                    TrafficStats.untagSocket(socket);
+                } catch (IOException ioe) {
+                    logger.d("socket is closed ", ioe);
+                }
+            }
+        } finally {
+            TrafficStats.clearThreadStatsTag();
         }
-        TrafficStats.clearThreadStatsTag();
     }
 
     /**

@@ -1,7 +1,5 @@
 package com.orientsec.easysocket.session;
 
-import android.net.TrafficStats;
-
 import com.orientsec.easysocket.EasyExecutor;
 import com.orientsec.easysocket.HeadParser;
 import com.orientsec.easysocket.Options;
@@ -35,9 +33,6 @@ public class BlockingReader extends Looper implements Reader {
     // Maximum size of the packet to read, in bytes
     private final long maxReadSize;
 
-    // Configuration options for the reader
-    private final Options options;
-
     // EasyExecutor for executing tasks
     private final EasyExecutor mainExecutor;
 
@@ -53,7 +48,7 @@ public class BlockingReader extends Looper implements Reader {
         this.session = session;
         this.socket = socket;
         this.mainExecutor = client.getMainExecutor();
-        this.options = client.getOptions();
+        Options options = client.getOptions();
         this.maxReadSize = options.getMaxReadSizeInKB() * 1024L;
         this.headParser = client.getHeadParser();
     }
@@ -109,7 +104,6 @@ public class BlockingReader extends Looper implements Reader {
      */
     @Override
     protected void beforeLoop() throws IOException {
-        TrafficStats.setThreadStatsTag(options.getReadStatsTag());
         inputStream = socket.getInputStream();
     }
 
@@ -128,7 +122,6 @@ public class BlockingReader extends Looper implements Reader {
      */
     @Override
     protected synchronized void loopFinish() {
-        TrafficStats.clearThreadStatsTag();
         EasyException e = EasyException.create(ErrorCode.READ_EXIT, ErrorType.CONNECT,
                 "socket read aborted", session.getSuffix(), error);
         if (isRunning()) {
