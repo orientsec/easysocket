@@ -68,6 +68,7 @@ open class CommonQueuedWriter(
         try {
             byteWriter.write(data)
             task.onSendSuccess()
+            scheduleNextWrite()
         } catch (e: Exception) {
             session.logger.w("write error ", e)
             val ex = e as? EasyException ?: EasyException(
@@ -77,7 +78,7 @@ open class CommonQueuedWriter(
             task.onSendFailure(ex)
             session.close(ex)
         }
-        scheduleNextWrite()
+
     }
 
     /**

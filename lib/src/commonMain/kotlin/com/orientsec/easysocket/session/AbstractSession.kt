@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
  * - 连接时间统计
  *
  * 子类需要实现具体的连接逻辑（[performConnect]）、
- * 读取器/写入器的创建（[getReader]/[getWriter]）以及 Socket 关闭（[closeSocket]）。
+ * 读取器/写入器的创建（[createReader]/[createWriter]）以及 Socket 关闭（[closeSocket]）。
  *
  * @param socketClient 所属的 Socket 客户端
  * @param address 连接的服务器地址
@@ -161,14 +161,14 @@ abstract class AbstractSession(
      *
      * @return 读取器实例
      */
-    protected abstract fun getReader(): Reader
+    protected abstract fun createReader(): Reader
 
     /**
      * 创建写入器，由子类实现。
      *
      * @return 写入器实例
      */
-    protected abstract fun getWriter(): Writer
+    protected abstract fun createWriter(): Writer
 
     /**
      * 关闭会话。
@@ -194,8 +194,8 @@ abstract class AbstractSession(
     protected suspend fun onSessionReady() {
         if (state == State.STARTING) {
             // 启动读取器和写入器
-            reader = getReader().apply { start() }
-            writer = getWriter()
+            reader = createReader().apply { start() }
+            writer = createWriter()
 
             // 注册响应包处理器
             messageHandlerMap[PacketType.RESPONSE] = taskManager

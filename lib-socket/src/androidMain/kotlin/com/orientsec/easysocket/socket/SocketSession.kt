@@ -240,7 +240,7 @@ class SocketSession(
      *
      * @return [BlockingReader] 实例
      */
-    override fun getReader(): Reader {
+    override fun createReader(): Reader {
         return BlockingReader(this, socketClient, mSocket!!)
     }
 
@@ -249,7 +249,7 @@ class SocketSession(
      *
      * @return [QueuedWriter] 实例
      */
-    override fun getWriter(): Writer {
+    override fun createWriter(): Writer {
         return QueuedWriter(this, socketClient.scope, mSocket!!)
     }
 

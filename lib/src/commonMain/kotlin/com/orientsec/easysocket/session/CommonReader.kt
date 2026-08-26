@@ -5,9 +5,7 @@ import com.orientsec.easysocket.client.BaseSocketClient
 import com.orientsec.easysocket.error.EasyException
 import com.orientsec.easysocket.error.ErrorCode
 import com.orientsec.easysocket.error.ErrorType
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import sun.jvm.hotspot.HelloWorld.e
 
 /**
  * 通用的读取逻辑基类。
@@ -16,7 +14,7 @@ import sun.jvm.hotspot.HelloWorld.e
  * 1. 读取固定长度的协议头
  * 2. 解析协议头获取消息体长度
  * 3. 读取消息体
- * 4. 解码为 [Packet] 并分发给会话处理
+ * 4. 解码为 [com.orientsec.easysocket.Packet] 并分发给会话处理
  *
  * 子类只需提供 [ByteReader] 实现即可完成完整的消息读取功能。
  *

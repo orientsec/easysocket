@@ -54,91 +54,125 @@ class KtorSession(
      */
     override suspend fun performConnect(): Boolean {
         logger.d("ktor connection is starting")
-        val connectResult = withContext(Dispatchers.IO) {
-            val selector = SelectorManager(Dispatchers.IO)
-            val startTime = Platform.currentTimeMillis()
-            var lastTime = startTime
-
-            // 1. TCP 连接阶段
-            val tcpSocket = try {
-                withTimeout(options.connectTimeoutMills.milliseconds) {
-                    aSocket(selector).tcp().connect(address.host, address.port) {
-                        keepAlive = true
-                        noDelay = true
-                    }
-                }
-            } catch (e: Exception) {
-                selector.close()
-                val errorCode = if (e is TimeoutCancellationException) ErrorCode.SOCKET_CONNECT
-                else ErrorCode.SOCKET_CONNECT
-                return@withContext ConnectResult(error = e, errorCode = errorCode)
+        return executeConnect()
+            .onSuccess {
+                this.mSocket = it.socket
+                this.mSelectorManager = it.selector
             }
-
-            var now = Platform.currentTimeMillis()
-            connectTimeMap[Period.CONNECT] = now - lastTime
-            lastTime = now
-
-            // 2. TLS 握手阶段
-            if (address.isSsl) {
-                try {
-                    val tlsSocket = withTimeout(options.tlsTimeoutMills.milliseconds) {
-                        tcpSocket.tls(socketClient.scope.coroutineContext)
-                    }
-                    now = Platform.currentTimeMillis()
-                    connectTimeMap[Period.SSL] = now - lastTime
-                    connectTimeMap[Period.ALL] = now - startTime
-                    logger.d(
-                        "ktor connected (SSL) in " +
-                                "${Platform.currentTimeMillis() - startTime}ms"
-                    )
-                    ConnectResult(socket = tlsSocket, selector = selector)
-                } catch (e: Exception) {
-                    selector.close()
-                    tcpSocket.close()
-                    val errorCode = if (e is TimeoutCancellationException) ErrorCode.TLS_TIMEOUT
-                    else ErrorCode.TLS_ERROR
-                    ConnectResult(error = e, errorCode = errorCode)
-                }
-            } else {
-                connectTimeMap[Period.ALL] = now - startTime
-                logger.d("ktor connected in ${now - startTime}ms")
-                ConnectResult(socket = tcpSocket, selector = selector)
+            .onFailure {
+                logger.w("ktor connection failed", it)
+                onFailed(it as EasyException)
             }
-        }
-
-        val error = connectResult.error
-        if (error != null) {
-            logger.w("ktor connection failed", error)
-            onFailed(
-                EasyException(
-                    connectResult.errorCode,
-                    ErrorType.CONNECT,
-                    "ktor connection failed",
-                    suffix,
-                    error
-                )
-            )
-            return false
-        }
-
-        this.mSocket = connectResult.socket
-        this.mSelectorManager = connectResult.selector
-        return true
+            .map { true }
+            .recover { false }
+            .getOrThrow()
     }
 
-    private class ConnectResult(
-        val socket: Socket? = null,
-        val selector: SelectorManager? = null,
-        val error: Exception? = null,
-        val errorCode: Int = ErrorCode.SOCKET_CONNECT
-    )
+    /**
+     * 在协程 IO 调度器中执行连接逻辑，管理 SelectorManager 的生命周期。
+     */
+    private suspend fun executeConnect(): Result<SelectorWrapper> = withContext(Dispatchers.IO) {
+        val selector = SelectorManager(Dispatchers.IO)
+        val stopwatch = Stopwatch()
+
+        // 1. TCP 连接阶段
+        val tcpSocket = connectTcp(selector)
+            .onFailure {
+                try {
+                    selector.close()
+                } catch (e: Exception) {
+                    logger.e("failed to close selector", e)
+                }
+                return@withContext Result.failure(it)
+            }
+            .onSuccess { stopwatch.record(Period.CONNECT, connectTimeMap) }
+            .getOrThrow()
+
+
+        val tlsSocket = if (address.isSsl) {
+            handshakeTls(tcpSocket).onFailure {
+                try {
+                    tcpSocket.close()
+                } catch (e: Exception) {
+                    logger.e("failed to close socket", e)
+                }
+                try {
+                    selector.close()
+                } catch (e: Exception) {
+                    logger.e("failed to close selector", e)
+                }
+                return@withContext Result.failure(it)
+            }.onSuccess {
+                val total = stopwatch.recordTotal(connectTimeMap)
+                logger.d("ktor connected${if (address.isSsl) " (SSL)" else ""} in ${total}ms")
+            }.getOrThrow()
+        } else tcpSocket
+
+        return@withContext Result.success(SelectorWrapper(tlsSocket, selector))
+    }
+
+    /**
+     * 建立 TCP 连接。
+     */
+    private suspend fun connectTcp(selector: SelectorManager): Result<Socket> {
+        return try {
+            val socket = withTimeout(options.connectTimeoutMills.milliseconds) {
+                aSocket(selector).tcp().connect(address.host, address.port) {
+                    keepAlive = true
+                    noDelay = true
+                }
+            }
+            Result.success(socket)
+        } catch (e: Exception) {
+            val code = if (e is TimeoutCancellationException) ErrorCode.SOCKET_CONNECT
+            else ErrorCode.SOCKET_CONNECT
+            val ex = EasyException(code, ErrorType.CONNECT, e.message ?: "failed", suffix, e)
+            Result.failure(ex)
+        }
+    }
+
+    /**
+     * 进行 TLS 握手。
+     */
+    private suspend fun handshakeTls(tcpSocket: Socket): Result<Socket> {
+        return try {
+            val socket = withTimeout(options.tlsTimeoutMills.milliseconds) {
+                tcpSocket.tls(socketClient.scope.coroutineContext)
+            }
+            Result.success(socket)
+        } catch (e: Exception) {
+            val errorCode = if (e is TimeoutCancellationException) ErrorCode.TLS_TIMEOUT
+            else ErrorCode.TLS_ERROR
+            val ex = EasyException(errorCode, ErrorType.CONNECT, "TLS failed", suffix, e)
+            Result.failure(ex)
+        }
+    }
+
+    private class SelectorWrapper(val socket: Socket, val selector: SelectorManager)
+
+    private class Stopwatch(private val startTime: Long = Platform.currentTimeMillis()) {
+        private var lastTime = startTime
+
+        fun record(period: Period, map: MutableMap<Period, Long>) {
+            val now = Platform.currentTimeMillis()
+            map[period] = now - lastTime
+            lastTime = now
+        }
+
+        fun recordTotal(map: MutableMap<Period, Long>): Long {
+            val now = Platform.currentTimeMillis()
+            val total = now - startTime
+            map[Period.ALL] = total
+            return total
+        }
+    }
 
     /**
      * 创建 Ktor 读取器。
      *
      * @return [KtorReader] 实例
      */
-    override fun getReader(): Reader {
+    override fun createReader(): Reader {
         return KtorReader(this, socketClient, mSocket!!)
     }
 
@@ -147,7 +181,7 @@ class KtorSession(
      *
      * @return [KtorWriter] 实例
      */
-    override fun getWriter(): Writer {
+    override fun createWriter(): Writer {
         return KtorWriter(this, socketClient.scope, mSocket!!)
     }
 
