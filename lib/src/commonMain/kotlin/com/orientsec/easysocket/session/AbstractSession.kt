@@ -18,6 +18,7 @@ import com.orientsec.easysocket.task.TaskManager
 import com.orientsec.easysocket.task.TaskType
 import com.orientsec.easysocket.utils.LogFactory
 import com.orientsec.easysocket.utils.Logger
+import com.orientsec.easysocket.utils.Platform
 import kotlinx.coroutines.launch
 
 /**
@@ -82,8 +83,10 @@ abstract class AbstractSession(
 
     /** 是否已连接（CONNECTED 或 AVAILABLE 状态） */
     override val isConnect: Boolean get() = state == State.CONNECTED || state == State.AVAILABLE
+
     /** 是否可用（AVAILABLE 状态） */
     override val isAvailable: Boolean get() = state == State.AVAILABLE
+
     /** 服务器是否可用 */
     override val isServerAvailable: Boolean get() = serverAvailable
 
@@ -303,4 +306,21 @@ abstract class AbstractSession(
     override fun connectTime(period: Period): Long = connectTimeMap[period] ?: -1
 
     override fun toString(): String = "${this::class.simpleName}[id=$id, address=$address]"
+
+    protected class Stopwatch(private val startTime: Long = Platform.currentTimeMillis()) {
+        private var lastTime = startTime
+
+        fun record(period: Period, map: MutableMap<Period, Long>) {
+            val now = Platform.currentTimeMillis()
+            map[period] = now - lastTime
+            lastTime = now
+        }
+
+        fun recordTotal(map: MutableMap<Period, Long>): Long {
+            val now = Platform.currentTimeMillis()
+            val total = now - startTime
+            map[Period.ALL] = total
+            return total
+        }
+    }
 }

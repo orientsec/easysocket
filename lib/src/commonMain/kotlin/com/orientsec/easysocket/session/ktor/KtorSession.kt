@@ -85,9 +85,8 @@ class KtorSession(
                 }
                 return@withContext Result.failure(it)
             }
-            .onSuccess { stopwatch.record(Period.CONNECT, connectTimeMap) }
             .getOrThrow()
-
+        stopwatch.record(Period.CONNECT, connectTimeMap)
 
         val tlsSocket = if (address.isSsl) {
             handshakeTls(tcpSocket).onFailure {
@@ -102,11 +101,11 @@ class KtorSession(
                     logger.e("failed to close selector", e)
                 }
                 return@withContext Result.failure(it)
-            }.onSuccess {
-                val total = stopwatch.recordTotal(connectTimeMap)
-                logger.d("ktor connected${if (address.isSsl) " (SSL)" else ""} in ${total}ms")
             }.getOrThrow()
         } else tcpSocket
+
+        val total = stopwatch.recordTotal(connectTimeMap)
+        logger.d("ktor connected${if (address.isSsl) " (SSL)" else ""} in ${total}ms")
 
         return@withContext Result.success(SelectorWrapper(tlsSocket, selector))
     }
@@ -124,7 +123,7 @@ class KtorSession(
             }
             Result.success(socket)
         } catch (e: Exception) {
-            val code = if (e is TimeoutCancellationException) ErrorCode.SOCKET_CONNECT
+            val code = if (e is TimeoutCancellationException) ErrorCode.SOCKET_CONNECT_TIMEOUT
             else ErrorCode.SOCKET_CONNECT
             val ex = EasyException(code, ErrorType.CONNECT, e.message ?: "failed", suffix, e)
             Result.failure(ex)
@@ -149,23 +148,6 @@ class KtorSession(
     }
 
     private class SelectorWrapper(val socket: Socket, val selector: SelectorManager)
-
-    private class Stopwatch(private val startTime: Long = Platform.currentTimeMillis()) {
-        private var lastTime = startTime
-
-        fun record(period: Period, map: MutableMap<Period, Long>) {
-            val now = Platform.currentTimeMillis()
-            map[period] = now - lastTime
-            lastTime = now
-        }
-
-        fun recordTotal(map: MutableMap<Period, Long>): Long {
-            val now = Platform.currentTimeMillis()
-            val total = now - startTime
-            map[Period.ALL] = total
-            return total
-        }
-    }
 
     /**
      * 创建 Ktor 读取器。
@@ -204,9 +186,8 @@ class KtorSession(
     }
 
     /**
-     * 获取 IP 地址。
-     * Ktor 暂不方便获取底层 IP 地址，返回 null。
+     * 获取对端 IP 地址。
      */
-    override val ipAddress: String? get() = null
+    override val ipAddress: String? get() = mSocket?.remoteAddress?.extractIpAddress()
 
 }

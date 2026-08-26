@@ -75,4 +75,6 @@ object ErrorCode {
     const val SOCKET_CREATE = 208
 
     const val DNS_ANALYZE = 209
+
+    const val SOCKET_CONNECT_TIMEOUT = 210
 }
