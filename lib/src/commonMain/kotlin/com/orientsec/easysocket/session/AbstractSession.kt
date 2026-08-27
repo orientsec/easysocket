@@ -120,11 +120,13 @@ abstract class AbstractSession(
      * 异步处理数据包。
      * 根据数据包类型查找对应的处理器进行分发。
      * 如果会话已断开，则忽略该数据包。
+     * 每次收到数据都会喂狗，重置心跳计时器。
      *
      * @param packet 接收到的数据包
      */
     private fun onPacket(packet: Packet) {
         if (state == State.DETACHED) return
+        pulse?.feed()
         val packetHandler = messageHandlerMap[packet.type]
         if (packetHandler == null) {
             logger.w("no packet handler for " + packet.type)

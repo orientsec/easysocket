@@ -74,7 +74,13 @@ object ErrorCode {
      */
     const val SOCKET_CREATE = 208
 
+    /**
+     * Indicates a DNS analyze error.
+     */
     const val DNS_ANALYZE = 209
 
+    /**
+     * Indicates a socket connect timeout.
+     */
     const val SOCKET_CONNECT_TIMEOUT = 210
 }

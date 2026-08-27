@@ -24,7 +24,7 @@ object Client {
             requestTimeoutMills = 10000
             connectTimeoutMills = 5000
             connectIntervalMillis = 3000
-            pulseIntervalSeconds = 30
+            pulseDelaySeconds = 30
             backgroundActiveDurationSeconds = 20
         }
         socketClient = EasySocket.open(options)

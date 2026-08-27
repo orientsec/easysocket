@@ -27,7 +27,7 @@ import kotlinx.coroutines.Dispatchers
  *     useAndroidDefaults()
  *     headParserProvider = { MyHeadParser() }
  *     addressList = listOf(Address("192.168.1.1", 8080))
- *     pulseIntervalSeconds = 60
+ *     pulseDelaySeconds = 60
  *     reconnectPolicy = ReconnectPolicy.ALWAYS
  * }
  * ```
@@ -69,10 +69,12 @@ class Options private constructor(
     val connectTimeoutMills: Int,
     /** Tls超时时间（毫秒） */
     val tlsTimeoutMills: Int,
-    /** 心跳间隔时间（秒），最小 30 秒 */
-    val pulseIntervalSeconds: Int,
-    /** 心跳最大丢失次数，超过后认为连接断开 */
-    val pulseMaxLostTimes: Int,
+    /** 心跳触发延迟时间（秒），无数据多久后开始心跳探测，最小 30 秒 */
+    val pulseDelaySeconds: Int,
+    /** 心跳重试间隔（毫秒），探测失败后下次探测的间隔 */
+    val pulseRetryIntervalMillis: Int,
+    /** 心跳最大重试次数，超过后认为连接断开 */
+    val pulseRetryTimes: Int,
     /** 后台活跃持续时间（秒），应用进入后台后保持连接的时间 */
     val backgroundActiveDurationSeconds: Int,
     /** 重连策略，控制是否及何时自动重连 */
@@ -184,17 +186,24 @@ class Options private constructor(
                 field = value
             }
 
-        /** 心跳间隔时间（秒），默认 60 秒，最小 30 秒 */
-        var pulseIntervalSeconds: Int = 60
+        /** 心跳触发延迟时间（秒），默认 60 秒，最小 30 秒。无数据多久后开始心跳探测 */
+        var pulseDelaySeconds: Int = 60
             set(value) {
-                require(value >= 30) { "Pulse rate must be at least 30 seconds." }
+                require(value >= 30) { "Pulse delay must be at least 30 seconds." }
                 field = value
             }
 
-        /** 心跳最大丢失次数，默认 2 次 */
-        var pulseMaxLostTimes: Int = 2
+        /** 心跳重试间隔（毫秒），默认 10000ms。探测失败后下次探测的间隔 */
+        var pulseRetryIntervalMillis: Int = 10000
             set(value) {
-                require(value >= 0) { "Pulse lost times cannot be negative." }
+                require(value > 0) { "Pulse retry interval must be positive." }
+                field = value
+            }
+
+        /** 心跳最大重试次数，默认 2 次 */
+        var pulseRetryTimes: Int = 2
+            set(value) {
+                require(value >= 0) { "Pulse retry times cannot be negative." }
                 field = value
             }
 
@@ -273,8 +282,9 @@ class Options private constructor(
                 requestTimeoutMills = requestTimeoutMills,
                 connectTimeoutMills = connectTimeoutMills,
                 tlsTimeoutMills = tlsTimeoutMillis,
-                pulseIntervalSeconds = pulseIntervalSeconds,
-                pulseMaxLostTimes = pulseMaxLostTimes,
+                pulseDelaySeconds = pulseDelaySeconds,
+                pulseRetryIntervalMillis = pulseRetryIntervalMillis,
+                pulseRetryTimes = pulseRetryTimes,
                 backgroundActiveDurationSeconds = backgroundActiveDurationSeconds,
                 reconnectPolicy = reconnectPolicy,
                 retryTimesPerAddress = retryTimesPerAddress,
