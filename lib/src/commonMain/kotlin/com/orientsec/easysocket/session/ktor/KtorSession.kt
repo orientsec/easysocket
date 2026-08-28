@@ -9,11 +9,11 @@ import com.orientsec.easysocket.error.ErrorType
 import com.orientsec.easysocket.session.AbstractSession
 import com.orientsec.easysocket.session.Reader
 import com.orientsec.easysocket.session.Writer
+import com.orientsec.easysocket.utils.Platform
 import io.ktor.network.selector.SelectorManager
 import io.ktor.network.sockets.Socket
 import io.ktor.network.sockets.aSocket
 import io.ktor.network.tls.tls
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -70,8 +70,8 @@ class KtorSession(
     /**
      * 在协程 IO 调度器中执行连接逻辑，管理 SelectorManager 的生命周期。
      */
-    private suspend fun executeConnect(): Result<SelectorWrapper> = withContext(Dispatchers.IO) {
-        val selector = SelectorManager(Dispatchers.IO)
+    private suspend fun executeConnect(): Result<SelectorWrapper> = withContext(Platform.ioDispatcher) {
+        val selector = SelectorManager(Platform.ioDispatcher)
         val stopwatch = Stopwatch()
 
         // 1. TCP 连接阶段
@@ -175,7 +175,7 @@ class KtorSession(
         mSocket = null
         mSelectorManager = null
 
-        socketClient.scope.launch(Dispatchers.IO) {
+        socketClient.scope.launch(Platform.ioDispatcher) {
             try {
                 socket?.close()
                 selector?.close()

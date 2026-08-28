@@ -3,12 +3,12 @@ package com.orientsec.easysocket.session.ktor
 import com.orientsec.easysocket.session.ByteWriter
 import com.orientsec.easysocket.session.CommonQueuedWriter
 import com.orientsec.easysocket.session.OperableSession
+import com.orientsec.easysocket.utils.Platform
 import io.ktor.network.sockets.Socket
 import io.ktor.network.sockets.openWriteChannel
 import io.ktor.utils.io.ByteWriteChannel
 import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.io.IOException
 
@@ -47,7 +47,7 @@ private class KtorByteWriter(
      *
      * @param data 要写入的字节数组
      */
-    override suspend fun write(data: ByteArray) = withContext(Dispatchers.IO) {
+    override suspend fun write(data: ByteArray) = withContext(Platform.ioDispatcher) {
         writeChannel.writeFully(data)
     }
 

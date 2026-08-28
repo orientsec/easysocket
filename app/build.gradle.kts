@@ -1,8 +1,55 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import com.android.build.api.dsl.ApplicationExtension
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
+    alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.multiplatform)
+    alias(libs.plugins.compose.compiler)
+}
+
+kotlin {
+    androidTarget {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
+    }
+    
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = "ComposeApp"
+            isStatic = true
+        }
+    }
+    
+    sourceSets {
+        commonMain.dependencies {
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material)
+            implementation(compose.ui)
+            implementation(compose.components.resources)
+            implementation(compose.components.uiToolingPreview)
+            implementation(project(":lib"))
+            implementation(project(":lib-socket"))
+            implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.kotlinx.io.core)
+        }
+        androidMain.dependencies {
+            implementation(compose.preview)
+            implementation(libs.androidx.appcompat)
+            implementation(libs.androidx.constraint.layout)
+            implementation(libs.androidx.lifecycle.process)
+            implementation(libs.androidx.activity.compose)
+        }
+        iosMain.dependencies {
+        }
+    }
 }
 
 configure<ApplicationExtension> {
@@ -26,15 +73,4 @@ configure<ApplicationExtension> {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-}
-
-dependencies {
-    implementation(libs.androidx.appcompat)
-    implementation(libs.androidx.constraint.layout)
-    implementation(project(":lib"))
-    implementation(project(":lib-socket"))
-    
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.ext.junit)
-    androidTestImplementation(libs.espresso.core)
 }

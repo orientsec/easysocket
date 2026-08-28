@@ -1,12 +1,12 @@
 package com.orientsec.easysocket.demo.client
 
-import android.util.Log
 import com.orientsec.easysocket.Address
 import com.orientsec.easysocket.EasySocket
 import com.orientsec.easysocket.Options
 import com.orientsec.easysocket.SocketClient
 import com.orientsec.easysocket.session.ktor.KtorSessionFactory
 import com.orientsec.easysocket.task.Callback
+import com.orientsec.easysocket.utils.Platform
 
 object Client {
     val socketClient: SocketClient
@@ -17,7 +17,7 @@ object Client {
         val addresses = listOf(address)
         val options = Options.build {
             isDebuggable = true
-            minLogLevel = Log.DEBUG
+            minLogLevel = Platform.LogLevel.DEBUG
             name = "EasySocketDemo"
             addressList = addresses
             headParserProvider = { MyHeadParser() }

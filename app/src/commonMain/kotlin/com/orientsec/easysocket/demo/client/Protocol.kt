@@ -9,7 +9,7 @@ import com.orientsec.easysocket.task.Callback
 import com.orientsec.easysocket.task.DefaultCallback
 import com.orientsec.easysocket.task.TaskBuilder
 import kotlinx.coroutines.CompletableDeferred
-import java.nio.ByteBuffer
+import kotlinx.io.*
 
 class MyHead(packetSize: Int, val taskId: Int, val packetType: PacketType) :
     HeadParser.Head(packetSize)
@@ -20,10 +20,11 @@ class MyHeadParser : HeadParser {
     }
 
     override fun parseHead(bytes: ByteArray): MyHead {
-        val byteBuffer = ByteBuffer.wrap(bytes)
-        val bodyLen = byteBuffer.getInt()
-        val taskId = byteBuffer.getInt()
-        val cmd = byteBuffer.getInt()
+        val buffer = Buffer()
+        buffer.write(bytes)
+        val bodyLen = buffer.readInt()
+        val taskId = buffer.readInt()
+        val cmd = buffer.readInt()
         val packetType = if (cmd == 0) {
             PacketType.PULSE
         } else {
@@ -67,29 +68,26 @@ class Session {
 }
 
 
-class SimpleRequest @JvmOverloads constructor(
+class SimpleRequest(
     private val param: String,
     private val session: Session,
     private val cmd: Int = 2
 ) : Request<String>() {
 
     override fun encode(sequenceId: Int): ByteArray {
-        val body = param.toByteArray()
-        val byteBuffer = ByteBuffer.allocate(16)
-        byteBuffer.putInt(body.size)
-        byteBuffer.putInt(sequenceId)
+        val body = param.encodeToByteArray()
+        val buffer = Buffer()
+        buffer.writeInt(body.size)
+        buffer.writeInt(sequenceId)
         //packet type
-        byteBuffer.putInt(cmd)
-        byteBuffer.putInt(session.sessionId)
+        buffer.writeInt(cmd)
+        buffer.writeInt(session.sessionId)
+        buffer.write(body)
 
-        val head = byteBuffer.array()
-        val sendBytes = ByteArray(head.size + body.size)
-        System.arraycopy(head, 0, sendBytes, 0, head.size)
-        System.arraycopy(body, 0, sendBytes, head.size, body.size)
-        return sendBytes
+        return buffer.readByteArray()
     }
 
     override fun decode(packet: Packet): String {
-        return String(packet.body as ByteArray)
+        return (packet.body as ByteArray).decodeToString()
     }
 }

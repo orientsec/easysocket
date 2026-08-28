@@ -11,6 +11,10 @@ kotlin {
         publishLibraryVariants("release")
     }
 
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+
     // 增加编译器选项以压制 expect/actual class 警告
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")

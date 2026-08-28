@@ -10,6 +10,10 @@ kotlin {
         publishLibraryVariants("release")
     }
     
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+    
     jvm()
     // iOS targets can be added here later
 

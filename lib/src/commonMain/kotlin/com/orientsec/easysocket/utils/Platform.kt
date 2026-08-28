@@ -12,6 +12,11 @@ expect object Platform {
     val mainDispatcher: CoroutineDispatcher
 
     /**
+     * Retrieves the IO dispatcher for the current platform.
+     */
+    val ioDispatcher: CoroutineDispatcher
+
+    /**
      * Gets the current system time in milliseconds.
      */
     fun currentTimeMillis(): Long
@@ -29,5 +34,35 @@ expect object Platform {
         val INFO: Int
         val WARN: Int
         val ERROR: Int
+    }
+
+    /**
+     * Creates a single-threaded dispatcher.
+     */
+    fun createSingleThreadDispatcher(name: String): CoroutineDispatcher
+
+    /**
+     * A simple lock interface for cross-platform synchronization.
+     */
+    interface Lock {
+        fun lock()
+        fun unlock()
+    }
+
+    /**
+     * Creates a new lock instance.
+     */
+    fun createLock(): Lock
+}
+
+/**
+ * Helper function to use the lock in a block.
+ */
+inline fun <T> Platform.Lock.withLock(block: () -> T): T {
+    lock()
+    try {
+        return block()
+    } finally {
+        unlock()
     }
 }

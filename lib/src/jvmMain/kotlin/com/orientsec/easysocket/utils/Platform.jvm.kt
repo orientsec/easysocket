@@ -1,39 +1,66 @@
 package com.orientsec.easysocket.utils
 
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
+import java.util.concurrent.Executors
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.locks.ReentrantLock
 
 /**
  * JVM 平台的 [Platform] 实现。
- * 当前为占位实现，尚未完成具体功能。
  */
 actual object Platform {
-    /** 主线程调度器，尚未实现 */
-    actual val mainDispatcher: CoroutineDispatcher
-        get() = TODO("Not yet implemented")
+    /** JVM 主线程调度器 */
+    actual val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 
-    /** 获取当前时间，尚未实现 */
-    actual fun currentTimeMillis(): Long {
-        TODO("Not yet implemented")
-    }
+    /** JVM IO 调度器 */
+    actual val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 
-    /** 日志输出，空实现 */
+    /** 获取当前时间 */
+    actual fun currentTimeMillis(): Long = System.currentTimeMillis()
+
+    /** 日志输出 */
     actual fun log(
         level: Int,
         tag: String,
         msg: String,
         throwable: Throwable?
     ) {
+        val levelStr = when (level) {
+            LogLevel.DEBUG -> "DEBUG"
+            LogLevel.INFO -> "INFO"
+            LogLevel.WARN -> "WARN"
+            LogLevel.ERROR -> "ERROR"
+            else -> "UNKNOWN"
+        }
+        println("[$levelStr][$tag] $msg")
+        throwable?.printStackTrace()
     }
 
-    /** JVM 平台的日志级别常量，尚未实现 */
+    /** JVM 平台的日志级别常量 */
     actual object LogLevel {
-        actual val DEBUG: Int
-            get() = TODO("Not yet implemented")
-        actual val INFO: Int
-            get() = TODO("Not yet implemented")
-        actual val WARN: Int
-            get() = TODO("Not yet implemented")
-        actual val ERROR: Int
-            get() = TODO("Not yet implemented")
+        actual val DEBUG = 3
+        actual val INFO = 4
+        actual val WARN = 5
+        actual val ERROR = 6
+    }
+
+    actual fun createSingleThreadDispatcher(name: String): CoroutineDispatcher {
+        val factory = ThreadFactory {
+            Thread(it, name)
+        }
+        return Executors.newSingleThreadExecutor(factory).asCoroutineDispatcher()
+    }
+
+    actual interface Lock {
+        actual fun lock()
+        actual fun unlock()
+    }
+
+    actual fun createLock(): Lock = object : Lock {
+        private val lock = ReentrantLock()
+        override fun lock() = lock.lock()
+        override fun unlock() = lock.unlock()
     }
 }

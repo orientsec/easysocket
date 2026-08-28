@@ -32,7 +32,6 @@ abstract class LoopReader(private val logger: Logger, private val scope: Corouti
      * 启动循环读取。
      * 如果循环已在运行，则不执行任何操作。
      */
-    @Synchronized
     override fun start() {
         if (job == null || job?.isCompleted == true) {
             loopTimes = 0
@@ -40,7 +39,7 @@ abstract class LoopReader(private val logger: Logger, private val scope: Corouti
             job = scope.launch {
                 runLoop()
             }
-            logger.d("${javaClass.simpleName} is starting")
+            logger.d("${this::class.simpleName} is starting")
         }
     }
 
@@ -57,11 +56,11 @@ abstract class LoopReader(private val logger: Logger, private val scope: Corouti
             }
         } catch (_: CancellationException) {
             // 协程被取消，正常退出
-            logger.d("${javaClass.simpleName} was cancelled")
+            logger.d("${this::class.simpleName} was cancelled")
         } catch (t: Throwable) {
             // 发生异常，记录错误
             error = t
-            logger.w("${javaClass.simpleName} is shutting down by error ", t)
+            logger.w("${this::class.simpleName} is shutting down by error ", t)
         } finally {
             // 确保循环结束回调一定被执行
             withContext(NonCancellable) {
@@ -89,7 +88,6 @@ abstract class LoopReader(private val logger: Logger, private val scope: Corouti
     /**
      * 停止循环读取，取消协程任务。
      */
-    @Synchronized
     override fun shutdown() {
         job?.cancel()
         job = null

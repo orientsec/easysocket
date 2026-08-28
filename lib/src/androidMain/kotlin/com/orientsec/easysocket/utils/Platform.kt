@@ -3,6 +3,10 @@ package com.orientsec.easysocket.utils
 import android.util.Log
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
+import java.util.concurrent.Executors
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.locks.ReentrantLock
 
 /**
  * Android 平台的 [Platform] 实现。
@@ -16,6 +20,9 @@ import kotlinx.coroutines.Dispatchers
 actual object Platform {
     /** Android 主线程调度器 */
     actual val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+
+    /** Android IO 调度器 */
+    actual val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 
     /** 获取当前系统时间（毫秒） */
     actual fun currentTimeMillis(): Long = System.currentTimeMillis()
@@ -47,5 +54,23 @@ actual object Platform {
         actual const val WARN = Log.WARN
         /** ERROR 级别 */
         actual const val ERROR = Log.ERROR
+    }
+
+    actual fun createSingleThreadDispatcher(name: String): CoroutineDispatcher {
+        val factory = ThreadFactory {
+            Thread(it, name)
+        }
+        return Executors.newSingleThreadExecutor(factory).asCoroutineDispatcher()
+    }
+
+    actual interface Lock {
+        actual fun lock()
+        actual fun unlock()
+    }
+
+    actual fun createLock(): Lock = object : Lock {
+        private val lock = ReentrantLock()
+        override fun lock() = lock.lock()
+        override fun unlock() = lock.unlock()
     }
 }

@@ -2,13 +2,8 @@ package com.orientsec.easysocket
 
 import com.orientsec.easysocket.client.BaseSocketClient
 import com.orientsec.easysocket.client.EasySocketClient
-import com.orientsec.easysocket.utils.AppLifecycleListener
-import com.orientsec.easysocket.utils.AppLifecycleObserver
-import com.orientsec.easysocket.utils.NetworkObserver
-import com.orientsec.easysocket.utils.Platform
+import com.orientsec.easysocket.utils.*
 import kotlinx.coroutines.*
-import java.util.concurrent.Executors
-import java.util.concurrent.ThreadFactory
 
 /**
  * EasySocket 核心入口对象，负责管理所有 Socket 客户端实例的生命周期。
@@ -35,34 +30,34 @@ import java.util.concurrent.ThreadFactory
  * ```
  */
 object EasySocket {
-    /** 所有已注册的 Socket 客户端实例列表 */
+    /** 所有已注册 del Socket 客户端实例列表 */
     private val socketClients = mutableListOf<BaseSocketClient>()
-
-    /** 线程工厂，为 EasySocket 主线程指定名称 */
-    private val factory = ThreadFactory {
-        Thread(it, "Easy-socket-main")
-    }
+    private val lock = Platform.createLock()
 
     /**
      * 单线程线程池调度器，方便处理异步计算。
      * 所有客户端的核心操作都在此调度器上执行，确保线程安全。
      */
-    private val dispatcher: ExecutorCoroutineDispatcher =
-        Executors.newSingleThreadExecutor(factory).asCoroutineDispatcher()
+    private val dispatcher: CoroutineDispatcher =
+        Platform.createSingleThreadDispatcher("Easy-socket-main")
 
     /** 库级别的协程作用域，使用 SupervisorJob 确保子协程互不影响 */
-    private val scope: CoroutineScope = CoroutineScope(dispatcher + SupervisorJob() + CoroutineExceptionHandler { _, throwable ->
-        // 全局异常处理，防止协程泄露导致的崩溃
-        println("EasySocket global exception: $throwable")
-        throwable.printStackTrace()
-    })
+    private val scope: CoroutineScope =
+        CoroutineScope(dispatcher + SupervisorJob() + CoroutineExceptionHandler { _, throwable ->
+            // 全局异常处理，防止协程泄露导致的崩溃
+            Platform.log(
+                Platform.LogLevel.ERROR,
+                "EasySocket",
+                "global exception: $throwable",
+                throwable
+            )
+        })
 
     /**
      * 应用进入后台的时间戳。
      * 值为 0 表示应用当前在前台，非 0 表示进入后台的时间点。
      * 用于 [ReconnectPolicy.ACTIVE] 策略下判断是否需要重连。
      */
-    @Volatile
     private var backgroundTimestamp: Long = 0
 
     /** 平台相关的网络状态观察者 */
@@ -83,29 +78,31 @@ object EasySocket {
         networkObserver: NetworkObserver,
         lifecycleObserver: AppLifecycleObserver
     ) {
-        if (this.networkObserver != null) {
-            return // 已初始化，直接返回
-        }
-        this.networkObserver = networkObserver
-        this.lifecycleObserver = lifecycleObserver
+        lock.withLock {
+            if (this.networkObserver != null) {
+                return // 已初始化，直接返回
+            }
+            this.networkObserver = networkObserver
+            this.lifecycleObserver = lifecycleObserver
 
-        // 注册网络可用回调，当网络恢复时通知所有客户端
-        networkObserver.start {
-            scope.launch { onNetworkAvailable() }
-        }
-
-        // 注册前后台切换回调
-        lifecycleObserver.start(object : AppLifecycleListener {
-            /** 应用回到前台时，重置后台时间戳 */
-            override fun onForeground() {
-                backgroundTimestamp = 0
+            // 注册网络可用回调，当网络恢复时通知所有客户端
+            networkObserver.start {
+                scope.launch { onNetworkAvailable() }
             }
 
-            /** 应用进入后台时，记录时间戳 */
-            override fun onBackground() {
-                backgroundTimestamp = Platform.currentTimeMillis()
-            }
-        })
+            // 注册前后台切换回调
+            lifecycleObserver.start(object : AppLifecycleListener {
+                /** 应用回到前台时，重置后台时间戳 */
+                override fun onForeground() {
+                    lock.withLock { backgroundTimestamp = 0 }
+                }
+
+                /** 应用进入后台时，记录时间戳 */
+                override fun onBackground() {
+                    lock.withLock { backgroundTimestamp = Platform.currentTimeMillis() }
+                }
+            })
+        }
     }
 
     /**
@@ -126,7 +123,7 @@ object EasySocket {
      * @param socketClient 要注册的客户端实例
      */
     fun addSocketClient(socketClient: BaseSocketClient) {
-        synchronized(socketClients) {
+        lock.withLock {
             socketClients.add(socketClient)
         }
     }
@@ -137,7 +134,7 @@ object EasySocket {
      * @param socketClient 要移除的客户端实例
      */
     fun removeSocketClient(socketClient: BaseSocketClient) {
-        synchronized(socketClients) {
+        lock.withLock {
             socketClients.remove(socketClient)
         }
     }
@@ -146,20 +143,19 @@ object EasySocket {
      * 关闭所有 Socket 客户端并释放资源。
      * 调用后所有客户端将不可用，需重新初始化才能使用。
      */
-    @Synchronized
     fun shutdown() {
-        synchronized(socketClients) {
+        lock.withLock {
             for (client in socketClients) {
                 client.shutdown()
             }
             socketClients.clear()
+            networkObserver?.stop()
+            lifecycleObserver?.stop()
+            scope.cancel()
+            // dispatcher.close() // Close is specific to some dispatchers
+            networkObserver = null
+            lifecycleObserver = null
         }
-        networkObserver?.stop()
-        lifecycleObserver?.stop()
-        scope.cancel()
-        dispatcher.close()
-        networkObserver = null
-        lifecycleObserver = null
     }
 
     /**
@@ -168,14 +164,14 @@ object EasySocket {
      *
      * @return 后台时间戳，0 表示在前台
      */
-    fun getBackgroundTimestamp(): Long = backgroundTimestamp
+    fun getBackgroundTimestamp(): Long = lock.withLock { backgroundTimestamp }
 
     /**
      * 当网络恢复可用时，通知所有活跃的客户端尝试重连。
      * 仅通知当前没有会话的客户端。
      */
     private fun onNetworkAvailable() {
-        val clients = synchronized(socketClients) { socketClients.toList() }
+        val clients = lock.withLock { socketClients.toList() }
         for (socketClient in clients) {
             socketClient.onNetworkAvailable()
         }
