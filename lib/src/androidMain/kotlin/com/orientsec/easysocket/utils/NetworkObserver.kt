@@ -1,10 +1,12 @@
 package com.orientsec.easysocket.utils
 
+import android.Manifest
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import androidx.annotation.RequiresPermission
 
 /**
  * Android 平台的 [NetworkObserver] 实现。
@@ -34,6 +36,7 @@ actual class NetworkObserver(private val context: Context) {
      *
      * @param onAvailable 网络可用时的回调
      */
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     actual fun start(onAvailable: () -> Unit) {
         this.onAvailable = onAvailable
         val capability = NetworkCapabilities.NET_CAPABILITY_VALIDATED
@@ -58,6 +61,7 @@ actual class NetworkObserver(private val context: Context) {
      *
      * @return true 如果网络可用
      */
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     actual fun isNetworkAvailable(): Boolean {
         return NetUtils.isNetworkAvailable(context)
     }

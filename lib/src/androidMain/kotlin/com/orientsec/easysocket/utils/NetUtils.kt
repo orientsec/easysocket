@@ -1,9 +1,10 @@
 package com.orientsec.easysocket.utils
 
+import android.Manifest
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.os.Build
+import androidx.annotation.RequiresPermission
 
 /**
  * Utility class `NetUtils` provides methods for network-related operations.
@@ -16,6 +17,7 @@ object NetUtils {
      * @param context The context used to access system services.
      * @return `true` if the network is available, `false` otherwise.
      */
+    @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     @JvmStatic
     fun isNetworkAvailable(context: Context?): Boolean {
         if (context == null) return false

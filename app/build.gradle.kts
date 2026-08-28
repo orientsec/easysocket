@@ -1,11 +1,13 @@
+import com.android.build.api.dsl.ApplicationExtension
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
 }
 
-android {
+configure<ApplicationExtension> {
     namespace = "com.orientsec.easysocket.demo"
-    compileSdk = 36
+    compileSdk = 37
     defaultConfig {
         applicationId = "com.orientsec.easysocket.demo"
         minSdk = 24
@@ -21,11 +23,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-    kotlinOptions {
-        jvmTarget = "1.8"
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 

@@ -5,6 +5,7 @@ import com.orientsec.easysocket.Address
 import com.orientsec.easysocket.EasySocket
 import com.orientsec.easysocket.Options
 import com.orientsec.easysocket.SocketClient
+import com.orientsec.easysocket.session.ktor.KtorSessionFactory
 import com.orientsec.easysocket.task.Callback
 
 object Client {
@@ -12,7 +13,7 @@ object Client {
     val session: Session = Session()
 
     init {
-        val address = Address("192.168.88.66", 10010)
+        val address = Address("192.168.89.168", 10010, isSsl = false)
         val addresses = listOf(address)
         val options = Options.build {
             isDebuggable = true
@@ -26,6 +27,7 @@ object Client {
             connectIntervalMillis = 3000
             pulseDelaySeconds = 30
             backgroundActiveDurationSeconds = 20
+            sessionFactory = KtorSessionFactory()
         }
         socketClient = EasySocket.open(options)
     }

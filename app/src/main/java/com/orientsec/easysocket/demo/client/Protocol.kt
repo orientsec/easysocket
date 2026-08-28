@@ -40,12 +40,17 @@ class MyHeadParser : HeadParser {
 
 class MySessionInitializer(private val client: Client) : SessionInitializer {
     override suspend fun start(taskBuilder: TaskBuilder): Result<Unit> {
-        val authRequest = SimpleRequest("test", client.session)
+        val authRequest = SimpleRequest("test", client.session, cmd = 1)
         val deferred = CompletableDeferred<Result<Unit>>()
         val callback: Callback<String> = object : DefaultCallback<String>() {
             override fun onSuccess(res: String) {
-                client.session.sessionId = res.toInt()
-                deferred.complete(Result.success(Unit))
+                val sessionId = res.toIntOrNull()
+                if (sessionId != null) {
+                    client.session.sessionId = sessionId
+                    deferred.complete(Result.success(Unit))
+                } else {
+                    deferred.complete(Result.failure(RuntimeException("Invalid session id: $res")))
+                }
             }
 
             override fun onFailure(t: Throwable) {

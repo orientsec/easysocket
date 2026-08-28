@@ -51,7 +51,11 @@ object EasySocket {
         Executors.newSingleThreadExecutor(factory).asCoroutineDispatcher()
 
     /** 库级别的协程作用域，使用 SupervisorJob 确保子协程互不影响 */
-    private val scope: CoroutineScope = CoroutineScope(dispatcher + SupervisorJob())
+    private val scope: CoroutineScope = CoroutineScope(dispatcher + SupervisorJob() + CoroutineExceptionHandler { _, throwable ->
+        // 全局异常处理，防止协程泄露导致的崩溃
+        println("EasySocket global exception: $throwable")
+        throwable.printStackTrace()
+    })
 
     /**
      * 应用进入后台的时间戳。

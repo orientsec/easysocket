@@ -10,6 +10,7 @@ import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.io.IOException
 
 /**
  * 基于 Ktor 的写入器实现。
@@ -55,6 +56,9 @@ private class KtorByteWriter(
      * 发送 IOException 标记通道已关闭。
      */
     override fun close() {
-        writeChannel.cancel(kotlinx.io.IOException("Writer is shut down"))
+        try {
+            writeChannel.cancel(IOException("Writer is shut down"))
+        } catch (_: Exception) {
+        }
     }
 }

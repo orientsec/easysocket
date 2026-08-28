@@ -9,7 +9,6 @@ import com.orientsec.easysocket.error.ErrorType
 import com.orientsec.easysocket.session.AbstractSession
 import com.orientsec.easysocket.session.Reader
 import com.orientsec.easysocket.session.Writer
-import com.orientsec.easysocket.utils.Platform
 import io.ktor.network.selector.SelectorManager
 import io.ktor.network.sockets.Socket
 import io.ktor.network.sockets.aSocket

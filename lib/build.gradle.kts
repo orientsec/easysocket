@@ -1,3 +1,5 @@
+import com.android.build.api.dsl.LibraryExtension
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.multiplatform)
@@ -8,7 +10,7 @@ kotlin {
     androidTarget {
         publishLibraryVariants("release")
     }
-    
+
     // 增加编译器选项以压制 expect/actual class 警告
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
@@ -40,15 +42,15 @@ kotlin {
     }
 }
 
-android {
+configure<LibraryExtension> {
     namespace = "com.orientsec.easysocket"
     compileSdk = 36
     defaultConfig {
         minSdk = 24
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 

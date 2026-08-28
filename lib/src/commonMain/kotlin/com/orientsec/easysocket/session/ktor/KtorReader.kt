@@ -7,10 +7,10 @@ import com.orientsec.easysocket.session.OperableSession
 import io.ktor.network.sockets.Socket
 import io.ktor.network.sockets.openReadChannel
 import io.ktor.utils.io.ByteReadChannel
-import io.ktor.utils.io.cancel
 import io.ktor.utils.io.readFully
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.io.IOException
 
 /**
  * 基于 Ktor 的读取器实现。
@@ -56,6 +56,10 @@ private class KtorByteReader(
      * 调用后读取通道将不再可用。
      */
     override fun close() {
-        readChannel.cancel()
+        // 提供明确的取消原因，有助于 Ktor 提供更有意义的错误信息
+        try {
+            readChannel.cancel(IOException("Reader is shut down"))
+        } catch (_: Exception) {
+        }
     }
 }
