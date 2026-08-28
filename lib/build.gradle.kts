@@ -19,26 +19,21 @@ kotlin {
     jvm()
 
     sourceSets {
-        val commonMain by getting {
-            dependencies {
-                implementation(libs.kotlinx.coroutines.core)
-                implementation(libs.ktor.network)
-                implementation(libs.ktor.network.tls)
-            }
+        commonMain.dependencies {
+            implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.ktor.network)
+            implementation(libs.ktor.network.tls)
         }
-        val commonTest by getting {
-            dependencies {
-                implementation(kotlin("test"))
-            }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
         }
-        val androidMain by getting {
-            dependencies {
-                implementation(libs.androidx.annotation)
-                implementation(libs.androidx.lifecycle.common.jvm)
-                implementation(libs.androidx.lifecycle.process)
-            }
+        androidMain.dependencies {
+            implementation(libs.androidx.annotation)
+            implementation(libs.androidx.lifecycle.common.jvm)
+            implementation(libs.androidx.lifecycle.process)
         }
-        val jvmMain by getting
+        jvmMain.dependencies {
+        }
     }
 }
 
