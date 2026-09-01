@@ -1,6 +1,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import com.android.build.api.dsl.ApplicationExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -10,18 +11,19 @@ plugins {
 }
 
 kotlin {
+    applyDefaultHierarchyTemplate()
+
     androidTarget {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
         }
     }
     
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
+    iosArm64()
+    iosSimulatorArm64()
+
+    targets.withType<KotlinNativeTarget>().forEach {
+        it.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
         }
@@ -46,8 +48,6 @@ kotlin {
             implementation(libs.androidx.constraint.layout)
             implementation(libs.androidx.lifecycle.process)
             implementation(libs.androidx.activity.compose)
-        }
-        iosMain.dependencies {
         }
     }
 }

@@ -1,13 +1,22 @@
+# IntelliJ IDEA / Android Studio
 *.iml
-.idea
-.gradle
+.idea/
+.gradle/
 /local.properties
-/.idea/workspace.xml
-/.idea/libraries
 .DS_Store
-/build
 /captures
 .externalNativeBuild
-/lib-socket/build
-/.artifacts
-/.kotlin
+.artifacts/
+.kotlin/
+
+# Build outputs
+**/build/
+
+# Xcode
+# ========================
+iosApp/iosApp.xcodeproj/xcuserdata/
+iosApp/iosApp.xcodeproj/project.xcworkspace/
+**/DerivedData/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
