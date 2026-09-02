@@ -30,7 +30,7 @@ kotlin {
 }
 
 configure<LibraryExtension> {
-    namespace = "com.orientsec.easysocket.socket"
+    namespace = "com.orientsec.easysocket.platform"
     compileSdk = 36
     defaultConfig {
         minSdk = 24

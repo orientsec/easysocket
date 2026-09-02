@@ -37,7 +37,7 @@ kotlin {
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
             implementation(project(":lib"))
-            implementation(project(":lib-socket"))
+            implementation(project(":lib-platform"))
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.io.core)
         }

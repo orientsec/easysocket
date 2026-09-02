@@ -1,4 +1,4 @@
-package com.orientsec.easysocket.socket
+package com.orientsec.easysocket.platform
 
 import com.orientsec.easysocket.Address
 import com.orientsec.easysocket.client.BaseSocketClient
