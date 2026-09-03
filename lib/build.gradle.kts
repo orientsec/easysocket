@@ -7,6 +7,8 @@ plugins {
 }
 
 kotlin {
+    applyDefaultHierarchyTemplate()
+
     androidTarget {
         publishLibraryVariants("release")
     }

@@ -9,7 +9,6 @@ import com.orientsec.easysocket.error.ErrorType
 import com.orientsec.easysocket.session.AbstractSession
 import com.orientsec.easysocket.session.Reader
 import com.orientsec.easysocket.session.Writer
-import com.orientsec.easysocket.utils.Platform
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

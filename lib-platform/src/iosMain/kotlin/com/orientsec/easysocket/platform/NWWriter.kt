@@ -4,17 +4,16 @@ import com.orientsec.easysocket.session.ByteWriter
 import com.orientsec.easysocket.session.CommonQueuedWriter
 import com.orientsec.easysocket.session.OperableSession
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.Pinned
-import kotlinx.cinterop.StableRef
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.pin
-import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.suspendCancellableCoroutine
 import platform.Network.nw_connection_send
 import platform.Network.nw_connection_t
 import platform.Network.nw_content_context_create
+import platform.Network.nw_error_get_error_code
+import platform.Network.nw_error_get_error_domain
 import platform.Network.nw_error_t
 import platform.darwin.dispatch_data_create
 
@@ -25,18 +24,10 @@ class NWWriter(
     connection: nw_connection_t,
 ) : CommonQueuedWriter(session, scope, NWByteWriter(connection)) {
 
-    private class WriteContext(
-        val pinned: Pinned<ByteArray>,
-        val continuation: CancellableContinuation<Unit>
-    )
-
     private class NWByteWriter(private val connection: nw_connection_t) : ByteWriter {
         override suspend fun write(data: ByteArray) {
             val pinned = data.pin()
             suspendCancellableCoroutine { continuation ->
-                val context = WriteContext(pinned, continuation)
-                val ref = StableRef.create(context)
-
                 val dispatchData = dispatch_data_create(
                     pinned.addressOf(0),
                     data.size.toULong(),
@@ -55,18 +46,25 @@ class NWWriter(
                     dispatchData,
                     contentContext,
                     true
-                ) { error: nw_error_t? ->
-                    val ctx = ref.get()
-                    ref.dispose()
-
-                    ctx.pinned.unpin()
+                ) { error: nw_error_t ->
+                    pinned.unpin()
                     if (error != null) {
-                        ctx.continuation.tryResumeWithException(Exception("NW write error"))
-                            ?.let { ctx.continuation.completeResume(it) }
+                        val errorCode = nw_error_get_error_code(error)
+                        val domain = nw_error_get_error_domain(error)
+                        val e = Exception("NW write error: $errorCode (domain: $domain)")
+                        continuation.tryResumeWithException(e)?.let {
+                            continuation.completeResume(it)
+                        }
                     } else {
-                        ctx.continuation.tryResume(Unit)
-                            ?.let { ctx.continuation.completeResume(it) }
+                        continuation.tryResume(Unit)?.let {
+                            continuation.completeResume(it)
+                        }
                     }
+                }
+
+                continuation.invokeOnCancellation {
+                    // Unpinning MUST happen in the completion handler of nw_connection_send
+                    // to ensure memory safety, as Network.framework might still be using the buffer.
                 }
             }
         }

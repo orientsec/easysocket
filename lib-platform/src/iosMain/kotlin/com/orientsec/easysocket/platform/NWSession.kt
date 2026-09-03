@@ -124,7 +124,8 @@ class NWSession(
         return suspendCancellableCoroutine { continuation ->
             nw_connection_set_queue(conn, queue)
 
-            nw_connection_set_state_changed_handler(conn) { state: nw_connection_state_t, error: nw_error_t? ->
+            nw_connection_set_state_changed_handler(conn)
+            { state: nw_connection_state_t, error: nw_error_t ->
                 handleStateChange(state, error, continuation)
             }
 
@@ -138,7 +139,7 @@ class NWSession(
 
     private fun handleStateChange(
         state: nw_connection_state_t,
-        error: nw_error_t?,
+        error: nw_error_t,
         continuation: CancellableContinuation<Boolean>
     ) {
         when (state) {
