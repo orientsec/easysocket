@@ -12,6 +12,7 @@ import com.orientsec.easysocket.session.Writer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.SocketAddress
@@ -24,6 +25,12 @@ import javax.net.ssl.SSLSocket
  * 支持 TCP 连接和 SSL/TLS 加密连接（通过 SSLSocket）。
  * 连接过程会记录各阶段（DNS、CONNECT、SSL）的耗时，
  * 并使用 TrafficProfiler 标记 Socket 流量。
+ *
+ * **SSL 前提**：默认工厂创建的是普通 Socket，无法完成 TLS 握手。
+ * 连接 `isSsl = true` 的地址时，必须注入 SSL 工厂：
+ * ```kotlin
+ * sessionFactory = SocketSessionFactory(javax.net.ssl.SSLSocketFactory.getDefault())
+ * ```
  *
  * @param socketClient 所属的 Socket 客户端
  * @param address 连接的服务器地址
@@ -102,15 +109,20 @@ class SocketSession(
 
     /**
      * DNS 解析。
+     * 显式调用 [java.net.InetAddress.getByName] 完成解析：
+     * - [Period.DNS] 计时反映真实的解析耗时
+     * - 解析失败归因为 [ErrorCode.DNS_ANALYZE]（若留给 connect() 处理，
+     *   UnknownHostException 会被归为 SOCKET_CONNECT，无法区分）
      */
     private fun dns(): Result<SocketAddress> {
         return try {
-            Result.success(InetSocketAddress(address.host, address.port))
+            val inetAddress = InetAddress.getByName(address.host)
+            Result.success(InetSocketAddress(inetAddress, address.port))
         } catch (e: Exception) {
             val ex = EasyException(
                 ErrorCode.DNS_ANALYZE,
                 ErrorType.CONNECT,
-                "dns resolve failed",
+                "dns resolve failed: $e",
                 suffix,
                 e
             )
@@ -159,7 +171,10 @@ class SocketSession(
         if (tcpSocket !is SSLSocket) {
             val ex = EasyException(
                 ErrorCode.TLS_ERROR, ErrorType.CONNECT,
-                "Not an SSLSocket", suffix
+                "Not an SSLSocket: address requires TLS but the injected " +
+                        "SocketFactory does not create SSLSocket. " +
+                        "Provide SocketSessionFactory(SSLSocketFactory...)",
+                suffix
             )
             return Result.failure(ex)
         }
