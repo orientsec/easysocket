@@ -26,6 +26,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "easysocket"
 include(":app")
+include(":app-shared")
 include(":lib")
 include(":lib-platform")
 include(":server")

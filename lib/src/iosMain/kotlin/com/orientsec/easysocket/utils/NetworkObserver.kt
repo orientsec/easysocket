@@ -8,7 +8,7 @@ import platform.darwin.dispatch_get_main_queue
  * 使用 [NWPathMonitor] 监听网络状态。
  */
 actual class NetworkObserver {
-    private var monitor: nw_path_monitor_t? = null
+    private var monitor: nw_path_monitor_t = null
     private var onAvailable: (() -> Unit)? = null
     private var lastStatusIsSatisfied = false
 

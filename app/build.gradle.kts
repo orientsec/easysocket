@@ -1,56 +1,12 @@
 import com.android.build.api.dsl.ApplicationExtension
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
-    alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.application)
-    alias(libs.plugins.compose.multiplatform)
-    alias(libs.plugins.compose.compiler)
 }
 
-kotlin {
-    applyDefaultHierarchyTemplate()
-
-    androidTarget {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
-        }
-    }
-    
-    iosArm64()
-    iosSimulatorArm64()
-
-    targets.withType<KotlinNativeTarget>().forEach {
-        it.binaries.framework {
-            baseName = "ComposeApp"
-            isStatic = true
-        }
-    }
-    
-    sourceSets {
-        commonMain.dependencies {
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material)
-            implementation(compose.ui)
-            implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
-            implementation(project(":lib"))
-            implementation(project(":lib-platform"))
-            implementation(libs.kotlinx.coroutines.core)
-            implementation(libs.kotlinx.io.core)
-        }
-        androidMain.dependencies {
-            implementation(compose.preview)
-            implementation(libs.androidx.appcompat)
-            implementation(libs.androidx.constraint.layout)
-            implementation(libs.androidx.lifecycle.process)
-            implementation(libs.androidx.activity.compose)
-        }
-    }
-}
-
+// 纯 Android 壳模块：只包含 manifest、图标和主题资源。
+// Compose UI 与业务代码在 :app-shared（KMP），MainActivity 也位于该库的 androidMain。
+// 本模块不含 Kotlin 源码，无需 Kotlin 插件。
 configure<ApplicationExtension> {
     namespace = "com.orientsec.easysocket.demo"
     compileSdk = 37
@@ -60,7 +16,6 @@ configure<ApplicationExtension> {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
         release {
@@ -72,4 +27,10 @@ configure<ApplicationExtension> {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
+
+dependencies {
+    implementation(project(":app-shared"))
+    // 壳模块的 AppTheme（parent 为 Theme.AppCompat）需要 appcompat 参与资源链接
+    implementation(libs.androidx.appcompat)
 }
