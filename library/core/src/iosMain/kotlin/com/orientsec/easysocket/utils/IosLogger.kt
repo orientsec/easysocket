@@ -3,7 +3,7 @@ package com.orientsec.easysocket.utils
 /**
  * iOS 平台的日志实现，直接使用 [Platform.log]。
  */
-class IosLogger(private val name: String, private val suffix: String) : Logger {
+class IosLogger(name: String, suffix: String) : Logger {
     private val tag = if (suffix.isEmpty()) name else "$name[$suffix]"
 
     override fun d(msg: String) {

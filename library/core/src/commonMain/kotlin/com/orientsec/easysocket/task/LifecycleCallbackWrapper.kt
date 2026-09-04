@@ -9,7 +9,7 @@ import kotlinx.coroutines.launch
  * 生命周期回调的包装器，为 [Callback] 提供线程调度和日志记录功能。
  *
  * 主要职责：
- * 1. 将所有回调切换到 [Options.callbackDispatcher] 指定的调度器上执行
+ * 1. 将所有回调切换到 [com.orientsec.easysocket.Options.callbackDispatcher] 指定的调度器上执行
  * 2. 在调试模式下输出每个生命周期事件的日志
  * 3. 如果原始回调实现了 [LifecycleCallback]，则同时调用其扩展方法
  * 4. 在任务完成（成功/失败/取消）时自动调用 [onComplete]
@@ -32,7 +32,7 @@ class LifecycleCallbackWrapper<T>(
     private val isDebuggable: Boolean = client.options.isDebuggable
 
     /**
-     * 将回调调度到 [Options.callbackDispatcher] 上执行。
+     * 将回调调度到 [com.orientsec.easysocket.Options.callbackDispatcher] 上执行。
      *
      * @param block 要在回调调度器上执行的代码块
      */

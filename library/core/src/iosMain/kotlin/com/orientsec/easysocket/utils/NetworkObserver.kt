@@ -5,7 +5,7 @@ import platform.darwin.dispatch_get_main_queue
 
 /**
  * iOS 平台的 [NetworkObserver] 实现。
- * 使用 [NWPathMonitor] 监听网络状态。
+ * 使用 NWPathMonitor 监听网络状态。
  */
 actual class NetworkObserver {
     private var monitor: nw_path_monitor_t = null
