@@ -28,3 +28,4 @@ rootProject.name = "easysocket"
 include(":app")
 include(":lib")
 include(":lib-platform")
+include(":server")

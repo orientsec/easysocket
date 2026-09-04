@@ -8,6 +8,7 @@ annotation = "1.10.0"
 mavenPublish = "0.37.0"
 constraintlayout = "2.2.2"
 kotlin = "2.4.10"
+netty = "4.1.94.Final"
 lifecycleCommonJvm = "2.11.0"
 lifecycleProcess = "2.11.0"
 ktor = "3.5.2"
@@ -29,11 +30,13 @@ ktor-network = { group = "io.ktor", name = "ktor-network", version.ref = "ktor" 
 ktor-network-tls = { group = "io.ktor", name = "ktor-network-tls", version.ref = "ktor" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-io-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-io-core", version.ref = "kotlinx-io" }
+netty-all = { group = "io.netty", name = "netty-all", version.ref = "netty" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
