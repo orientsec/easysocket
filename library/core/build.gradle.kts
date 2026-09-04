@@ -50,5 +50,5 @@ configure<MavenPublishBaseExtension> {
     // 为所有 target publication（kotlinMultiplatform/jvm/iosXxx/androidRelease）
     // 统一设置坐标。不要用 publishing{} 手动注册 publication：那会产生一个
     // 空壳 artifact，而真正的 KMP 产物仍落在默认的错误坐标上。
-    coordinates("com.orientsec", "easysocket", "1.0.0")
+    coordinates("com.orientsec.easysocket", "core", "1.0.0")
 }

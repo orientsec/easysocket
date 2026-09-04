@@ -5,7 +5,7 @@ plugins {
 }
 
 // 纯 Android 壳模块：只包含 manifest、图标和主题资源。
-// Compose UI 与业务代码在 :app-shared（KMP），MainActivity 也位于该库的 androidMain。
+// Compose UI 与业务代码在 :demo（KMP），MainActivity 也位于该库的 androidMain。
 // 本模块不含 Kotlin 源码，无需 Kotlin 插件。
 configure<ApplicationExtension> {
     namespace = "com.orientsec.easysocket.demo"
@@ -30,7 +30,7 @@ configure<ApplicationExtension> {
 }
 
 dependencies {
-    implementation(project(":app-shared"))
+    implementation(project(":demo:client"))
     // 壳模块的 AppTheme（parent 为 Theme.AppCompat）需要 appcompat 参与资源链接
     implementation(libs.androidx.appcompat)
 }

@@ -25,8 +25,12 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "easysocket"
-include(":app")
-include(":app-shared")
-include(":lib")
-include(":lib-platform")
-include(":server")
+
+// 库层（物理上位于 library/ 目录，逻辑上为 :library:* 二级模块）
+include(":library:core")
+include(":library:platform")
+
+// demo 层（物理上位于 demo/ 目录，逻辑上为 :demo:* 二级模块）
+include(":demo:client")
+include(":demo:androidDemo")
+include(":demo:server")

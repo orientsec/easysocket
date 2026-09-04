@@ -2,7 +2,7 @@
 *.iml
 .idea/
 .gradle/
-/local.properties
+local.properties
 .DS_Store
 /captures
 .externalNativeBuild
@@ -14,8 +14,8 @@
 
 # Xcode
 # ========================
-iosApp/iosApp.xcodeproj/xcuserdata/
-iosApp/iosApp.xcodeproj/project.xcworkspace/
+**/iosDemo.xcodeproj/xcuserdata/
+**/iosDemo.xcodeproj/project.xcworkspace/
 **/DerivedData/
 *.xcuserstate
 *.xccheckout

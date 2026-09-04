@@ -10,8 +10,6 @@ plugins {
 kotlin {
     applyDefaultHierarchyTemplate()
 
-    jvmToolchain(17)
-
     android {
         namespace = "com.orientsec.easysocket.demo.shared"
         compileSdk = 37
@@ -36,8 +34,8 @@ kotlin {
             implementation(libs.compose.ui)
             implementation(libs.compose.resources)
             implementation(libs.compose.ui.tooling.preview)
-            implementation(project(":lib"))
-            implementation(project(":lib-platform"))
+            implementation(project(":library:core"))
+            implementation(project(":library:platform"))
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.io.core)
         }
