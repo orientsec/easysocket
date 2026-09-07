@@ -130,6 +130,11 @@ class EchoRequest(private val text: String) : Request<String>() {
     override fun decode(packet: Packet): String = packet.body.decodeToString()
 }
 
+// Option 1: suspend (await the result in place)
+val res: String = client.buildTask(EchoRequest("hello")).send()
+
+// Option 2: callback (invoked on the main thread; implement LifecycleCallback
+// for fine-grained stage events)
 client.buildTask(EchoRequest("hello"), object : DefaultCallback<String>() {
     override fun onSuccess(res: String) { /* main thread */ }
     override fun onFailure(t: Throwable) { /* ... */ }

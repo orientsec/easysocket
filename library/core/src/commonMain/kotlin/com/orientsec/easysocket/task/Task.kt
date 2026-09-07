@@ -104,3 +104,16 @@ interface Task<T> {
      */
     fun request(): Request<T>
 }
+
+/**
+ * Executes the task and awaits its result.
+ *
+ * Throws if the task fails or is canceled; the caller's coroutine cancellation
+ * cancels the task.
+ *
+ * @return The decoded response.
+ */
+suspend fun <T> Task<T>.send(): T {
+    execute()
+    return await()
+}

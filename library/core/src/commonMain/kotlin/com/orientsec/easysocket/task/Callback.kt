@@ -31,4 +31,20 @@ interface Callback<T> {
      */
     fun onCanceled()
 
+    companion object {
+
+        private val NOOP: Callback<Any?> = object : Callback<Any?> {
+            override fun onStart() {}
+            override fun onSuccess(res: Any?) {}
+            override fun onFailure(t: Throwable) {}
+            override fun onCanceled() {}
+        }
+
+        /**
+         * Returns a callback that does nothing, used as the default when the
+         * caller only needs the [Task.await] / [Task.send] suspend path.
+         */
+        @Suppress("UNCHECKED_CAST")
+        fun <T> noop(): Callback<T> = NOOP as Callback<T>
+    }
 }

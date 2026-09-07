@@ -127,6 +127,10 @@ class EchoRequest(private val text: String) : Request<String>() {
     override fun decode(packet: Packet): String = packet.body.decodeToString()
 }
 
+// 方式一：suspend（挂起等待结果）
+val res: String = client.buildTask(EchoRequest("hello")).send()
+
+// 方式二：callback（回调在主线程；可细粒度实现 LifecycleCallback 观察各阶段）
 client.buildTask(EchoRequest("hello"), object : DefaultCallback<String>() {
     override fun onSuccess(res: String) { /* 主线程 */ }
     override fun onFailure(t: Throwable) { /* ... */ }

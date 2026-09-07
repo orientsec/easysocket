@@ -17,5 +17,5 @@ interface TaskBuilder {
      * @param T      The type of the result returned by the task.
      * @return An executable task.
      */
-    fun <T> buildTask(request: Request<T>, callback: Callback<T>): Task<T>
+    fun <T> buildTask(request: Request<T>, callback: Callback<T> = Callback.noop()): Task<T>
 }

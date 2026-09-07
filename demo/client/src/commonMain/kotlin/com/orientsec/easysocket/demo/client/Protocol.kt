@@ -5,10 +5,8 @@ import com.orientsec.easysocket.Packet
 import com.orientsec.easysocket.PacketType
 import com.orientsec.easysocket.request.Request
 import com.orientsec.easysocket.session.SessionInitializer
-import com.orientsec.easysocket.task.Callback
-import com.orientsec.easysocket.task.DefaultCallback
 import com.orientsec.easysocket.task.TaskBuilder
-import kotlinx.coroutines.CompletableDeferred
+import com.orientsec.easysocket.task.send
 import kotlinx.io.*
 
 class MyHead(packetSize: Int, val taskId: Int, val packetType: PacketType) :
@@ -42,24 +40,17 @@ class MyHeadParser : HeadParser {
 class MySessionInitializer(private val client: Client) : SessionInitializer {
     override suspend fun start(taskBuilder: TaskBuilder): Result<Unit> {
         val authRequest = SimpleRequest("test", client.session, cmd = 1)
-        val deferred = CompletableDeferred<Result<Unit>>()
-        val callback: Callback<String> = object : DefaultCallback<String>() {
-            override fun onSuccess(res: String) {
-                val sessionId = res.toIntOrNull()
-                if (sessionId != null) {
-                    client.session.sessionId = sessionId
-                    deferred.complete(Result.success(Unit))
-                } else {
-                    deferred.complete(Result.failure(RuntimeException("Invalid session id: $res")))
-                }
+        return try {
+            val sessionId = taskBuilder.buildTask(authRequest).send().toIntOrNull()
+            if (sessionId != null) {
+                client.session.sessionId = sessionId
+                Result.success(Unit)
+            } else {
+                Result.failure(RuntimeException("Invalid session id"))
             }
-
-            override fun onFailure(t: Throwable) {
-                deferred.complete(Result.failure(t))
-            }
+        } catch (t: Throwable) {
+            Result.failure(t)
         }
-        taskBuilder.buildTask(authRequest, callback).execute()
-        return deferred.await()
     }
 }
 
